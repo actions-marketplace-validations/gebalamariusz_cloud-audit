@@ -38,6 +38,10 @@ coverage.xml
 *.html
 !src/cloud_audit/reports/templates/*.html.j2
 
+# Internal / local-only files (never push)
+CLAUDE.md
+ROADMAP.md
+
 # OS
 .DS_Store
 Thumbs.db
