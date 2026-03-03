@@ -44,11 +44,11 @@ Running 17 checks on AWS...
 
 Most cloud security scanners give you hundreds of findings, and you end up ignoring all of them. cloud-audit takes a different approach:
 
-- **17 curated, high-signal checks** — every check catches something an attacker would actually exploit
-- **12 seconds, not 12 minutes** — scan completes before your coffee gets cold
-- **Zero configuration** — uses your existing AWS credentials, works out of the box
-- **Beautiful reports** — dark-mode HTML report you can send to your manager or client
-- **Single `pip install`** — no Java, no Docker required, no 50-step setup guide
+- **17 curated, high-signal checks** - every check catches something an attacker would actually exploit
+- **12 seconds, not 12 minutes** - scan completes before your coffee gets cold
+- **Zero configuration** - uses your existing AWS credentials, works out of the box
+- **Beautiful reports** - dark-mode HTML report you can send to your manager or client
+- **Single `pip install`** - no Java, no Docker required, no 50-step setup guide
 
 > **Positioning:** cloud-audit is not another Prowler. Prowler has 576 checks and takes hours. We have 17 checks and take seconds. Every finding matters. Every report is actionable.
 
@@ -195,7 +195,7 @@ A score of **80+** is good, **50-79** needs attention, and **below 50** requires
 | Checks | 17 (curated) | 576 (AWS) | ~200 |
 | Scan time | ~12 seconds | 1-4 hours | 30-60 minutes |
 | Setup | `pip install` | `pip install` + config | `pip install` + config |
-| Alert fatigue | Zero — every finding matters | High — hundreds of findings | Moderate |
+| Alert fatigue | Zero - every finding matters | High - hundreds of findings | Moderate |
 | Remediation | Copy-paste CLI + Terraform | Text descriptions | None |
 | HTML report | Dark-mode, client-ready | Functional | Interactive |
 | Maintenance | Active | Active | Inactive (12+ months) |
@@ -223,17 +223,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 
 ## Roadmap
 
-- ~~**v0.1.0** — 17 AWS checks, CLI, HTML/JSON reports~~
-- ~~**v0.2.0** — Remediation engine (CLI + Terraform), CIS Benchmark mapping, 45 moto tests~~
-- **v0.3.0** — CloudTrail, GuardDuty, Config, KMS, CloudWatch checks
-- **v0.4.0** — Lambda, ECS, SSM, Secrets Manager checks + IAM/EC2/S3 expansions
-- **v0.5.0** — SARIF output (GitHub Security integration), config file, baseline/suppress, cross-account scanning
-- **v1.0.0** — Executive-ready reports, scan diff/compare, documentation site
+- ~~**v0.1.0** - 17 AWS checks, CLI, HTML/JSON reports~~
+- ~~**v0.2.0** - Remediation engine (CLI + Terraform), CIS Benchmark mapping, 45 moto tests~~
+- **v0.3.0** - CloudTrail, GuardDuty, Config, KMS, CloudWatch checks
+- **v0.4.0** - Lambda, ECS, SSM, Secrets Manager checks + IAM/EC2/S3 expansions
+- **v0.5.0** - SARIF output (GitHub Security integration), config file, baseline/suppress, cross-account scanning
+- **v1.0.0** - Executive-ready reports, scan diff/compare, documentation site
 
 ## License
 
-[MIT](LICENSE) — Mariusz Gebala / [HAIT](https://haitmg.pl)
+[MIT](LICENSE) - Mariusz Gebala / [HAIT](https://haitmg.pl)
 
 ## Author
 
-Built by [Mariusz Gebala](https://github.com/gebalamariusz) at [HAIT](https://haitmg.pl) — Cloud Infrastructure & Security Consulting.
+Built by [Mariusz Gebala](https://github.com/gebalamariusz) at [HAIT](https://haitmg.pl) - Cloud Infrastructure & Security Consulting.
