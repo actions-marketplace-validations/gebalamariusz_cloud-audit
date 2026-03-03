@@ -1,16 +1,16 @@
-<div align="center">
+<h1 align="center">cloud-audit</h1>
 
-# cloud-audit
+<p align="center">
+  <strong>Fast, opinionated AWS security scanner. Curated checks. Zero noise. Copy-paste fixes.</strong>
+</p>
 
-**Fast, opinionated AWS security scanner. Curated checks. Zero noise. Copy-paste fixes.**
-
-[![PyPI version](https://img.shields.io/pypi/v/cloud-audit?color=blue)](https://pypi.org/project/cloud-audit/)
-[![Python versions](https://img.shields.io/pypi/pyversions/cloud-audit)](https://pypi.org/project/cloud-audit/)
-[![CI](https://github.com/gebalamariusz/cloud-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/gebalamariusz/cloud-audit/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Downloads](https://img.shields.io/pypi/dm/cloud-audit)](https://pypi.org/project/cloud-audit/)
-
-</div>
+<p align="center">
+  <a href="https://pypi.org/project/cloud-audit/"><img src="https://img.shields.io/pypi/v/cloud-audit?color=blue" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/cloud-audit/"><img src="https://img.shields.io/pypi/pyversions/cloud-audit" alt="Python versions"></a>
+  <a href="https://github.com/gebalamariusz/cloud-audit/actions/workflows/ci.yml"><img src="https://github.com/gebalamariusz/cloud-audit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://pypi.org/project/cloud-audit/"><img src="https://img.shields.io/pypi/dm/cloud-audit" alt="Downloads"></a>
+</p>
 
 ---
 
