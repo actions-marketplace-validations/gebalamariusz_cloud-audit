@@ -23,6 +23,23 @@ class Category(str, Enum):
     PERFORMANCE = "performance"
 
 
+class Effort(str, Enum):
+    """Estimated effort to implement the remediation."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class Remediation(BaseModel):
+    """Remediation details for a finding — CLI command, Terraform HCL, and docs link."""
+
+    cli: str = Field(description="AWS CLI command (copy-paste ready)")
+    terraform: str = Field(description="Terraform HCL snippet")
+    doc_url: str = Field(description="Link to AWS documentation")
+    effort: Effort = Field(description="Estimated remediation effort")
+
+
 SEVERITY_SCORE = {
     Severity.CRITICAL: 0,
     Severity.HIGH: 5,
@@ -52,6 +69,8 @@ class Finding(BaseModel):
     region: str = Field(default="global")
     description: str = Field(description="What is wrong")
     recommendation: str = Field(description="How to fix it")
+    remediation: Remediation | None = Field(default=None, description="Structured remediation details")
+    compliance_refs: list[str] = Field(default_factory=list, description="Compliance references, e.g. ['CIS 1.5']")
 
 
 class CheckResult(BaseModel):

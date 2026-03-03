@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
-from cloud_audit.models import Category, CheckResult, Finding, Severity
+from cloud_audit.models import Category, CheckResult, Effort, Finding, Remediation, Severity
 
 if TYPE_CHECKING:
     from cloud_audit.providers.aws.provider import AWSProvider
@@ -22,18 +22,35 @@ def check_public_amis(provider: AWSProvider) -> CheckResult:
             images = ec2.describe_images(Owners=["self"])["Images"]
             for image in images:
                 result.resources_scanned += 1
+                image_id = image["ImageId"]
                 if image.get("Public", False):
                     result.findings.append(
                         Finding(
                             check_id="aws-ec2-001",
-                            title=f"AMI '{image['ImageId']}' is publicly shared",
+                            title=f"AMI '{image_id}' is publicly shared",
                             severity=Severity.HIGH,
                             category=Category.SECURITY,
                             resource_type="AWS::EC2::Image",
-                            resource_id=image["ImageId"],
+                            resource_id=image_id,
                             region=region,
-                            description=f"AMI {image['ImageId']} ({image.get('Name', 'unnamed')}) is publicly accessible to all AWS accounts.",
+                            description=f"AMI {image_id} ({image.get('Name', 'unnamed')}) is publicly accessible to all AWS accounts.",
                             recommendation="Make the AMI private unless public sharing is intentional.",
+                            remediation=Remediation(
+                                cli=(
+                                    f"aws ec2 modify-image-attribute --image-id {image_id} "
+                                    f'--launch-permission \'{{"Remove":[{{"Group":"all"}}]}}\' --region {region}'
+                                ),
+                                terraform=(
+                                    "# Ensure your AMI resource does not have public launch permissions.\n"
+                                    "# Use aws_ami_launch_permission to restrict access:\n"
+                                    f'resource "aws_ami_launch_permission" "restrict" {{\n'
+                                    f'  image_id   = "{image_id}"\n'
+                                    f'  account_id = "TRUSTED_ACCOUNT_ID"\n'
+                                    f"}}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharing-amis.html",
+                                effort=Effort.LOW,
+                            ),
                         )
                     )
     except Exception as e:
@@ -67,6 +84,32 @@ def check_unencrypted_volumes(provider: AWSProvider) -> CheckResult:
                                 region=region,
                                 description=f"Volume {vol_id} ({size} GiB) is not encrypted at rest.",
                                 recommendation="Enable EBS default encryption in account settings and migrate existing volumes.",
+                                remediation=Remediation(
+                                    cli=(
+                                        f"# Enable EBS default encryption for the region:\n"
+                                        f"aws ec2 enable-ebs-encryption-by-default --region {region}\n"
+                                        f"# Migrate existing volume {vol_id}:\n"
+                                        f"# 1. Create snapshot: aws ec2 create-snapshot --volume-id {vol_id}\n"
+                                        f"# 2. Copy with encryption: aws ec2 copy-snapshot --encrypted --source-snapshot-id snap-xxx\n"
+                                        f"# 3. Create volume from encrypted snapshot\n"
+                                        f"# 4. Swap volume on the instance"
+                                    ),
+                                    terraform=(
+                                        "# Enable EBS default encryption:\n"
+                                        'resource "aws_ebs_encryption_by_default" "this" {\n'
+                                        "  enabled = true\n"
+                                        "}\n"
+                                        "\n"
+                                        "# Ensure new volumes are encrypted:\n"
+                                        'resource "aws_ebs_volume" "example" {\n'
+                                        "  # ...\n"
+                                        "  encrypted = true\n"
+                                        "}"
+                                    ),
+                                    doc_url="https://docs.aws.amazon.com/ebs/latest/userguide/encryption-by-default.html",
+                                    effort=Effort.HIGH,
+                                ),
+                                compliance_refs=["CIS 2.2.1"],
                             )
                         )
     except Exception as e:
@@ -80,9 +123,6 @@ def check_stopped_instances(provider: AWSProvider) -> CheckResult:
     result = CheckResult(check_id="aws-ec2-003", check_name="Stopped EC2 instances (cost)")
 
     try:
-        from datetime import datetime, timezone
-
-        datetime.now(timezone.utc)
         for region in provider.regions:
             ec2 = provider.session.client("ec2", region_name=region)
             paginator = ec2.get_paginator("describe_instances")
@@ -92,9 +132,6 @@ def check_stopped_instances(provider: AWSProvider) -> CheckResult:
                         result.resources_scanned += 1
                         instance_id = instance["InstanceId"]
                         instance_type = instance["InstanceType"]
-
-                        # Check state transition time
-                        instance.get("StateTransitionReason", "")
                         name_tag = next(
                             (t["Value"] for t in instance.get("Tags", []) if t["Key"] == "Name"),
                             "unnamed",
@@ -111,6 +148,21 @@ def check_stopped_instances(provider: AWSProvider) -> CheckResult:
                                 region=region,
                                 description=f"Instance {instance_id} ({instance_type}) is stopped. EBS volumes are still incurring charges.",
                                 recommendation="Terminate the instance if no longer needed, or create an AMI and terminate to save on EBS costs.",
+                                remediation=Remediation(
+                                    cli=(
+                                        f"# WARNING: This will permanently delete the instance!\n"
+                                        f"# Create an AMI first if you need the data:\n"
+                                        f"aws ec2 create-image --instance-id {instance_id} --name '{name_tag}-backup' --region {region}\n"
+                                        f"# Then terminate:\n"
+                                        f"aws ec2 terminate-instances --instance-ids {instance_id} --region {region}"
+                                    ),
+                                    terraform=(
+                                        "# Remove the aws_instance resource from your Terraform config\n"
+                                        "# and run terraform apply, or set count = 0."
+                                    ),
+                                    doc_url="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/terminating-instances.html",
+                                    effort=Effort.LOW,
+                                ),
                             )
                         )
     except Exception as e:

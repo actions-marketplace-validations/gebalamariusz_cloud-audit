@@ -5,11 +5,33 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
-from cloud_audit.models import Category, CheckResult, Finding, Severity
+from cloud_audit.models import Category, CheckResult, Effort, Finding, Remediation, Severity
 
 if TYPE_CHECKING:
     from cloud_audit.providers.aws.provider import AWSProvider
     from cloud_audit.providers.base import CheckFn
+
+
+def _s3_public_access_remediation(name: str) -> Remediation:
+    return Remediation(
+        cli=(
+            f"aws s3api put-public-access-block --bucket {name} "
+            f"--public-access-block-configuration "
+            f"BlockPublicAcls=true,IgnorePublicAcls=true,"
+            f"BlockPublicPolicy=true,RestrictPublicBuckets=true"
+        ),
+        terraform=(
+            f'resource "aws_s3_bucket_public_access_block" "{name}" {{\n'
+            f'  bucket                  = "{name}"\n'
+            f"  block_public_acls       = true\n"
+            f"  ignore_public_acls      = true\n"
+            f"  block_public_policy     = true\n"
+            f"  restrict_public_buckets = true\n"
+            f"}}"
+        ),
+        doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html",
+        effort=Effort.LOW,
+    )
 
 
 def check_public_buckets(provider: AWSProvider) -> CheckResult:
@@ -44,6 +66,8 @@ def check_public_buckets(provider: AWSProvider) -> CheckResult:
                             resource_id=name,
                             description=f"Bucket '{name}' has incomplete public access block configuration.",
                             recommendation="Enable all four public access block settings unless the bucket explicitly needs public access.",
+                            remediation=_s3_public_access_remediation(name),
+                            compliance_refs=["CIS 2.1.5"],
                         )
                     )
             except s3.exceptions.ClientError:
@@ -58,6 +82,8 @@ def check_public_buckets(provider: AWSProvider) -> CheckResult:
                         resource_id=name,
                         description=f"Bucket '{name}' does not have a public access block configuration.",
                         recommendation="Add a public access block to the bucket with all four settings enabled.",
+                        remediation=_s3_public_access_remediation(name),
+                        compliance_refs=["CIS 2.1.5"],
                     )
                 )
     except Exception as e:
@@ -91,6 +117,26 @@ def check_bucket_encryption(provider: AWSProvider) -> CheckResult:
                             resource_id=name,
                             description=f"Bucket '{name}' does not have default server-side encryption configured.",
                             recommendation="Enable default encryption with SSE-S3 (AES-256) or SSE-KMS.",
+                            remediation=Remediation(
+                                cli=(
+                                    f"aws s3api put-bucket-encryption --bucket {name} "
+                                    f"--server-side-encryption-configuration "
+                                    f'\'{{"Rules":[{{"ApplyServerSideEncryptionByDefault":{{"SSEAlgorithm":"AES256"}}}}]}}\''
+                                ),
+                                terraform=(
+                                    f'resource "aws_s3_bucket_server_side_encryption_configuration" "{name}" {{\n'
+                                    f'  bucket = "{name}"\n'
+                                    f"  rule {{\n"
+                                    f"    apply_server_side_encryption_by_default {{\n"
+                                    f'      sse_algorithm = "AES256"\n'
+                                    f"    }}\n"
+                                    f"  }}\n"
+                                    f"}}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-encryption.html",
+                                effort=Effort.LOW,
+                            ),
+                            compliance_refs=["CIS 2.1.1"],
                         )
                     )
     except Exception as e:
@@ -124,6 +170,19 @@ def check_bucket_versioning(provider: AWSProvider) -> CheckResult:
                         resource_id=name,
                         description=f"Bucket '{name}' versioning is '{status}'. Without versioning, deleted or overwritten objects cannot be recovered.",
                         recommendation="Enable versioning to protect against accidental deletion or overwrites.",
+                        remediation=Remediation(
+                            cli=f"aws s3api put-bucket-versioning --bucket {name} --versioning-configuration Status=Enabled",
+                            terraform=(
+                                f'resource "aws_s3_bucket_versioning" "{name}" {{\n'
+                                f'  bucket = "{name}"\n'
+                                f"  versioning_configuration {{\n"
+                                f'    status = "Enabled"\n'
+                                f"  }}\n"
+                                f"}}"
+                            ),
+                            doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/Versioning.html",
+                            effort=Effort.LOW,
+                        ),
                     )
                 )
     except Exception as e:

@@ -3,7 +3,9 @@
 from cloud_audit.models import (
     Category,
     CheckResult,
+    Effort,
     Finding,
+    Remediation,
     ScanReport,
     Severity,
 )
@@ -88,3 +90,43 @@ def test_scan_report_perfect_score():
     report.compute_summary()
     assert report.summary.score == 100
     assert report.summary.total_findings == 0
+
+
+def test_finding_with_remediation():
+    r = Remediation(
+        cli="aws s3api put-public-access-block --bucket test-bucket ...",
+        terraform='resource "aws_s3_bucket_public_access_block" "example" { bucket = "test-bucket" }',
+        doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html",
+        effort=Effort.LOW,
+    )
+    f = Finding(
+        check_id="test-001",
+        title="Test",
+        severity=Severity.HIGH,
+        category=Category.SECURITY,
+        resource_type="AWS::S3::Bucket",
+        resource_id="test-bucket",
+        description="Public bucket",
+        recommendation="Block public access",
+        remediation=r,
+        compliance_refs=["CIS 2.1.5"],
+    )
+    assert f.remediation is not None
+    assert f.remediation.effort == Effort.LOW
+    assert f.compliance_refs == ["CIS 2.1.5"]
+
+
+def test_finding_without_remediation():
+    """Ensure remediation is optional (backward compat)."""
+    f = Finding(
+        check_id="test-001",
+        title="Test",
+        severity=Severity.LOW,
+        category=Category.COST,
+        resource_type="AWS::EC2::EIP",
+        resource_id="eip-123",
+        description="Unused",
+        recommendation="Release",
+    )
+    assert f.remediation is None
+    assert f.compliance_refs == []

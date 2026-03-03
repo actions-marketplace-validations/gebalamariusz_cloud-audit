@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
-from cloud_audit.models import Category, CheckResult, Finding, Severity
+from cloud_audit.models import Category, CheckResult, Effort, Finding, Remediation, Severity
 
 if TYPE_CHECKING:
     from cloud_audit.providers.aws.provider import AWSProvider
@@ -38,6 +38,20 @@ def check_rds_public_access(provider: AWSProvider) -> CheckResult:
                                 region=region,
                                 description=f"RDS instance '{db_id}' ({db['Engine']}) has PubliclyAccessible=true.",
                                 recommendation="Disable public access and use private subnets. Connect via VPN or bastion host.",
+                                remediation=Remediation(
+                                    cli=(
+                                        f"aws rds modify-db-instance --db-instance-identifier {db_id} "
+                                        f"--no-publicly-accessible --apply-immediately"
+                                    ),
+                                    terraform=(
+                                        f'resource "aws_db_instance" "{db_id}" {{\n'
+                                        f"  # ...\n"
+                                        f"  publicly_accessible = false\n"
+                                        f"}}"
+                                    ),
+                                    doc_url="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_RDS_Configuring.html",
+                                    effort=Effort.LOW,
+                                ),
                             )
                         )
     except Exception as e:
@@ -72,6 +86,27 @@ def check_rds_encryption(provider: AWSProvider) -> CheckResult:
                                 region=region,
                                 description=f"RDS instance '{db_id}' does not have storage encryption enabled.",
                                 recommendation="Enable encryption at rest. Note: existing instances must be migrated via snapshot restore.",
+                                remediation=Remediation(
+                                    cli=(
+                                        f"# RDS encryption cannot be enabled on existing instances.\n"
+                                        f"# Migrate via snapshot:\n"
+                                        f"aws rds create-db-snapshot --db-instance-identifier {db_id} "
+                                        f"--db-snapshot-identifier {db_id}-pre-encrypt\n"
+                                        f"aws rds copy-db-snapshot --source-db-snapshot-identifier {db_id}-pre-encrypt "
+                                        f"--target-db-snapshot-identifier {db_id}-encrypted --kms-key-id alias/aws/rds\n"
+                                        f"aws rds restore-db-instance-from-db-snapshot --db-instance-identifier {db_id}-new "
+                                        f"--db-snapshot-identifier {db_id}-encrypted"
+                                    ),
+                                    terraform=(
+                                        f'resource "aws_db_instance" "{db_id}" {{\n'
+                                        f"  # ...\n"
+                                        f"  storage_encrypted = true\n"
+                                        f"  kms_key_id        = aws_kms_key.rds.arn  # optional\n"
+                                        f"}}"
+                                    ),
+                                    doc_url="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.Encryption.html",
+                                    effort=Effort.HIGH,
+                                ),
                             )
                         )
     except Exception as e:
@@ -111,6 +146,17 @@ def check_rds_multi_az(provider: AWSProvider) -> CheckResult:
                                 region=region,
                                 description=f"RDS instance '{db_id}' ({instance_class}) does not have Multi-AZ failover enabled.",
                                 recommendation="Enable Multi-AZ for production databases to provide automatic failover.",
+                                remediation=Remediation(
+                                    cli=(
+                                        f"aws rds modify-db-instance --db-instance-identifier {db_id} "
+                                        f"--multi-az --apply-immediately"
+                                    ),
+                                    terraform=(
+                                        f'resource "aws_db_instance" "{db_id}" {{\n  # ...\n  multi_az = true\n}}'
+                                    ),
+                                    doc_url="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZ.html",
+                                    effort=Effort.MEDIUM,
+                                ),
                             )
                         )
     except Exception as e:

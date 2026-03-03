@@ -31,9 +31,15 @@ def render_html(report: ScanReport) -> str:
     for f in sorted_findings:
         by_category[f.category.value].append(f)
 
+    # Collect unique CIS references across all findings
+    cis_controls: list[str] = sorted(
+        {ref for f in report.all_findings for ref in f.compliance_refs if ref.startswith("CIS")}
+    )
+
     return template.render(
         report=report,
         sorted_findings=sorted_findings,
         by_category=dict(by_category),
         severity_order=severity_order,
+        cis_controls=cis_controls,
     )

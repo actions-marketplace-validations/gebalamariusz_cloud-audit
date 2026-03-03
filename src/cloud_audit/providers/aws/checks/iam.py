@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
-from cloud_audit.models import Category, CheckResult, Finding, Severity
+from cloud_audit.models import Category, CheckResult, Effort, Finding, Remediation, Severity
 
 if TYPE_CHECKING:
     from cloud_audit.providers.aws.provider import AWSProvider
@@ -31,6 +31,21 @@ def check_root_mfa(provider: AWSProvider) -> CheckResult:
                     resource_id="root",
                     description="The root account has no MFA device configured. Root has unrestricted access to all resources.",
                     recommendation="Enable MFA on the root account immediately. Use a hardware MFA device for best security.",
+                    remediation=Remediation(
+                        cli=(
+                            "# Root MFA must be configured via AWS Console\n"
+                            "# 1. Sign in as root: https://console.aws.amazon.com/\n"
+                            "# 2. Go to: IAM > Security credentials > Multi-factor authentication\n"
+                            "# 3. Assign MFA device (hardware TOTP recommended)"
+                        ),
+                        terraform=(
+                            "# Root MFA cannot be managed via Terraform.\n"
+                            "# Use AWS Console or aws-vault for root account protection."
+                        ),
+                        doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user_manage_mfa.html",
+                        effort=Effort.LOW,
+                    ),
+                    compliance_refs=["CIS 1.5"],
                 )
             )
     except Exception as e:
@@ -70,6 +85,26 @@ def check_users_mfa(provider: AWSProvider) -> CheckResult:
                             resource_id=username,
                             description=f"User '{username}' can log in to the AWS Console but has no MFA device configured.",
                             recommendation=f"Enable MFA for user '{username}' or remove console access if not needed.",
+                            remediation=Remediation(
+                                cli=(
+                                    f"# Enable virtual MFA for user '{username}':\n"
+                                    f"aws iam create-virtual-mfa-device "
+                                    f"--virtual-mfa-device-name {username}-mfa "
+                                    f"--outfile /tmp/{username}-qr.png --bootstrap-method QRCodePNG\n"
+                                    f"# Then activate with two consecutive TOTP codes:\n"
+                                    f"aws iam enable-mfa-device --user-name {username} "
+                                    f"--serial-number arn:aws:iam::ACCOUNT_ID:mfa/{username}-mfa "
+                                    f"--authentication-code1 CODE1 --authentication-code2 CODE2"
+                                ),
+                                terraform=(
+                                    f'resource "aws_iam_virtual_mfa_device" "{username}_mfa" {{\n'
+                                    f'  virtual_mfa_device_name = "{username}-mfa"\n'
+                                    f"}}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_enable_virtual.html",
+                                effort=Effort.LOW,
+                            ),
+                            compliance_refs=["CIS 1.4"],
                         )
                     )
     except Exception as e:
@@ -104,6 +139,7 @@ def check_access_keys_rotation(provider: AWSProvider) -> CheckResult:
                     age_days = (now - created).days
 
                     if age_days > max_age_days:
+                        key_id = key["AccessKeyId"]
                         result.findings.append(
                             Finding(
                                 check_id="aws-iam-003",
@@ -111,9 +147,30 @@ def check_access_keys_rotation(provider: AWSProvider) -> CheckResult:
                                 severity=Severity.MEDIUM,
                                 category=Category.SECURITY,
                                 resource_type="AWS::IAM::AccessKey",
-                                resource_id=key["AccessKeyId"],
-                                description=f"Access key {key['AccessKeyId']} for user '{username}' was created {age_days} days ago (limit: {max_age_days}).",
+                                resource_id=key_id,
+                                description=f"Access key {key_id} for user '{username}' was created {age_days} days ago (limit: {max_age_days}).",
                                 recommendation="Rotate the access key. Create a new key, update all services using it, then deactivate the old one.",
+                                remediation=Remediation(
+                                    cli=(
+                                        f"# Rotate access key for user '{username}':\n"
+                                        f"aws iam create-access-key --user-name {username}\n"
+                                        f"# Update all services using the old key, then:\n"
+                                        f"aws iam update-access-key --user-name {username} "
+                                        f"--access-key-id {key_id} --status Inactive\n"
+                                        f"aws iam delete-access-key --user-name {username} "
+                                        f"--access-key-id {key_id}"
+                                    ),
+                                    terraform=(
+                                        "# Access keys should be managed outside Terraform.\n"
+                                        "# Use aws-vault or SSO for credential management.\n"
+                                        f'resource "aws_iam_access_key" "{username}" {{\n'
+                                        f'  user = "{username}"\n'
+                                        f"}}"
+                                    ),
+                                    doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html#Using_RotateAccessKey",
+                                    effort=Effort.LOW,
+                                ),
+                                compliance_refs=["CIS 1.14"],
                             )
                         )
     except Exception as e:
@@ -143,8 +200,25 @@ def check_unused_access_keys(provider: AWSProvider) -> CheckResult:
                     if key["Status"] != "Active":
                         continue
                     result.resources_scanned += 1
+                    key_id = key["AccessKeyId"]
 
-                    last_used_resp = iam.get_access_key_last_used(AccessKeyId=key["AccessKeyId"])
+                    _remediation = Remediation(
+                        cli=(
+                            f"aws iam update-access-key --user-name {username} "
+                            f"--access-key-id {key_id} --status Inactive\n"
+                            f"# After confirming no impact:\n"
+                            f"aws iam delete-access-key --user-name {username} "
+                            f"--access-key-id {key_id}"
+                        ),
+                        terraform=(
+                            "# Remove the aws_iam_access_key resource from your Terraform config\n"
+                            "# and run terraform apply to delete the unused key."
+                        ),
+                        doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html",
+                        effort=Effort.LOW,
+                    )
+
+                    last_used_resp = iam.get_access_key_last_used(AccessKeyId=key_id)
                     last_used_info = last_used_resp["AccessKeyLastUsed"]
 
                     if "LastUsedDate" not in last_used_info:
@@ -155,9 +229,11 @@ def check_unused_access_keys(provider: AWSProvider) -> CheckResult:
                                 severity=Severity.MEDIUM,
                                 category=Category.SECURITY,
                                 resource_type="AWS::IAM::AccessKey",
-                                resource_id=key["AccessKeyId"],
-                                description=f"Active access key {key['AccessKeyId']} for user '{username}' has never been used.",
+                                resource_id=key_id,
+                                description=f"Active access key {key_id} for user '{username}' has never been used.",
                                 recommendation="Deactivate or delete unused access keys to reduce attack surface.",
+                                remediation=_remediation,
+                                compliance_refs=["CIS 1.12"],
                             )
                         )
                     else:
@@ -170,9 +246,11 @@ def check_unused_access_keys(provider: AWSProvider) -> CheckResult:
                                     severity=Severity.LOW,
                                     category=Category.SECURITY,
                                     resource_type="AWS::IAM::AccessKey",
-                                    resource_id=key["AccessKeyId"],
-                                    description=f"Access key {key['AccessKeyId']} last used {days_unused} days ago.",
+                                    resource_id=key_id,
+                                    description=f"Access key {key_id} last used {days_unused} days ago.",
                                     recommendation="Review if this key is still needed. Deactivate unused keys.",
+                                    remediation=_remediation,
+                                    compliance_refs=["CIS 1.12"],
                                 )
                             )
     except Exception as e:

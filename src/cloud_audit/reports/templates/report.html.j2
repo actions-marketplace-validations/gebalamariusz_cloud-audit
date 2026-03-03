@@ -212,6 +212,146 @@
 
   .footer a:hover { text-decoration: underline; }
 
+  /* Remediation panel */
+  .remediation-panel {
+    margin-top: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .remediation-panel summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--teal);
+    background: rgba(45,212,191,0.04);
+    user-select: none;
+    list-style: none;
+  }
+
+  .remediation-panel summary::-webkit-details-marker { display: none; }
+
+  .remediation-panel summary::before {
+    content: '\25b6\00a0';
+    font-size: 10px;
+  }
+
+  .remediation-panel[open] summary::before {
+    content: '\25bc\00a0';
+  }
+
+  .remediation-content {
+    padding: 14px;
+    font-size: 13px;
+    border-top: 1px solid var(--border);
+  }
+
+  .remediation-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin: 10px 0 4px;
+  }
+
+  .remediation-label:first-child { margin-top: 0; }
+
+  .code-block {
+    position: relative;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .copy-btn:hover { color: var(--teal); border-color: var(--teal); }
+
+  .compliance-ref {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    background: rgba(45,212,191,0.08);
+    color: var(--teal);
+    margin-left: 6px;
+  }
+
+  .effort-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .effort-low { background: rgba(34,197,94,0.12); color: var(--green); }
+  .effort-medium { background: rgba(245,158,11,0.12); color: var(--orange); }
+  .effort-high { background: rgba(239,68,68,0.12); color: var(--red); }
+
+  .remediation-doc {
+    margin-top: 10px;
+    font-size: 12px;
+  }
+
+  .remediation-doc a { color: var(--teal); text-decoration: none; }
+  .remediation-doc a:hover { text-decoration: underline; }
+
+  /* CIS coverage section */
+  .cis-section {
+    margin-top: 40px;
+    padding: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .cis-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .cis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+  }
+
+  .cis-item {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: rgba(45,212,191,0.06);
+    border: 1px solid rgba(45,212,191,0.1);
+    text-align: center;
+  }
+
   /* Severity bar */
   .severity-bar {
     display: flex;
@@ -306,10 +446,26 @@
     <div class="finding-header">
       <span class="severity severity-{{ finding.severity.value }}">{{ finding.severity.value }}</span>
       <span class="finding-title">{{ finding.title }}</span>
+      {% for ref in finding.compliance_refs %}
+      <span class="compliance-ref">{{ ref }}</span>
+      {% endfor %}
       <span class="finding-resource">{{ finding.resource_id }}</span>
     </div>
     <div class="finding-body">{{ finding.description }}</div>
     <div class="finding-recommendation">{{ finding.recommendation }}</div>
+    {% if finding.remediation %}
+    <details class="remediation-panel">
+      <summary>How to fix</summary>
+      <div class="remediation-content">
+        <div class="remediation-label">Effort: <span class="effort-badge effort-{{ finding.remediation.effort.value }}">{{ finding.remediation.effort.value }}</span></div>
+        <div class="remediation-label">AWS CLI</div>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button>{{ finding.remediation.cli }}</div>
+        <div class="remediation-label">Terraform</div>
+        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)">Copy</button>{{ finding.remediation.terraform }}</div>
+        <div class="remediation-doc"><a href="{{ finding.remediation.doc_url }}" target="_blank" rel="noopener">AWS Documentation &rarr;</a></div>
+      </div>
+    </details>
+    {% endif %}
   </div>
   {% endfor %}
   {% endfor %}
@@ -322,6 +478,18 @@
   </div>
   {% endif %}
 
+  <!-- CIS Benchmark Coverage -->
+  {% if cis_controls %}
+  <div class="cis-section">
+    <div class="cis-title">CIS AWS Foundations Benchmark Coverage ({{ cis_controls | length }} controls mapped)</div>
+    <div class="cis-grid">
+      {% for ref in cis_controls %}
+      <div class="cis-item">{{ ref }}</div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Footer -->
   <div class="footer">
     Generated by <a href="https://github.com/gebalamariusz/cloud-audit">cloud-audit</a>
@@ -330,5 +498,9 @@
   </div>
 
 </div>
+
+<script>
+function copyCode(btn){var t=btn.parentElement.textContent.replace('Copy','').trim();navigator.clipboard.writeText(t).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy'},1500)});}
+</script>
 </body>
 </html>
