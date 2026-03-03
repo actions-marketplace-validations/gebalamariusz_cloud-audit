@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -13,8 +14,6 @@ from cloud_audit import __version__
 from cloud_audit.models import Severity
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from cloud_audit.models import ScanReport
 
 app = typer.Typer(
@@ -179,8 +178,6 @@ def scan(
     output: Annotated[Path | None, typer.Option("--output", "-o", help="Output file path (.html, .json)")] = None,
 ) -> None:
     """Scan cloud infrastructure and generate an audit report."""
-    from pathlib import Path as PathCls
-
     from cloud_audit.scanner import run_scan
 
     region_list = [r.strip() for r in regions.split(",")] if regions else None
@@ -203,17 +200,16 @@ def scan(
 
     # Write output
     if output:
-        out_path = PathCls(output) if not isinstance(output, PathCls) else output
-        suffix = out_path.suffix.lower()
+        suffix = output.suffix.lower()
         if suffix == ".html":
             from cloud_audit.reports.html import render_html
 
             html = render_html(report)
-            out_path.write_text(html, encoding="utf-8")
-            console.print(f"\n[green]HTML report saved to {out_path}[/green]")
+            output.write_text(html, encoding="utf-8")
+            console.print(f"\n[green]HTML report saved to {output}[/green]")
         elif suffix == ".json":
-            out_path.write_text(report.model_dump_json(indent=2), encoding="utf-8")
-            console.print(f"\n[green]JSON report saved to {out_path}[/green]")
+            output.write_text(report.model_dump_json(indent=2), encoding="utf-8")
+            console.print(f"\n[green]JSON report saved to {output}[/green]")
         else:
             console.print(f"[red]Unsupported output format: {suffix}. Use .html or .json[/red]")
             raise typer.Exit(1)
