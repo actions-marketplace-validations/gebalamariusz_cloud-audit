@@ -11,12 +11,16 @@ from cloud_audit.providers.aws.checks import (
     cloudwatch,
     config_,
     ec2,
+    ecs,
     eip,
     guardduty,
     iam,
     kms,
+    lambda_,
     rds,
     s3,
+    secrets,
+    ssm,
     vpc,
 )
 from cloud_audit.providers.base import BaseProvider
@@ -25,7 +29,23 @@ if TYPE_CHECKING:
     from cloud_audit.providers.base import CheckFn
 
 # Registry of all AWS checks, grouped by service
-_CHECK_MODULES = [iam, s3, ec2, vpc, eip, rds, cloudtrail, guardduty, config_, kms, cloudwatch]
+_CHECK_MODULES = [
+    iam,
+    s3,
+    ec2,
+    vpc,
+    eip,
+    rds,
+    cloudtrail,
+    guardduty,
+    config_,
+    kms,
+    cloudwatch,
+    lambda_,
+    ecs,
+    ssm,
+    secrets,
+]
 
 
 class AWSProvider(BaseProvider):

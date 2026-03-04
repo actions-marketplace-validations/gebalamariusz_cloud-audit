@@ -191,14 +191,166 @@ def check_bucket_versioning(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_bucket_lifecycle(provider: AWSProvider) -> CheckResult:
+    """Check if S3 buckets have lifecycle rules configured."""
+    s3 = provider.session.client("s3")
+    result = CheckResult(check_id="aws-s3-004", check_name="S3 bucket lifecycle policy")
+
+    try:
+        buckets = s3.list_buckets()["Buckets"]
+        for bucket in buckets:
+            name = bucket["Name"]
+            result.resources_scanned += 1
+
+            try:
+                lifecycle = s3.get_bucket_lifecycle_configuration(Bucket=name)
+                rules = lifecycle.get("Rules", [])
+                has_enabled = any(r.get("Status") == "Enabled" for r in rules)
+                if not has_enabled:
+                    result.findings.append(
+                        Finding(
+                            check_id="aws-s3-004",
+                            title=f"S3 bucket '{name}' has no active lifecycle rules",
+                            severity=Severity.LOW,
+                            category=Category.COST,
+                            resource_type="AWS::S3::Bucket",
+                            resource_id=name,
+                            description=f"Bucket '{name}' has lifecycle rules but none are enabled. Old or incomplete objects accumulate cost.",
+                            recommendation="Enable lifecycle rules to transition or expire objects automatically.",
+                            remediation=Remediation(
+                                cli=(
+                                    f"aws s3api put-bucket-lifecycle-configuration --bucket {name} "
+                                    f"--lifecycle-configuration '{{"
+                                    f'"Rules":[{{"ID":"auto-archive","Status":"Enabled",'
+                                    f'"Transitions":[{{"Days":90,"StorageClass":"GLACIER"}}],'
+                                    f'"Filter":{{"Prefix":""}}}}]}}\''
+                                ),
+                                terraform=(
+                                    f'resource "aws_s3_bucket_lifecycle_configuration" "{name}" {{\n'
+                                    f'  bucket = "{name}"\n'
+                                    f"  rule {{\n"
+                                    f'    id     = "auto-archive"\n'
+                                    f'    status = "Enabled"\n'
+                                    f"    transition {{\n"
+                                    f"      days          = 90\n"
+                                    f'      storage_class = "GLACIER"\n'
+                                    f"    }}\n"
+                                    f"  }}\n"
+                                    f"}}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html",
+                                effort=Effort.LOW,
+                            ),
+                        )
+                    )
+            except Exception as exc:
+                error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+                if error_code == "NoSuchLifecycleConfiguration":
+                    result.findings.append(
+                        Finding(
+                            check_id="aws-s3-004",
+                            title=f"S3 bucket '{name}' has no lifecycle policy",
+                            severity=Severity.LOW,
+                            category=Category.COST,
+                            resource_type="AWS::S3::Bucket",
+                            resource_id=name,
+                            description=f"Bucket '{name}' has no lifecycle configuration. Objects never expire or transition to cheaper storage.",
+                            recommendation="Add lifecycle rules to transition old objects to Glacier or expire them.",
+                            remediation=Remediation(
+                                cli=(
+                                    f"aws s3api put-bucket-lifecycle-configuration --bucket {name} "
+                                    f"--lifecycle-configuration '{{"
+                                    f'"Rules":[{{"ID":"auto-archive","Status":"Enabled",'
+                                    f'"Transitions":[{{"Days":90,"StorageClass":"GLACIER"}}],'
+                                    f'"Filter":{{"Prefix":""}}}}]}}\''
+                                ),
+                                terraform=(
+                                    f'resource "aws_s3_bucket_lifecycle_configuration" "{name}" {{\n'
+                                    f'  bucket = "{name}"\n'
+                                    f"  rule {{\n"
+                                    f'    id     = "auto-archive"\n'
+                                    f'    status = "Enabled"\n'
+                                    f"    transition {{\n"
+                                    f"      days          = 90\n"
+                                    f'      storage_class = "GLACIER"\n'
+                                    f"    }}\n"
+                                    f"  }}\n"
+                                    f"}}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html",
+                                effort=Effort.LOW,
+                            ),
+                        )
+                    )
+                else:
+                    continue
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_access_logging(provider: AWSProvider) -> CheckResult:
+    """Check if S3 buckets have server access logging enabled."""
+    s3 = provider.session.client("s3")
+    result = CheckResult(check_id="aws-s3-005", check_name="S3 access logging")
+
+    try:
+        buckets = s3.list_buckets()["Buckets"]
+        for bucket in buckets:
+            name = bucket["Name"]
+            result.resources_scanned += 1
+
+            try:
+                logging_config = s3.get_bucket_logging(Bucket=name)
+                if "LoggingEnabled" not in logging_config:
+                    result.findings.append(
+                        Finding(
+                            check_id="aws-s3-005",
+                            title=f"S3 bucket '{name}' does not have access logging enabled",
+                            severity=Severity.MEDIUM,
+                            category=Category.SECURITY,
+                            resource_type="AWS::S3::Bucket",
+                            resource_id=name,
+                            description=f"Bucket '{name}' has no server access logging. Access attempts are not being recorded.",
+                            recommendation="Enable server access logging to track requests to the bucket.",
+                            remediation=Remediation(
+                                cli=(
+                                    f"aws s3api put-bucket-logging --bucket {name} "
+                                    f"--bucket-logging-status '{{"
+                                    f'"LoggingEnabled":{{"TargetBucket":"{name}-logs","TargetPrefix":"access-logs/"}}}}\''
+                                ),
+                                terraform=(
+                                    f'resource "aws_s3_bucket_logging" "{name}" {{\n'
+                                    f'  bucket        = "{name}"\n'
+                                    f'  target_bucket = "{name}-logs"\n'
+                                    f'  target_prefix = "access-logs/"\n'
+                                    f"}}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html",
+                                effort=Effort.LOW,
+                            ),
+                        )
+                    )
+            except Exception:
+                continue
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all S3 checks bound to the provider."""
     checks: list[CheckFn] = [
         partial(check_public_buckets, provider),
         partial(check_bucket_encryption, provider),
         partial(check_bucket_versioning, provider),
+        partial(check_bucket_lifecycle, provider),
+        partial(check_access_logging, provider),
     ]
     for fn in checks:
         fn.category = Category.SECURITY
     checks[2].category = Category.RELIABILITY
+    checks[3].category = Category.COST
     return checks

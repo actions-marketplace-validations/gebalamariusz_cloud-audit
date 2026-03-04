@@ -21,9 +21,9 @@
 
 59% of cloud security teams receive **500+ alerts daily**. 55% admit to **missing critical ones** ([Forrester/HelpNetSecurity](https://www.helpnetsecurity.com/2023/10/cloud-alert-fatigue/)). Most scanners make this worse, not better. cloud-audit takes a different approach:
 
-- **27 curated, high-signal checks** - every check catches something an attacker would actually exploit
+- **42 curated, high-signal checks** - every check catches something an attacker would actually exploit
 - **Every finding = copy-paste fix** - AWS CLI command + Terraform HCL + docs link, ready to go
-- **CIS Benchmark mapped** - 14 controls from CIS AWS Foundations Benchmark, compliance evidence included
+- **CIS Benchmark mapped** - 15 controls from CIS AWS Foundations Benchmark, compliance evidence included
 - **12 seconds, not 12 minutes** - scan completes before your coffee gets cold
 - **Zero configuration** - `pip install cloud-audit && cloud-audit scan` gives results immediately
 - **Beautiful reports** - dark-mode HTML report you can send to your manager or client
@@ -32,7 +32,7 @@
   <img src="assets/report-preview.png" alt="cloud-audit dark-mode HTML report preview" width="700">
 </p>
 
-> cloud-audit is not another Prowler. Prowler has 576 checks and takes hours. We have 27 checks and take seconds. Every finding comes with a ready-to-use fix.
+> cloud-audit is not another Prowler. Prowler has 576 checks and takes hours. We have 42 checks and take seconds. Every finding comes with a ready-to-use fix.
 
 ## Every Finding = A Fix
 
@@ -123,6 +123,19 @@ pip install -e .
 | KMS key rotation disabled | `aws-kms-001` | Medium | Customer-managed keys without automatic rotation (CIS 3.6) |
 | KMS wildcard key policy | `aws-kms-002` | High | Key policy with Principal: * allows any AWS principal to use the key |
 | Root usage alarm missing | `aws-cw-001` | High | No CloudWatch alarm for root account usage (CIS 4.3) |
+| Overly permissive IAM policy | `aws-iam-005` | Critical | IAM policy with Action: * and Resource: * grants full admin access |
+| Weak password policy | `aws-iam-006` | Medium | Account password policy doesn't meet CIS requirements (CIS 1.8) |
+| S3 access logging disabled | `aws-s3-005` | Medium | No server access logging to track bucket requests |
+| EC2 IMDSv1 enabled | `aws-ec2-004` | High | Instance metadata v1 is vulnerable to SSRF credential theft |
+| Lambda public function URL | `aws-lambda-001` | High | Lambda function URL with AuthType=NONE (unauthenticated) |
+| Lambda deprecated runtime | `aws-lambda-002` | Medium | EOL runtime without security patches |
+| Lambda env var secrets | `aws-lambda-003` | High | Potential secrets in Lambda environment variables |
+| ECS privileged container | `aws-ecs-001` | Critical | Container runs with privileged mode (root host access) |
+| ECS missing log config | `aws-ecs-002` | High | Container without logging makes debugging impossible |
+| ECS Exec enabled | `aws-ecs-003` | Medium | Interactive shell access enabled (risky in production) |
+| EC2 not managed by SSM | `aws-ssm-001` | Medium | Running instance not registered with Systems Manager |
+| SSM insecure parameter | `aws-ssm-002` | High | Secret-like parameter stored as String instead of SecureString |
+| Secret rotation disabled | `aws-sm-001` | Medium | Secrets Manager secret without automatic rotation |
 
 ### Cost
 
@@ -130,6 +143,8 @@ pip install -e .
 |-------|----|----------|-------------|
 | Unattached Elastic IPs | `aws-eip-001` | Low | Unattached EIPs cost ~$3.65/month each |
 | Stopped EC2 instances | `aws-ec2-003` | Low | Stopped instances still incur EBS charges |
+| S3 no lifecycle policy | `aws-s3-004` | Low | No lifecycle rules to transition/expire old objects |
+| Unused secret | `aws-sm-002` | Low | Secret not accessed in 90+ days ($0.40/month) |
 
 ### Reliability
 
@@ -208,13 +223,13 @@ A score of **80+** is good, **50-79** needs attention, and **below 50** requires
 
 | Feature | cloud-audit | Prowler | ScoutSuite* |
 |---------|-------------|---------|-------------|
-| Checks | 27 (curated) | 576 (AWS) | ~200 |
+| Checks | 42 (curated) | 576 (AWS) | ~200 |
 | Scan time | ~12 seconds | 1-4 hours | 30-60 minutes |
 | Setup | `pip install` | `pip install` + config | `pip install` + config |
 | Alert fatigue | Zero - every finding matters | High - hundreds of findings | Moderate |
 | **Terraform fix code** | **Yes (copy-paste)** | No | No |
 | **CLI fix commands** | **Yes (copy-paste)** | Text descriptions | No |
-| **CIS Benchmark mapping** | Yes (10 controls) | Yes (full) | No |
+| **CIS Benchmark mapping** | Yes (15 controls) | Yes (full) | No |
 | HTML report | Dark-mode, client-ready | Functional | Interactive |
 | Maintenance | Active | Active | Inactive (12+ months) |
 
@@ -246,7 +261,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 - ~~**v0.1.0** - 17 AWS checks, CLI, HTML/JSON reports~~
 - ~~**v0.2.0** - Remediation engine (CLI + Terraform), CIS Benchmark mapping, 45 moto tests~~
 - ~~**v0.3.0** - CloudTrail, GuardDuty, Config, KMS, CloudWatch checks (27 total)~~
-- **v0.4.0** - Lambda, ECS, SSM, Secrets Manager checks (42 total)
+- ~~**v0.4.0** - Lambda, ECS, SSM, Secrets Manager checks (42 total)~~
 - **v0.5.0** - SARIF output (GitHub Security integration), config file, baseline/suppress
 - **v1.0.0** - Executive-ready reports, scan diff/compare, 45 curated checks
 

@@ -1,3 +1,5 @@
 """cloud-audit - Scan your cloud infrastructure for security, cost, and reliability issues."""
 
-__version__ = "0.2.0"
+from importlib.metadata import version
+
+__version__ = version("cloud-audit")

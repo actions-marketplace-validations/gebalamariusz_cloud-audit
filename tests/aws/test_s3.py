@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cloud_audit.providers.aws.checks.s3 import (
+    check_access_logging,
     check_bucket_encryption,
+    check_bucket_lifecycle,
     check_bucket_versioning,
     check_public_buckets,
 )
@@ -100,3 +102,83 @@ def test_bucket_versioning_fail(mock_aws_provider: AWSProvider) -> None:
     assert ver_findings[0].severity.value == "low"
     assert ver_findings[0].remediation is not None
     assert "put-bucket-versioning" in ver_findings[0].remediation.cli
+
+
+def test_bucket_lifecycle_pass(mock_aws_provider: AWSProvider) -> None:
+    """Bucket with lifecycle rules - no finding."""
+    s3 = mock_aws_provider.session.client("s3")
+    s3.create_bucket(
+        Bucket="lifecycle-bucket",
+        CreateBucketConfiguration={"LocationConstraint": "eu-central-1"},
+    )
+    s3.put_bucket_lifecycle_configuration(
+        Bucket="lifecycle-bucket",
+        LifecycleConfiguration={
+            "Rules": [
+                {
+                    "ID": "archive",
+                    "Status": "Enabled",
+                    "Filter": {"Prefix": ""},
+                    "Transitions": [{"Days": 90, "StorageClass": "GLACIER"}],
+                }
+            ]
+        },
+    )
+    result = check_bucket_lifecycle(mock_aws_provider)
+    findings = [f for f in result.findings if f.resource_id == "lifecycle-bucket"]
+    assert len(findings) == 0
+
+
+def test_bucket_lifecycle_fail(mock_aws_provider: AWSProvider) -> None:
+    """Bucket without lifecycle rules - LOW finding."""
+    s3 = mock_aws_provider.session.client("s3")
+    s3.create_bucket(
+        Bucket="no-lifecycle-bucket",
+        CreateBucketConfiguration={"LocationConstraint": "eu-central-1"},
+    )
+    result = check_bucket_lifecycle(mock_aws_provider)
+    findings = [f for f in result.findings if f.resource_id == "no-lifecycle-bucket"]
+    assert len(findings) == 1
+    assert findings[0].severity.value == "low"
+    assert findings[0].category.value == "cost"
+
+
+def test_access_logging_pass(mock_aws_provider: AWSProvider) -> None:
+    """Bucket with access logging - no finding."""
+    s3 = mock_aws_provider.session.client("s3")
+    s3.create_bucket(
+        Bucket="logged-bucket",
+        CreateBucketConfiguration={"LocationConstraint": "eu-central-1"},
+    )
+    s3.create_bucket(
+        Bucket="logged-bucket-logs",
+        CreateBucketConfiguration={"LocationConstraint": "eu-central-1"},
+    )
+    # Grant log-delivery group write access (required by moto)
+    s3.put_bucket_acl(Bucket="logged-bucket-logs", ACL="log-delivery-write")
+    s3.put_bucket_logging(
+        Bucket="logged-bucket",
+        BucketLoggingStatus={
+            "LoggingEnabled": {
+                "TargetBucket": "logged-bucket-logs",
+                "TargetPrefix": "access-logs/",
+            }
+        },
+    )
+    result = check_access_logging(mock_aws_provider)
+    findings = [f for f in result.findings if f.resource_id == "logged-bucket"]
+    assert len(findings) == 0
+
+
+def test_access_logging_fail(mock_aws_provider: AWSProvider) -> None:
+    """Bucket without access logging - MEDIUM finding."""
+    s3 = mock_aws_provider.session.client("s3")
+    s3.create_bucket(
+        Bucket="unlogged-bucket",
+        CreateBucketConfiguration={"LocationConstraint": "eu-central-1"},
+    )
+    result = check_access_logging(mock_aws_provider)
+    findings = [f for f in result.findings if f.resource_id == "unlogged-bucket"]
+    assert len(findings) == 1
+    assert findings[0].severity.value == "medium"
+    assert findings[0].remediation is not None

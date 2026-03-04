@@ -171,12 +171,73 @@ def check_stopped_instances(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_imdsv1(provider: AWSProvider) -> CheckResult:
+    """Check for EC2 instances using IMDSv1 (instance metadata service v1)."""
+    result = CheckResult(check_id="aws-ec2-004", check_name="EC2 IMDSv1 enabled")
+
+    try:
+        for region in provider.regions:
+            ec2 = provider.session.client("ec2", region_name=region)
+            paginator = ec2.get_paginator("describe_instances")
+            for page in paginator.paginate(Filters=[{"Name": "instance-state-name", "Values": ["running"]}]):
+                for reservation in page["Reservations"]:
+                    for instance in reservation["Instances"]:
+                        result.resources_scanned += 1
+                        instance_id = instance["InstanceId"]
+                        name_tag = next(
+                            (t["Value"] for t in instance.get("Tags", []) if t["Key"] == "Name"),
+                            "unnamed",
+                        )
+                        metadata_options = instance.get("MetadataOptions", {})
+                        http_tokens = metadata_options.get("HttpTokens", "optional")
+
+                        if http_tokens != "required":
+                            result.findings.append(
+                                Finding(
+                                    check_id="aws-ec2-004",
+                                    title=f"EC2 instance '{name_tag}' ({instance_id}) allows IMDSv1",
+                                    severity=Severity.HIGH,
+                                    category=Category.SECURITY,
+                                    resource_type="AWS::EC2::Instance",
+                                    resource_id=instance_id,
+                                    region=region,
+                                    description=f"Instance {instance_id} has HttpTokens='{http_tokens}'. IMDSv1 is vulnerable to SSRF attacks that can steal IAM credentials.",
+                                    recommendation="Enforce IMDSv2 by setting HttpTokens to 'required'.",
+                                    remediation=Remediation(
+                                        cli=(
+                                            f"aws ec2 modify-instance-metadata-options "
+                                            f"--instance-id {instance_id} "
+                                            f"--http-tokens required "
+                                            f"--http-endpoint enabled "
+                                            f"--region {region}"
+                                        ),
+                                        terraform=(
+                                            'resource "aws_instance" "example" {\n'
+                                            "  # ...\n"
+                                            "  metadata_options {\n"
+                                            '    http_tokens   = "required"  # Enforce IMDSv2\n'
+                                            '    http_endpoint = "enabled"\n'
+                                            "  }\n"
+                                            "}"
+                                        ),
+                                        doc_url="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html",
+                                        effort=Effort.LOW,
+                                    ),
+                                )
+                            )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all EC2 checks bound to the provider."""
     checks: list[CheckFn] = [
         partial(check_public_amis, provider),
         partial(check_unencrypted_volumes, provider),
         partial(check_stopped_instances, provider),
+        partial(check_imdsv1, provider),
     ]
     for fn in checks:
         fn.category = Category.SECURITY

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cloud_audit.providers.aws.checks.ec2 import (
+    check_imdsv1,
     check_public_amis,
     check_stopped_instances,
     check_unencrypted_volumes,
@@ -72,3 +73,30 @@ def test_stopped_instances_fail(mock_aws_provider: AWSProvider) -> None:
     assert stopped_findings[0].severity.value == "low"
     assert stopped_findings[0].remediation is not None
     assert "terminate-instances" in stopped_findings[0].remediation.cli
+
+
+def test_imdsv1_fail(mock_aws_provider: AWSProvider) -> None:
+    """Running instance with IMDSv1 (default) - HIGH finding."""
+    ec2 = mock_aws_provider.session.client("ec2", region_name="eu-central-1")
+    ec2.run_instances(ImageId="ami-12345678", MinCount=1, MaxCount=1, InstanceType="t2.micro")
+    result = check_imdsv1(mock_aws_provider)
+    findings = [f for f in result.findings if f.check_id == "aws-ec2-004"]
+    assert len(findings) >= 1
+    assert findings[0].severity.value == "high"
+    assert "modify-instance-metadata-options" in findings[0].remediation.cli
+
+
+def test_imdsv1_pass(mock_aws_provider: AWSProvider) -> None:
+    """Running instance with IMDSv2 enforced - no finding."""
+    ec2 = mock_aws_provider.session.client("ec2", region_name="eu-central-1")
+    resp = ec2.run_instances(
+        ImageId="ami-12345678",
+        MinCount=1,
+        MaxCount=1,
+        InstanceType="t2.micro",
+        MetadataOptions={"HttpTokens": "required", "HttpEndpoint": "enabled"},
+    )
+    instance_id = resp["Instances"][0]["InstanceId"]
+    result = check_imdsv1(mock_aws_provider)
+    findings = [f for f in result.findings if f.check_id == "aws-ec2-004" and f.resource_id == instance_id]
+    assert len(findings) == 0

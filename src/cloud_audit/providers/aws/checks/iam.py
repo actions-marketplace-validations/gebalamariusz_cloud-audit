@@ -259,6 +259,188 @@ def check_unused_access_keys(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_overly_permissive_policy(provider: AWSProvider) -> CheckResult:
+    """Check for IAM policies with overly permissive actions (Action: * on Resource: *)."""
+    iam = provider.session.client("iam")
+    result = CheckResult(check_id="aws-iam-005", check_name="Overly permissive IAM policies")
+
+    try:
+        import json
+
+        paginator = iam.get_paginator("list_policies")
+        for page in paginator.paginate(Scope="Local"):
+            for policy in page["Policies"]:
+                result.resources_scanned += 1
+                arn = policy["Arn"]
+                name = policy["PolicyName"]
+
+                try:
+                    version_id = policy["DefaultVersionId"]
+                    doc = iam.get_policy_version(PolicyArn=arn, VersionId=version_id)["PolicyVersion"]["Document"]
+                    if isinstance(doc, str):
+                        doc = json.loads(doc)
+
+                    statements = doc.get("Statement", [])
+                    if isinstance(statements, dict):
+                        statements = [statements]
+
+                    for stmt in statements:
+                        if stmt.get("Effect") != "Allow":
+                            continue
+                        actions = stmt.get("Action", [])
+                        resources = stmt.get("Resource", [])
+                        if isinstance(actions, str):
+                            actions = [actions]
+                        if isinstance(resources, str):
+                            resources = [resources]
+                        if "*" in actions and "*" in resources:
+                            result.findings.append(
+                                Finding(
+                                    check_id="aws-iam-005",
+                                    title=f"IAM policy '{name}' grants full admin access (Action: *, Resource: *)",
+                                    severity=Severity.CRITICAL,
+                                    category=Category.SECURITY,
+                                    resource_type="AWS::IAM::Policy",
+                                    resource_id=arn,
+                                    description=f"Policy '{name}' has a statement with Action: * and Resource: *. This grants unrestricted access to all AWS services.",
+                                    recommendation="Follow least-privilege principle. Replace wildcard actions with specific service actions.",
+                                    remediation=Remediation(
+                                        cli=(
+                                            f"# Review and restrict the policy:\n"
+                                            f"aws iam get-policy-version --policy-arn {arn} --version-id {version_id}\n"
+                                            f"# Create a new version with least-privilege permissions:\n"
+                                            f"aws iam create-policy-version --policy-arn {arn} "
+                                            f"--policy-document file://restricted-policy.json --set-as-default"
+                                        ),
+                                        terraform=(
+                                            f"# Replace wildcard policy with specific permissions:\n"
+                                            f'resource "aws_iam_policy" "{name}" {{\n'
+                                            f'  name = "{name}"\n'
+                                            f"  policy = jsonencode({{\n"
+                                            f'    Version = "2012-10-17"\n'
+                                            f"    Statement = [{{\n"
+                                            f'      Effect   = "Allow"\n'
+                                            f'      Action   = ["s3:GetObject", "s3:ListBucket"]  # specific actions\n'
+                                            f'      Resource = ["arn:aws:s3:::my-bucket/*"]\n'
+                                            f"    }}]\n"
+                                            f"  }})\n"
+                                            f"}}"
+                                        ),
+                                        doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege",
+                                        effort=Effort.HIGH,
+                                    ),
+                                )
+                            )
+                            break  # One finding per policy is enough
+                except Exception:
+                    continue
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_weak_password_policy(provider: AWSProvider) -> CheckResult:
+    """Check if the account password policy meets CIS requirements."""
+    iam = provider.session.client("iam")
+    result = CheckResult(check_id="aws-iam-006", check_name="Password policy strength")
+
+    try:
+        result.resources_scanned = 1
+        try:
+            policy = iam.get_account_password_policy()["PasswordPolicy"]
+        except iam.exceptions.NoSuchEntityException:
+            result.findings.append(
+                Finding(
+                    check_id="aws-iam-006",
+                    title="No account password policy configured",
+                    severity=Severity.MEDIUM,
+                    category=Category.SECURITY,
+                    resource_type="AWS::IAM::AccountPasswordPolicy",
+                    resource_id="password-policy",
+                    description="No custom password policy is set. The default AWS policy is very permissive (6 chars, no complexity).",
+                    recommendation="Set a password policy with minimum 14 characters, requiring uppercase, lowercase, numbers, and symbols.",
+                    remediation=Remediation(
+                        cli=(
+                            "aws iam update-account-password-policy "
+                            "--minimum-password-length 14 "
+                            "--require-symbols --require-numbers "
+                            "--require-uppercase-characters --require-lowercase-characters "
+                            "--max-password-age 90 --password-reuse-prevention 24"
+                        ),
+                        terraform=(
+                            'resource "aws_iam_account_password_policy" "strict" {\n'
+                            "  minimum_password_length        = 14\n"
+                            "  require_lowercase_characters   = true\n"
+                            "  require_uppercase_characters   = true\n"
+                            "  require_numbers                = true\n"
+                            "  require_symbols                = true\n"
+                            "  max_password_age               = 90\n"
+                            "  password_reuse_prevention      = 24\n"
+                            "}"
+                        ),
+                        doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html",
+                        effort=Effort.LOW,
+                    ),
+                    compliance_refs=["CIS 1.8"],
+                )
+            )
+            return result
+
+        issues = []
+        if policy.get("MinimumPasswordLength", 0) < 14:
+            issues.append(f"minimum length {policy.get('MinimumPasswordLength', 0)} (should be >= 14)")
+        if not policy.get("RequireUppercaseCharacters", False):
+            issues.append("uppercase not required")
+        if not policy.get("RequireLowercaseCharacters", False):
+            issues.append("lowercase not required")
+        if not policy.get("RequireNumbers", False):
+            issues.append("numbers not required")
+        if not policy.get("RequireSymbols", False):
+            issues.append("symbols not required")
+
+        if issues:
+            result.findings.append(
+                Finding(
+                    check_id="aws-iam-006",
+                    title=f"Password policy is weak: {', '.join(issues)}",
+                    severity=Severity.MEDIUM,
+                    category=Category.SECURITY,
+                    resource_type="AWS::IAM::AccountPasswordPolicy",
+                    resource_id="password-policy",
+                    description=f"Account password policy does not meet CIS requirements: {', '.join(issues)}.",
+                    recommendation="Update the password policy to require minimum 14 characters with complexity requirements.",
+                    remediation=Remediation(
+                        cli=(
+                            "aws iam update-account-password-policy "
+                            "--minimum-password-length 14 "
+                            "--require-symbols --require-numbers "
+                            "--require-uppercase-characters --require-lowercase-characters "
+                            "--max-password-age 90 --password-reuse-prevention 24"
+                        ),
+                        terraform=(
+                            'resource "aws_iam_account_password_policy" "strict" {\n'
+                            "  minimum_password_length        = 14\n"
+                            "  require_lowercase_characters   = true\n"
+                            "  require_uppercase_characters   = true\n"
+                            "  require_numbers                = true\n"
+                            "  require_symbols                = true\n"
+                            "  max_password_age               = 90\n"
+                            "  password_reuse_prevention      = 24\n"
+                            "}"
+                        ),
+                        doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html",
+                        effort=Effort.LOW,
+                    ),
+                    compliance_refs=["CIS 1.8"],
+                )
+            )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all IAM checks bound to the provider."""
     checks: list[CheckFn] = [
@@ -266,6 +448,8 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
         partial(check_users_mfa, provider),
         partial(check_access_keys_rotation, provider),
         partial(check_unused_access_keys, provider),
+        partial(check_overly_permissive_policy, provider),
+        partial(check_weak_password_policy, provider),
     ]
     for fn in checks:
         fn.category = Category.SECURITY
