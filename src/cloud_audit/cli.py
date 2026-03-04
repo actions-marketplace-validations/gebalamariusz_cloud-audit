@@ -305,6 +305,141 @@ def scan(
 
 
 @app.command()
+def demo() -> None:
+    """Show a demo scan with sample output (no AWS credentials needed)."""
+    import time
+
+    from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn
+
+    console.print()
+
+    # Simulate progress bar
+    with Progress(
+        TextColumn("[bold]Running 17 checks on AWS..."),
+        BarColumn(bar_width=40),
+        TextColumn("{task.completed}/{task.total}"),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Scanning", total=17)
+        for _ in range(17):
+            time.sleep(0.08)
+            progress.advance(task)
+
+    # Health score
+    console.print()
+    console.print(
+        Panel(
+            "[bold yellow]62[/bold yellow] / 100",
+            title="[bold]Health Score[/bold]",
+            border_style="yellow",
+            width=30,
+        )
+    )
+
+    # Summary table
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column(style="dim")
+    table.add_column()
+    table.add_row("Provider", "AWS")
+    table.add_row("Account", "123456789012")
+    table.add_row("Regions", "eu-central-1")
+    table.add_row("Duration", "12s")
+    table.add_row("Resources scanned", "147")
+    table.add_row("Checks passed", "[green]11[/green]")
+    table.add_row("Checks failed", "[red]6[/red]")
+    console.print(table)
+
+    # Findings by severity
+    console.print("\n[bold]Findings by severity:[/bold]")
+    console.print("  [bold red]x CRITICAL: 2[/bold red]")
+    console.print("  [red]x HIGH: 4[/red]")
+    console.print("  [yellow]! MEDIUM: 7[/yellow]")
+    console.print("  [cyan]o LOW: 3[/cyan]")
+
+    # Top findings
+    console.print("\n[bold]Top findings (5 of 16):[/bold]\n")
+
+    ft = Table(box=None, padding=(0, 1), show_header=True, header_style="bold")
+    ft.add_column("Sev", width=8)
+    ft.add_column("Region", width=14)
+    ft.add_column("Check")
+    ft.add_column("Resource")
+    ft.add_column("Title", max_width=55)
+    ft.add_row(
+        "[bold red]CRITICAL[/bold red]",
+        "[dim]global[/dim]",
+        "aws-iam-001",
+        "arn:aws:iam::1234...:root",
+        "Root account without MFA enabled",
+    )
+    ft.add_row(
+        "[bold red]CRITICAL[/bold red]",
+        "[dim]eu-central-1[/dim]",
+        "aws-vpc-002",
+        "sg-0a1b2c3d4e5f67890",
+        "SG open to 0.0.0.0/0 on port 22",
+    )
+    ft.add_row(
+        "[red]HIGH[/red]",
+        "[dim]eu-central-1[/dim]",
+        "aws-rds-001",
+        "production-db",
+        "RDS instance is publicly accessible",
+    )
+    ft.add_row(
+        "[red]HIGH[/red]",
+        "[dim]global[/dim]",
+        "aws-s3-001",
+        "company-backups-2024",
+        "S3 public access block disabled",
+    )
+    ft.add_row(
+        "[yellow]MEDIUM[/yellow]",
+        "[dim]global[/dim]",
+        "aws-iam-003",
+        "deploy-key-AKIA...",
+        "Access key 347 days old (limit: 90)",
+    )
+    console.print(ft)
+
+    console.print("\n  [dim]... and 11 more. See full report for details.[/dim]")
+
+    # Remediation preview
+    console.print("\n[bold]Remediation details (2 of 6 actionable findings):[/bold]\n")
+
+    console.print("  [bold red]CRITICAL[/bold red]  Root account without MFA enabled")
+    console.print("  [dim]Resource:[/dim]   arn:aws:iam::123456789012:root")
+    console.print("  [dim]Compliance:[/dim] CIS 1.5")
+    console.print("  [dim]Effort:[/dim]     [green]LOW[/green]")
+    mfa_cli = "aws iam create-virtual-mfa-device --virtual-mfa-device-name root-mfa"
+    console.print(f"  [dim]CLI:[/dim]        [cyan]{mfa_cli}[/cyan]")
+    console.print('  [dim]Terraform:[/dim]  resource "aws_iam_virtual_mfa_device" "root" { ... }')
+    mfa_docs = "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_enable_virtual.html"
+    console.print(f"  [dim]Docs:[/dim]       {mfa_docs}")
+    console.print()
+
+    console.print("  [bold red]CRITICAL[/bold red]  Security group open to 0.0.0.0/0 on port 22")
+    console.print("  [dim]Resource:[/dim]   sg-0a1b2c3d4e5f67890")
+    console.print("  [dim]Compliance:[/dim] CIS 5.2")
+    console.print("  [dim]Effort:[/dim]     [green]LOW[/green]")
+    sg_cli = (
+        "aws ec2 revoke-security-group-ingress"
+        " --group-id sg-0a1b2c3d4e5f67890"
+        " --protocol tcp --port 22 --cidr 0.0.0.0/0"
+    )
+    console.print(f"  [dim]CLI:[/dim]        [cyan]{sg_cli}[/cyan]")
+    console.print('  [dim]Terraform:[/dim]  resource "aws_security_group_rule" "ssh" { ... }')
+    sg_docs = "https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html"
+    console.print(f"  [dim]Docs:[/dim]       {sg_docs}")
+    console.print()
+
+    console.print(
+        "[dim]This is sample output. Run [bold]cloud-audit scan[/bold] with AWS credentials for a real scan.[/dim]"
+    )
+
+
+@app.command()
 def version() -> None:
     """Show version."""
     console.print(f"cloud-audit {__version__}")

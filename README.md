@@ -14,43 +14,46 @@
 
 ---
 
-```
-$ cloud-audit scan --provider aws --output report.html
-
-Running 17 checks on AWS...
-
- ━━━━━━━━━━━━━━━━━━━━━━━━━ 17/17 00:12
-
- ╭── Health Score ──╮
- │       62         │
- ╰──────────────────╯
-
- Provider          AWS
- Account           123456789012
- Resources scanned 147
- Checks passed     11
- Checks failed     6
-
- Findings by severity:
-   ✖ CRITICAL: 2
-   ✖ HIGH: 4
-   ⚠ MEDIUM: 7
-   ○ LOW: 3
-
- HTML report saved to report.html
-```
+<p align="center">
+  <img src="assets/demo.gif" alt="cloud-audit terminal output showing health score, findings, and remediation" width="700">
+</p>
 
 ## Why cloud-audit?
 
-Most cloud security scanners give you hundreds of findings, and you end up ignoring all of them. cloud-audit takes a different approach:
+59% of cloud security teams receive **500+ alerts daily**. 55% admit to **missing critical ones** ([Forrester/HelpNetSecurity](https://www.helpnetsecurity.com/2023/10/cloud-alert-fatigue/)). Most scanners make this worse, not better. cloud-audit takes a different approach:
 
 - **17 curated, high-signal checks** - every check catches something an attacker would actually exploit
+- **Every finding = copy-paste fix** - AWS CLI command + Terraform HCL + docs link, ready to go
+- **CIS Benchmark mapped** - 10 controls from CIS AWS Foundations Benchmark, compliance evidence included
 - **12 seconds, not 12 minutes** - scan completes before your coffee gets cold
-- **Zero configuration** - uses your existing AWS credentials, works out of the box
+- **Zero configuration** - `pip install cloud-audit && cloud-audit scan` gives results immediately
 - **Beautiful reports** - dark-mode HTML report you can send to your manager or client
-- **Single `pip install`** - no Java, no Docker required, no 50-step setup guide
 
-> **Positioning:** cloud-audit is not another Prowler. Prowler has 576 checks and takes hours. We have 17 checks and take seconds. Every finding matters. Every report is actionable.
+> cloud-audit is not another Prowler. Prowler has 576 checks and takes hours. We have 17 checks and take seconds. Every finding comes with a ready-to-use fix.
+
+## Every Finding = A Fix
+
+This is what makes cloud-audit different. Run with `-R` and every finding includes a ready-to-use remediation:
+
+```
+$ cloud-audit scan -R
+
+  CRITICAL  Root account without MFA enabled
+  Resource:   arn:aws:iam::123456789012:root
+  Compliance: CIS 1.5
+  Effort:     LOW
+  CLI:        aws iam create-virtual-mfa-device --virtual-mfa-device-name root-mfa
+  Terraform:  resource "aws_iam_virtual_mfa_device" "root" { ... }
+  Docs:       https://docs.aws.amazon.com/IAM/latest/UserGuide/...
+
+  CRITICAL  Security group open to 0.0.0.0/0 on port 22
+  Resource:   sg-0a1b2c3d4e5f67890
+  Compliance: CIS 5.2
+  CLI:        aws ec2 revoke-security-group-ingress --group-id sg-... --port 22
+  Terraform:  resource "aws_security_group_rule" "ssh_restricted" { ... }
+```
+
+Export all fixes as a bash script: `cloud-audit scan --export-fixes fixes.sh`
 
 ## Quick Start
 
@@ -190,15 +193,19 @@ A score of **80+** is good, **50-79** needs attention, and **below 50** requires
 
 ## How It Compares
 
-| Feature | cloud-audit | Prowler | ScoutSuite |
-|---------|-------------|---------|------------|
+| Feature | cloud-audit | Prowler | ScoutSuite* |
+|---------|-------------|---------|-------------|
 | Checks | 17 (curated) | 576 (AWS) | ~200 |
 | Scan time | ~12 seconds | 1-4 hours | 30-60 minutes |
 | Setup | `pip install` | `pip install` + config | `pip install` + config |
 | Alert fatigue | Zero - every finding matters | High - hundreds of findings | Moderate |
-| Remediation | Copy-paste CLI + Terraform | Text descriptions | None |
+| **Terraform fix code** | **Yes (copy-paste)** | No | No |
+| **CLI fix commands** | **Yes (copy-paste)** | Text descriptions | No |
+| **CIS Benchmark mapping** | Yes (10 controls) | Yes (full) | No |
 | HTML report | Dark-mode, client-ready | Functional | Interactive |
 | Maintenance | Active | Active | Inactive (12+ months) |
+
+\* ScoutSuite has had no releases in over 12 months and is effectively unmaintained.
 
 ## Development
 
@@ -225,10 +232,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 
 - ~~**v0.1.0** - 17 AWS checks, CLI, HTML/JSON reports~~
 - ~~**v0.2.0** - Remediation engine (CLI + Terraform), CIS Benchmark mapping, 45 moto tests~~
-- **v0.3.0** - CloudTrail, GuardDuty, Config, KMS, CloudWatch checks
-- **v0.4.0** - Lambda, ECS, SSM, Secrets Manager checks + IAM/EC2/S3 expansions
-- **v0.5.0** - SARIF output (GitHub Security integration), config file, baseline/suppress, cross-account scanning
-- **v1.0.0** - Executive-ready reports, scan diff/compare, documentation site
+- **v0.3.0** - CloudTrail, GuardDuty, Config, KMS, CloudWatch checks (27 total)
+- **v0.4.0** - Lambda, ECS, SSM, Secrets Manager checks (42 total)
+- **v0.5.0** - SARIF output (GitHub Security integration), config file, baseline/suppress
+- **v1.0.0** - Executive-ready reports, scan diff/compare, 45 curated checks
+
+See [ROADMAP.md](ROADMAP.md) for the full plan.
 
 ## License
 
