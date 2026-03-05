@@ -169,24 +169,164 @@ cloud-audit scan --regions all
 # Filter by category
 cloud-audit scan --categories security,cost
 
+# Filter by minimum severity
+cloud-audit scan --min-severity high
+
 # Show remediation details (CLI commands, Terraform, docs)
 cloud-audit scan -R
 
 # Export all fix commands as a dry-run bash script
 cloud-audit scan --export-fixes fixes.sh
 
-# Generate HTML report
-cloud-audit scan --output report.html
+# Quiet mode (exit code only, no output)
+cloud-audit scan --quiet
 
-# Generate JSON report (for CI/CD pipelines)
-cloud-audit scan --output report.json
-
-# Combine: remediation + HTML report
-cloud-audit scan -R --output report.html
+# Cross-account scanning via IAM role
+cloud-audit scan --role-arn arn:aws:iam::987654321098:role/auditor
 
 # Show version
 cloud-audit version
+
+# List all available checks
+cloud-audit list-checks
+cloud-audit list-checks --categories security
 ```
+
+### Output Formats
+
+```bash
+# Rich terminal output (default)
+cloud-audit scan
+
+# JSON (to stdout)
+cloud-audit scan --format json
+
+# JSON (to file)
+cloud-audit scan --format json --output report.json
+
+# SARIF for GitHub Code Scanning
+cloud-audit scan --format sarif --output results.sarif
+
+# Markdown (for PR comments)
+cloud-audit scan --format markdown --output report.md
+
+# HTML report (requires --output)
+cloud-audit scan --format html --output report.html
+
+# Auto-detect format from file extension
+cloud-audit scan --output report.json
+cloud-audit scan --output results.sarif
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Clean - no findings |
+| 1 | Findings detected |
+| 2 | Scan error (bad credentials, invalid config, etc.) |
+
+### Configuration File
+
+Create a `.cloud-audit.yml` in your project root:
+
+```yaml
+provider: aws
+regions:
+  - eu-central-1
+  - eu-west-1
+min_severity: medium
+exclude_checks:
+  - aws-eip-001
+  - aws-ec2-003
+suppressions:
+  - check_id: aws-vpc-001
+    resource_id: vpc-abc123
+    reason: "Legacy VPC, migration planned for Q3"
+```
+
+Config is auto-detected from the current directory. Override with `--config path/to/.cloud-audit.yml`.
+
+**Precedence:** CLI flags > environment variables > config file > defaults.
+
+### Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `CLOUD_AUDIT_REGIONS` | Comma-separated regions | `eu-central-1,eu-west-1` |
+| `CLOUD_AUDIT_MIN_SEVERITY` | Minimum severity filter | `high` |
+| `CLOUD_AUDIT_EXCLUDE_CHECKS` | Comma-separated check IDs to skip | `aws-eip-001,aws-iam-001` |
+| `CLOUD_AUDIT_ROLE_ARN` | IAM role ARN for cross-account | `arn:aws:iam::...:role/auditor` |
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: Cloud Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  pull-requests: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install cloud-audit
+        run: pip install cloud-audit
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      # SARIF upload to GitHub Security tab
+      - name: Scan (SARIF)
+        continue-on-error: true
+        run: cloud-audit scan --format sarif --output results.sarif
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
+          category: cloud-audit
+
+      # Markdown report as PR comment
+      - name: Scan (Markdown)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: cloud-audit scan --format markdown --output report.md
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: report.md
+```
+
+This gives you:
+- **Security tab**: findings appear as Code Scanning alerts with deduplication across runs
+- **PR comments**: a Markdown summary posted automatically on every pull request
+- **Exit code 1** when findings exist (use `continue-on-error: true` to prevent blocking)
 
 ## AWS Permissions
 
@@ -262,7 +402,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 - ~~**v0.2.0** - Remediation engine (CLI + Terraform), CIS Benchmark mapping, 45 moto tests~~
 - ~~**v0.3.0** - CloudTrail, GuardDuty, Config, KMS, CloudWatch checks (27 total)~~
 - ~~**v0.4.0** - Lambda, ECS, SSM, Secrets Manager checks (42 total)~~
-- **v0.5.0** - SARIF output (GitHub Security integration), config file, baseline/suppress
+- ~~**v0.5.1** - SARIF output (GitHub Security integration), config file, suppressions, CI/CD~~
 - **v1.0.0** - Executive-ready reports, scan diff/compare, 45 curated checks
 
 See [ROADMAP.md](ROADMAP.md) for the full plan.
