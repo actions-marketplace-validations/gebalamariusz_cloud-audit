@@ -165,14 +165,64 @@ def check_rds_multi_az(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_rds_auto_minor_upgrade(provider: AWSProvider) -> CheckResult:
+    """Check for RDS instances with automatic minor version upgrade disabled."""
+    result = CheckResult(check_id="aws-rds-004", check_name="RDS auto minor upgrade")
+
+    try:
+        for region in provider.regions:
+            rds = provider.session.client("rds", region_name=region)
+            paginator = rds.get_paginator("describe_db_instances")
+
+            for page in paginator.paginate():
+                for db in page["DBInstances"]:
+                    result.resources_scanned += 1
+                    db_id = db["DBInstanceIdentifier"]
+
+                    if not db.get("AutoMinorVersionUpgrade", True):
+                        result.findings.append(
+                            Finding(
+                                check_id="aws-rds-004",
+                                title=f"RDS instance '{db_id}' has auto minor upgrade disabled",
+                                severity=Severity.LOW,
+                                category=Category.RELIABILITY,
+                                resource_type="AWS::RDS::DBInstance",
+                                resource_id=db_id,
+                                region=region,
+                                description=f"RDS instance '{db_id}' will not automatically receive minor engine version upgrades with security patches.",
+                                recommendation="Enable auto minor version upgrade to receive security patches automatically.",
+                                remediation=Remediation(
+                                    cli=(
+                                        f"aws rds modify-db-instance --db-instance-identifier {db_id} "
+                                        f"--auto-minor-version-upgrade --apply-immediately"
+                                    ),
+                                    terraform=(
+                                        f'resource "aws_db_instance" "{db_id}" {{\n'
+                                        f"  # ...\n"
+                                        f"  auto_minor_version_upgrade = true\n"
+                                        f"}}"
+                                    ),
+                                    doc_url="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_UpgradeDBInstance.Upgrading.html",
+                                    effort=Effort.LOW,
+                                ),
+                            )
+                        )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all RDS checks bound to the provider."""
     checks: list[CheckFn] = [
         partial(check_rds_public_access, provider),
         partial(check_rds_encryption, provider),
         partial(check_rds_multi_az, provider),
+        partial(check_rds_auto_minor_upgrade, provider),
     ]
     for fn in checks:
         fn.category = Category.SECURITY
     checks[2].category = Category.RELIABILITY
+    checks[3].category = Category.RELIABILITY
     return checks

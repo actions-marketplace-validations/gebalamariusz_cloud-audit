@@ -8,6 +8,7 @@ from cloud_audit.providers.aws.checks.ec2 import (
     check_imdsv1,
     check_public_amis,
     check_stopped_instances,
+    check_termination_protection,
     check_unencrypted_volumes,
 )
 
@@ -99,4 +100,28 @@ def test_imdsv1_pass(mock_aws_provider: AWSProvider) -> None:
     instance_id = resp["Instances"][0]["InstanceId"]
     result = check_imdsv1(mock_aws_provider)
     findings = [f for f in result.findings if f.check_id == "aws-ec2-004" and f.resource_id == instance_id]
+    assert len(findings) == 0
+
+
+def test_termination_protection_fail(mock_aws_provider: AWSProvider) -> None:
+    """Running instance without termination protection - LOW finding."""
+    ec2 = mock_aws_provider.session.client("ec2", region_name="eu-central-1")
+    resp = ec2.run_instances(ImageId="ami-12345678", MinCount=1, MaxCount=1, InstanceType="t2.micro")
+    instance_id = resp["Instances"][0]["InstanceId"]
+    result = check_termination_protection(mock_aws_provider)
+    findings = [f for f in result.findings if f.check_id == "aws-ec2-005" and f.resource_id == instance_id]
+    assert len(findings) >= 1
+    assert findings[0].severity.value == "low"
+    assert findings[0].remediation is not None
+    assert "disable-api-termination" in findings[0].remediation.cli
+
+
+def test_termination_protection_pass(mock_aws_provider: AWSProvider) -> None:
+    """Running instance with termination protection - no finding."""
+    ec2 = mock_aws_provider.session.client("ec2", region_name="eu-central-1")
+    resp = ec2.run_instances(ImageId="ami-12345678", MinCount=1, MaxCount=1, InstanceType="t2.micro")
+    instance_id = resp["Instances"][0]["InstanceId"]
+    ec2.modify_instance_attribute(InstanceId=instance_id, DisableApiTermination={"Value": True})
+    result = check_termination_protection(mock_aws_provider)
+    findings = [f for f in result.findings if f.check_id == "aws-ec2-005" and f.resource_id == instance_id]
     assert len(findings) == 0

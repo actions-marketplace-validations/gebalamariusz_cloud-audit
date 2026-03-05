@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cloud_audit.providers.aws.checks.rds import (
+    check_rds_auto_minor_upgrade,
     check_rds_encryption,
     check_rds_multi_az,
     check_rds_public_access,
@@ -107,3 +108,32 @@ def test_rds_multi_az_fail(mock_aws_provider: AWSProvider) -> None:
     assert az_findings[0].severity.value == "medium"
     assert az_findings[0].remediation is not None
     assert "--multi-az" in az_findings[0].remediation.cli
+
+
+def test_rds_auto_minor_upgrade_pass(mock_aws_provider: AWSProvider) -> None:
+    """RDS with auto minor upgrade enabled (default) - no finding."""
+    rds = mock_aws_provider.session.client("rds", region_name="eu-central-1")
+    _create_db_instance(rds, "upgraded-db")
+    result = check_rds_auto_minor_upgrade(mock_aws_provider)
+    findings = [f for f in result.findings if f.resource_id == "upgraded-db"]
+    assert len(findings) == 0
+
+
+def test_rds_auto_minor_upgrade_fail(mock_aws_provider: AWSProvider) -> None:
+    """RDS with auto minor upgrade disabled - LOW finding."""
+    rds = mock_aws_provider.session.client("rds", region_name="eu-central-1")
+    rds.create_db_instance(
+        DBInstanceIdentifier="no-upgrade-db",
+        DBInstanceClass="db.m5.large",
+        Engine="mysql",
+        MasterUsername="admin",
+        MasterUserPassword="SecurePassword123!",  # noqa: S106
+        AllocatedStorage=20,
+        AutoMinorVersionUpgrade=False,
+    )
+    result = check_rds_auto_minor_upgrade(mock_aws_provider)
+    findings = [f for f in result.findings if f.resource_id == "no-upgrade-db"]
+    assert len(findings) == 1
+    assert findings[0].severity.value == "low"
+    assert findings[0].remediation is not None
+    assert "--auto-minor-version-upgrade" in findings[0].remediation.cli

@@ -231,6 +231,66 @@ def check_imdsv1(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_termination_protection(provider: AWSProvider) -> CheckResult:
+    """Check for EC2 instances without termination protection enabled."""
+    result = CheckResult(check_id="aws-ec2-005", check_name="EC2 termination protection")
+
+    try:
+        for region in provider.regions:
+            ec2 = provider.session.client("ec2", region_name=region)
+            paginator = ec2.get_paginator("describe_instances")
+            for page in paginator.paginate(Filters=[{"Name": "instance-state-name", "Values": ["running"]}]):
+                for reservation in page["Reservations"]:
+                    for instance in reservation["Instances"]:
+                        result.resources_scanned += 1
+                        instance_id = instance["InstanceId"]
+                        name_tag = next(
+                            (t["Value"] for t in instance.get("Tags", []) if t["Key"] == "Name"),
+                            "unnamed",
+                        )
+
+                        try:
+                            attr = ec2.describe_instance_attribute(
+                                InstanceId=instance_id, Attribute="disableApiTermination"
+                            )
+                            protected = attr.get("DisableApiTermination", {}).get("Value", False)
+                        except Exception:
+                            continue
+
+                        if not protected:
+                            result.findings.append(
+                                Finding(
+                                    check_id="aws-ec2-005",
+                                    title=f"EC2 instance '{name_tag}' ({instance_id}) has no termination protection",
+                                    severity=Severity.LOW,
+                                    category=Category.RELIABILITY,
+                                    resource_type="AWS::EC2::Instance",
+                                    resource_id=instance_id,
+                                    region=region,
+                                    description=f"Instance {instance_id} does not have API termination protection enabled. It can be accidentally terminated.",
+                                    recommendation="Enable termination protection for important instances to prevent accidental deletion.",
+                                    remediation=Remediation(
+                                        cli=(
+                                            f"aws ec2 modify-instance-attribute --instance-id {instance_id} "
+                                            f"--disable-api-termination --region {region}"
+                                        ),
+                                        terraform=(
+                                            'resource "aws_instance" "example" {\n'
+                                            "  # ...\n"
+                                            "  disable_api_termination = true\n"
+                                            "}"
+                                        ),
+                                        doc_url="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_ChangingDisableAPITermination.html",
+                                        effort=Effort.LOW,
+                                    ),
+                                )
+                            )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all EC2 checks bound to the provider."""
     checks: list[CheckFn] = [
@@ -238,8 +298,10 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
         partial(check_unencrypted_volumes, provider),
         partial(check_stopped_instances, provider),
         partial(check_imdsv1, provider),
+        partial(check_termination_protection, provider),
     ]
     for fn in checks:
         fn.category = Category.SECURITY
     checks[2].category = Category.COST
+    checks[4].category = Category.RELIABILITY
     return checks

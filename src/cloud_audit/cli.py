@@ -1,5 +1,9 @@
 """CLI interface for cloud-audit."""
 
+from __future__ import annotations
+
+import os
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -35,7 +39,7 @@ SEVERITY_ICONS = {
 }
 
 
-def _print_summary(report: ScanReport) -> None:
+def _print_summary(report: ScanReport, suppressed_count: int = 0) -> None:
     """Print a rich summary of the scan results to the console."""
     s = report.summary
     all_errored = s.checks_errored > 0 and s.checks_passed == 0 and s.checks_failed == 0
@@ -107,6 +111,8 @@ def _print_summary(report: ScanReport) -> None:
     table.add_row("Checks failed", f"[red]{s.checks_failed}[/red]" if s.checks_failed else "0")
     if s.checks_errored:
         table.add_row("Checks errored", f"[yellow]{s.checks_errored}[/yellow]")
+    if suppressed_count:
+        table.add_row("Findings suppressed", f"[dim]{suppressed_count}[/dim]")
     console.print(table)
 
     # Show errors if any (partial failure)
@@ -242,6 +248,32 @@ def _export_fixes(findings: list[Finding], output_path: Path) -> None:
     console.print(f"[dim]  {len(actionable)} commands (commented out). Review before uncommenting.[/dim]")
 
 
+def _resolve_env_regions() -> str | None:
+    """Read CLOUD_AUDIT_REGIONS env var."""
+    return os.environ.get("CLOUD_AUDIT_REGIONS")
+
+
+def _resolve_env_min_severity() -> Severity | None:
+    """Read CLOUD_AUDIT_MIN_SEVERITY env var."""
+    val = os.environ.get("CLOUD_AUDIT_MIN_SEVERITY")
+    if val:
+        return Severity(val.lower())
+    return None
+
+
+def _resolve_env_exclude_checks() -> list[str] | None:
+    """Read CLOUD_AUDIT_EXCLUDE_CHECKS env var."""
+    val = os.environ.get("CLOUD_AUDIT_EXCLUDE_CHECKS")
+    if val:
+        return [c.strip() for c in val.split(",") if c.strip()]
+    return None
+
+
+def _resolve_env_role_arn() -> str | None:
+    """Read CLOUD_AUDIT_ROLE_ARN env var."""
+    return os.environ.get("CLOUD_AUDIT_ROLE_ARN")
+
+
 @app.command()
 def scan(
     provider: Annotated[str, typer.Option("--provider", "-p", help="Cloud provider")] = "aws",
@@ -250,7 +282,18 @@ def scan(
     categories: Annotated[
         str | None, typer.Option("--categories", "-c", help="Filter: security,cost,reliability")
     ] = None,
-    output: Annotated[Path | None, typer.Option("--output", "-o", help="Output file path (.html, .json)")] = None,
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="Output file path")] = None,
+    fmt: Annotated[
+        str | None, typer.Option("--format", "-f", help="Output format: json, html, sarif, markdown")
+    ] = None,
+    min_severity: Annotated[
+        str | None, typer.Option("--min-severity", help="Minimum severity: critical, high, medium, low, info")
+    ] = None,
+    quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Quiet mode - exit code only")] = False,
+    role_arn: Annotated[str | None, typer.Option("--role-arn", help="IAM role ARN for cross-account scanning")] = None,
+    config: Annotated[
+        Path | None, typer.Option("--config", help="Path to .cloud-audit.yml config file")
+    ] = None,
     remediation: Annotated[
         bool, typer.Option("--remediation", "-R", help="Show remediation details for findings")
     ] = False,
@@ -259,49 +302,200 @@ def scan(
     ] = None,
 ) -> None:
     """Scan cloud infrastructure and generate an audit report."""
+    from cloud_audit.config import CloudAuditConfig, load_config
     from cloud_audit.scanner import run_scan
 
-    region_list = [r.strip() for r in regions.split(",")] if regions else None
+    # Load config file
+    try:
+        cfg = load_config(config)
+    except (ValueError, Exception) as e:
+        console.print(f"[red]Config error: {e}[/red]")
+        raise typer.Exit(2) from None
+
+    # Resolve precedence: CLI flags > env vars > config > defaults
+
+    # Regions: CLI > env > config
+    if regions:
+        region_list = [r.strip() for r in regions.split(",")]
+    elif _resolve_env_regions():
+        region_list = [r.strip() for r in _resolve_env_regions().split(",")]  # type: ignore[union-attr]
+    elif cfg.regions:
+        region_list = cfg.regions
+    else:
+        region_list = None
+
+    # Role ARN: CLI > env > none
+    effective_role_arn = role_arn or _resolve_env_role_arn()
+
+    # Min severity: CLI > env > config
+    effective_severity: Severity | None = None
+    if min_severity:
+        effective_severity = Severity(min_severity.lower())
+    elif _resolve_env_min_severity():
+        effective_severity = _resolve_env_min_severity()
+    elif cfg.min_severity:
+        effective_severity = cfg.min_severity
+
+    # Exclude checks: env extends config
+    env_excludes = _resolve_env_exclude_checks()
+    all_excludes = list(set(cfg.exclude_checks + env_excludes)) if env_excludes else cfg.exclude_checks
+
+    # Build effective config for scanner
+    effective_config = CloudAuditConfig(
+        provider=cfg.provider,
+        profile=cfg.profile,
+        regions=region_list,
+        min_severity=effective_severity,
+        exclude_checks=all_excludes,
+        suppressions=cfg.suppressions,
+    )
+
     category_list = [c.strip() for c in categories.split(",")] if categories else None
 
     # Initialize provider
     if provider == "aws":
         from cloud_audit.providers.aws import AWSProvider
 
-        cloud_provider = AWSProvider(profile=profile, regions=region_list)
+        effective_profile = profile or cfg.profile
+        cloud_provider = AWSProvider(profile=effective_profile, regions=region_list, role_arn=effective_role_arn)
     else:
         console.print(f"[red]Provider '{provider}' is not supported yet. Available: aws[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(2)
 
     # Run scan
-    report = run_scan(cloud_provider, categories=category_list)
+    report, suppressed_count = run_scan(
+        cloud_provider,
+        categories=category_list,
+        config=effective_config,
+        quiet=quiet,
+    )
 
-    # Print summary
-    _print_summary(report)
+    # Determine exit code: 0=clean, 1=findings, 2=errors
+    has_findings = report.summary.total_findings > 0
+    s = report.summary
+    all_errored = s.checks_errored > 0 and s.checks_passed == 0 and s.checks_failed == 0
 
-    # Remediation details
-    if remediation:
-        _print_remediation(report.all_findings)
-
-    # Export fixes script
-    if export_fixes:
-        _export_fixes(report.all_findings, export_fixes)
-
-    # Write output
-    if output:
+    # Format output
+    if fmt:
+        _handle_format(fmt, report, output, quiet)
+    elif output:
+        # Backward compat: detect format from suffix
         suffix = output.suffix.lower()
-        if suffix == ".html":
-            from cloud_audit.reports.html import render_html
-
-            html = render_html(report)
-            output.write_text(html, encoding="utf-8")
-            console.print(f"\n[green]HTML report saved to {output}[/green]")
-        elif suffix == ".json":
-            output.write_text(report.model_dump_json(indent=2), encoding="utf-8")
-            console.print(f"\n[green]JSON report saved to {output}[/green]")
+        suffix_to_fmt = {".json": "json", ".html": "html", ".sarif": "sarif", ".md": "markdown"}
+        detected_fmt = suffix_to_fmt.get(suffix)
+        if detected_fmt:
+            _handle_format(detected_fmt, report, output, quiet)
         else:
-            console.print(f"[red]Unsupported output format: {suffix}. Use .html or .json[/red]")
-            raise typer.Exit(1)
+            console.print(f"[red]Cannot detect format from suffix '{suffix}'. Use --format explicitly.[/red]")
+            raise typer.Exit(2)
+    else:
+        # Default: Rich console output
+        if not quiet:
+            _print_summary(report, suppressed_count)
+
+            if remediation:
+                _print_remediation(report.all_findings)
+
+            if export_fixes:
+                _export_fixes(report.all_findings, export_fixes)
+
+    # Exit code
+    if all_errored:
+        raise typer.Exit(2)
+    if has_findings:
+        raise typer.Exit(1)
+
+
+def _handle_format(fmt: str, report: ScanReport, output: Path | None, quiet: bool) -> None:
+    """Handle --format output. Writes to file or stdout."""
+    if fmt == "json":
+        content = report.model_dump_json(indent=2)
+    elif fmt == "sarif":
+        from cloud_audit.reports.sarif import generate_sarif
+
+        content = generate_sarif(report)
+    elif fmt == "markdown":
+        from cloud_audit.reports.markdown import generate_markdown
+
+        content = generate_markdown(report)
+    elif fmt == "html":
+        from cloud_audit.reports.html import render_html
+
+        content = render_html(report)
+        if not output:
+            console.print("[red]HTML format requires --output <file.html>[/red]")
+            raise typer.Exit(2)
+    else:
+        console.print(f"[red]Unknown format '{fmt}'. Available: json, html, sarif, markdown[/red]")
+        raise typer.Exit(2)
+
+    if output:
+        output.write_text(content, encoding="utf-8")
+        if not quiet:
+            console.print(f"[green]{fmt.upper()} report saved to {output}[/green]")
+    else:
+        sys.stdout.write(content)
+        sys.stdout.write("\n")
+
+
+@app.command(name="list-checks")
+def list_checks(
+    provider: Annotated[str, typer.Option("--provider", "-p", help="Cloud provider")] = "aws",
+    categories: Annotated[
+        str | None, typer.Option("--categories", "-c", help="Filter: security,cost,reliability")
+    ] = None,
+) -> None:
+    """List all available checks."""
+    if provider == "aws":
+        from cloud_audit.providers.aws.provider import _CHECK_MODULES
+    else:
+        console.print(f"[red]Provider '{provider}' is not supported yet. Available: aws[/red]")
+        raise typer.Exit(2)
+
+    category_list = [c.strip() for c in categories.split(",")] if categories else None
+
+    table = Table(title=f"Available checks ({provider.upper()})", show_lines=False)
+    table.add_column("Check", style="bold")
+    table.add_column("Category")
+    table.add_column("Service")
+
+    count = 0
+    for module in _CHECK_MODULES:
+        # Module name = service name (e.g., iam, s3, ec2)
+        service = module.__name__.rsplit(".", 1)[-1].rstrip("_")
+
+        # get_checks requires a provider, but we just need function metadata
+        # Use a sentinel — we won't call the checks, just inspect the partials
+        try:
+            # Create a minimal mock-like object to get check list
+            checks = module.get_checks(None)
+        except Exception:  # noqa: S112
+            continue
+
+        for check_fn in checks:
+            category = getattr(check_fn, "category", "unknown")
+
+            cat_val = getattr(category, "value", category)
+            if category_list and str(category) not in category_list and cat_val not in category_list:
+                continue
+
+            func_name = getattr(check_fn, "func", check_fn).__name__
+            # Convert function name to readable: check_root_mfa -> Root MFA
+            readable = func_name.replace("check_", "").replace("_", " ").title()
+
+            cat_color = {"security": "red", "cost": "yellow", "reliability": "cyan", "performance": "green"}.get(
+                str(getattr(category, "value", category)), "white"
+            )
+
+            table.add_row(
+                readable,
+                f"[{cat_color}]{getattr(category, 'value', category).upper()}[/{cat_color}]",
+                service.upper(),
+            )
+            count += 1
+
+    console.print(table)
+    console.print(f"\n[dim]Total: {count} checks[/dim]")
 
 
 @app.command()

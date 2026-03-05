@@ -245,12 +245,84 @@ def check_vpc_flow_logs(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_unrestricted_nacl(provider: AWSProvider) -> CheckResult:
+    """Check for Network ACLs that allow all inbound traffic from 0.0.0.0/0."""
+    result = CheckResult(check_id="aws-vpc-004", check_name="Unrestricted NACL")
+
+    try:
+        for region in provider.regions:
+            ec2 = provider.session.client("ec2", region_name=region)
+            nacls = ec2.describe_network_acls()["NetworkAcls"]
+
+            for nacl in nacls:
+                # Skip default NACLs -- they are AWS defaults, not user-managed
+                if nacl.get("IsDefault", False):
+                    continue
+
+                nacl_id = nacl["NetworkAclId"]
+                result.resources_scanned += 1
+
+                for entry in nacl.get("Entries", []):
+                    # Only check inbound rules (Egress=False) that ALLOW traffic
+                    if entry.get("Egress", True):
+                        continue
+                    if entry.get("RuleAction") != "allow":
+                        continue
+
+                    cidr = entry.get("CidrBlock", "")
+                    protocol = entry.get("Protocol", "")
+
+                    # Protocol "-1" means all traffic, CIDR 0.0.0.0/0 means from anywhere
+                    if cidr == "0.0.0.0/0" and protocol == "-1":
+                        result.findings.append(
+                            Finding(
+                                check_id="aws-vpc-004",
+                                title=f"NACL '{nacl_id}' allows all inbound traffic from 0.0.0.0/0",
+                                severity=Severity.MEDIUM,
+                                category=Category.SECURITY,
+                                resource_type="AWS::EC2::NetworkAcl",
+                                resource_id=nacl_id,
+                                region=region,
+                                description=f"Network ACL {nacl_id} has an inbound rule allowing all protocols from 0.0.0.0/0. This bypasses security group restrictions at the subnet level.",
+                                recommendation="Restrict NACL inbound rules to specific ports and IP ranges needed for your workloads.",
+                                remediation=Remediation(
+                                    cli=(
+                                        f"aws ec2 replace-network-acl-entry --network-acl-id {nacl_id} "
+                                        f"--rule-number {entry.get('RuleNumber', 100)} "
+                                        f"--protocol -1 --rule-action deny --ingress "
+                                        f"--cidr-block 0.0.0.0/0 --region {region}"
+                                    ),
+                                    terraform=(
+                                        'resource "aws_network_acl_rule" "restrict_inbound" {\n'
+                                        f'  network_acl_id = "{nacl_id}"\n'
+                                        "  rule_number    = 100\n"
+                                        "  egress         = false\n"
+                                        '  protocol       = "tcp"\n'
+                                        '  rule_action    = "allow"\n'
+                                        '  cidr_block     = "10.0.0.0/8"  # Restrict to your CIDR\n'
+                                        "  from_port      = 443\n"
+                                        "  to_port        = 443\n"
+                                        "}"
+                                    ),
+                                    doc_url="https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html",
+                                    effort=Effort.MEDIUM,
+                                ),
+                            )
+                        )
+                        break  # One finding per NACL is enough
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all VPC checks bound to the provider."""
     checks: list[CheckFn] = [
         partial(check_default_vpc_in_use, provider),
         partial(check_open_security_groups, provider),
         partial(check_vpc_flow_logs, provider),
+        partial(check_unrestricted_nacl, provider),
     ]
     for fn in checks:
         fn.category = Category.SECURITY

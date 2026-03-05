@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from cloud_audit.providers.aws.checks.vpc import (
     check_default_vpc_in_use,
     check_open_security_groups,
+    check_unrestricted_nacl,
     check_vpc_flow_logs,
 )
 
@@ -117,3 +118,54 @@ def test_vpc_flow_logs_fail(mock_aws_provider: AWSProvider) -> None:
     assert vpc_findings[0].remediation is not None
     assert "create-flow-logs" in vpc_findings[0].remediation.cli
     assert vpc_findings[0].compliance_refs == ["CIS 3.7"]
+
+
+def test_unrestricted_nacl_pass(mock_aws_provider: AWSProvider) -> None:
+    """Custom NACL with restricted rules - no finding."""
+    ec2 = mock_aws_provider.session.client("ec2", region_name="eu-central-1")
+    vpc = ec2.create_vpc(CidrBlock="10.2.0.0/16")
+    vpc_id = vpc["Vpc"]["VpcId"]
+    nacl = ec2.create_network_acl(VpcId=vpc_id)
+    nacl_id = nacl["NetworkAcl"]["NetworkAclId"]
+    ec2.create_network_acl_entry(
+        NetworkAclId=nacl_id,
+        RuleNumber=100,
+        Protocol="6",  # TCP
+        RuleAction="allow",
+        Egress=False,
+        CidrBlock="10.0.0.0/8",
+        PortRange={"From": 443, "To": 443},
+    )
+    result = check_unrestricted_nacl(mock_aws_provider)
+    findings = [f for f in result.findings if f.resource_id == nacl_id]
+    assert len(findings) == 0
+
+
+def test_unrestricted_nacl_fail(mock_aws_provider: AWSProvider) -> None:
+    """Custom NACL allowing all inbound from 0.0.0.0/0 - MEDIUM finding."""
+    ec2 = mock_aws_provider.session.client("ec2", region_name="eu-central-1")
+    vpc = ec2.create_vpc(CidrBlock="10.3.0.0/16")
+    vpc_id = vpc["Vpc"]["VpcId"]
+    nacl = ec2.create_network_acl(VpcId=vpc_id)
+    nacl_id = nacl["NetworkAcl"]["NetworkAclId"]
+    ec2.create_network_acl_entry(
+        NetworkAclId=nacl_id,
+        RuleNumber=100,
+        Protocol="-1",  # All traffic
+        RuleAction="allow",
+        Egress=False,
+        CidrBlock="0.0.0.0/0",
+    )
+    result = check_unrestricted_nacl(mock_aws_provider)
+    findings = [f for f in result.findings if f.resource_id == nacl_id]
+    assert len(findings) == 1
+    assert findings[0].severity.value == "medium"
+    assert findings[0].remediation is not None
+    assert "replace-network-acl-entry" in findings[0].remediation.cli
+
+
+def test_unrestricted_nacl_skips_default(mock_aws_provider: AWSProvider) -> None:
+    """Default NACLs are skipped (AWS-managed defaults)."""
+    result = check_unrestricted_nacl(mock_aws_provider)
+    # moto creates a default NACL with allow-all - should be skipped
+    assert result.error is None

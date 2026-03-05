@@ -51,8 +51,25 @@ _CHECK_MODULES = [
 class AWSProvider(BaseProvider):
     """AWS cloud provider - uses boto3 to scan resources."""
 
-    def __init__(self, profile: str | None = None, regions: list[str] | None = None) -> None:
-        self._session = boto3.Session(profile_name=profile)
+    def __init__(
+        self,
+        profile: str | None = None,
+        regions: list[str] | None = None,
+        role_arn: str | None = None,
+    ) -> None:
+        base_session = boto3.Session(profile_name=profile)
+
+        if role_arn:
+            sts = base_session.client("sts")
+            creds = sts.assume_role(RoleArn=role_arn, RoleSessionName="cloud-audit-scan")["Credentials"]
+            self._session = boto3.Session(
+                aws_access_key_id=creds["AccessKeyId"],
+                aws_secret_access_key=creds["SecretAccessKey"],
+                aws_session_token=creds["SessionToken"],
+            )
+        else:
+            self._session = base_session
+
         self._sts = self._session.client("sts")
 
         if regions and regions == ["all"]:
