@@ -1,7 +1,7 @@
 <h1 align="center">cloud-audit</h1>
 
 <p align="center">
-  <strong>Fast, opinionated AWS security scanner. Curated checks. Zero noise. Copy-paste fixes.</strong>
+  <strong>Open-source AWS security scanner. 45 checks, each with a ready-to-use fix.</strong>
 </p>
 
 <p align="center">
@@ -14,29 +14,125 @@
 ---
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/gebalamariusz/cloud-audit/main/assets/demo.gif" alt="cloud-audit terminal output showing health score, findings, and remediation" width="700">
+  <img src="https://raw.githubusercontent.com/gebalamariusz/cloud-audit/main/assets/demo.gif" alt="cloud-audit terminal demo" width="700">
 </p>
 
-## Why cloud-audit?
+cloud-audit scans your AWS account for security misconfigurations and gives you a finding-by-finding remediation plan - AWS CLI commands, Terraform HCL, and documentation links you can copy-paste to fix each issue.
 
-59% of cloud security teams receive **500+ alerts daily**. 55% admit to **missing critical ones** ([Forrester/HelpNetSecurity](https://www.helpnetsecurity.com/2023/10/cloud-alert-fatigue/)). Most scanners make this worse, not better. cloud-audit takes a different approach:
+It runs 45 curated checks across 15 AWS services, mapped to 16 CIS AWS Foundations Benchmark controls.
 
-- **42 curated, high-signal checks** - every check catches something an attacker would actually exploit
-- **Every finding = copy-paste fix** - AWS CLI command + Terraform HCL + docs link, ready to go
-- **CIS Benchmark mapped** - 15 controls from CIS AWS Foundations Benchmark, compliance evidence included
-- **12 seconds, not 12 minutes** - scan completes before your coffee gets cold
-- **Zero configuration** - `pip install cloud-audit && cloud-audit scan` gives results immediately
-- **Beautiful reports** - dark-mode HTML report you can send to your manager or client
+## Try it without an AWS account
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/gebalamariusz/cloud-audit/main/assets/report-preview.png" alt="cloud-audit dark-mode HTML report preview" width="700">
-</p>
+```bash
+pip install cloud-audit
+cloud-audit demo
+```
 
-> cloud-audit is not another Prowler. Prowler has 576 checks and takes hours. We have 42 checks and take seconds. Every finding comes with a ready-to-use fix.
+The `demo` command runs a simulated scan with sample data. You can see the output format, health score, and remediation details without any AWS credentials.
 
-## Every Finding = A Fix
+## Quick Start
 
-This is what makes cloud-audit different. Run with `-R` and every finding includes a ready-to-use remediation:
+```bash
+pip install cloud-audit
+cloud-audit scan
+```
+
+That's it. Uses your default AWS credentials and region. You'll get a health score and a list of findings in your terminal.
+
+```bash
+# Show remediation details for each finding
+cloud-audit scan -R
+
+# Specific profile and regions
+cloud-audit scan --profile production --regions eu-central-1,eu-west-1
+
+# Export all fixes as a runnable bash script
+cloud-audit scan --export-fixes fixes.sh
+```
+
+## Who is this for
+
+- **Small teams (1-10 people) without a dedicated security team** - get visibility into your AWS security posture without buying a platform
+- **DevOps/SRE engineers running a pre-deploy check** - scan before shipping, catch misconfigurations early
+- **Consultants doing client audits** - generate a professional HTML report you can hand to a client
+- **Teams that need CIS compliance evidence without paying for Security Hub** - 16 CIS controls mapped and included in reports
+
+## What it checks
+
+45 checks across IAM, S3, EC2, VPC, RDS, Lambda, ECS, CloudTrail, GuardDuty, KMS, SSM, Secrets Manager, CloudWatch, and AWS Config.
+
+**By severity:** 6 Critical, 13 High, 16 Medium, 10 Low.
+
+Every check answers one question: *would an attacker exploit this?* If not, the check doesn't exist.
+
+<details>
+<summary>Full check list</summary>
+
+### Security
+
+| ID | Severity | Description |
+|----|----------|-------------|
+| `aws-iam-001` | Critical | Root account without MFA |
+| `aws-iam-002` | High | IAM user with console access but no MFA |
+| `aws-iam-003` | Medium | Access key older than 90 days |
+| `aws-iam-004` | Medium | Access key unused for 30+ days |
+| `aws-iam-005` | Critical | IAM policy with Action: \* and Resource: \* |
+| `aws-iam-006` | Medium | Password policy below CIS requirements |
+| `aws-s3-001` | High | S3 bucket without public access block |
+| `aws-s3-002` | Medium | S3 bucket without encryption at rest |
+| `aws-s3-005` | Medium | S3 bucket without access logging |
+| `aws-ec2-001` | High | Publicly shared AMI |
+| `aws-ec2-002` | Medium | Unencrypted EBS volume |
+| `aws-ec2-004` | High | EC2 instance with IMDSv1 (SSRF risk) |
+| `aws-vpc-001` | Medium | Default VPC in use |
+| `aws-vpc-002` | Critical | Security group open to 0.0.0.0/0 on sensitive ports |
+| `aws-vpc-003` | Medium | VPC without flow logs |
+| `aws-vpc-004` | Medium | Network ACL allows all inbound from 0.0.0.0/0 |
+| `aws-rds-001` | Critical | Publicly accessible RDS instance |
+| `aws-rds-002` | High | Unencrypted RDS instance |
+| `aws-ct-001` | Critical | No multi-region CloudTrail trail |
+| `aws-ct-002` | High | CloudTrail log file validation disabled |
+| `aws-ct-003` | Critical | CloudTrail S3 bucket is publicly accessible |
+| `aws-gd-001` | High | GuardDuty not enabled |
+| `aws-gd-002` | Medium | GuardDuty findings unresolved for 30+ days |
+| `aws-cfg-001` | Medium | AWS Config not enabled |
+| `aws-cfg-002` | High | AWS Config recorder stopped |
+| `aws-kms-001` | Medium | KMS key without automatic rotation |
+| `aws-kms-002` | High | KMS key policy with Principal: \* |
+| `aws-cw-001` | High | No CloudWatch alarm for root account usage |
+| `aws-lambda-001` | High | Lambda function URL with no authentication |
+| `aws-lambda-002` | Medium | Lambda running on a deprecated runtime |
+| `aws-lambda-003` | High | Potential secrets in Lambda environment variables |
+| `aws-ecs-001` | Critical | ECS task running in privileged mode |
+| `aws-ecs-002` | High | ECS task without log configuration |
+| `aws-ecs-003` | Medium | ECS service with Execute Command enabled |
+| `aws-ssm-001` | Medium | EC2 instance not managed by Systems Manager |
+| `aws-ssm-002` | High | SSM parameter with secret stored as plain String |
+| `aws-sm-001` | Medium | Secrets Manager secret without rotation |
+
+### Cost
+
+| ID | Severity | Description |
+|----|----------|-------------|
+| `aws-eip-001` | Low | Unattached Elastic IP ($3.65/month) |
+| `aws-ec2-003` | Low | Stopped EC2 instance (EBS charges continue) |
+| `aws-s3-004` | Low | S3 bucket without lifecycle rules |
+| `aws-sm-002` | Low | Secrets Manager secret unused for 90+ days ($0.40/month) |
+
+### Reliability
+
+| ID | Severity | Description |
+|----|----------|-------------|
+| `aws-s3-003` | Low | S3 bucket without versioning |
+| `aws-rds-003` | Medium | Single-AZ RDS instance (no automatic failover) |
+| `aws-rds-004` | Low | RDS auto minor version upgrade disabled |
+| `aws-ec2-005` | Low | EC2 instance without termination protection |
+
+</details>
+
+## Every finding includes a fix
+
+This is what makes cloud-audit different from most scanners. Run with `-R` to see remediation for each finding:
 
 ```
 $ cloud-audit scan -R
@@ -56,16 +152,35 @@ $ cloud-audit scan -R
   Terraform:  resource "aws_security_group_rule" "ssh_restricted" { ... }
 ```
 
-Export all fixes as a bash script: `cloud-audit scan --export-fixes fixes.sh`
-
-## Quick Start
+Or export all fixes as a bash script:
 
 ```bash
-pip install cloud-audit
-cloud-audit scan
+cloud-audit scan --export-fixes fixes.sh
 ```
 
-That's it. You'll get a health score and findings in your terminal.
+The script is commented and uses `set -e` - review it, uncomment what you want to apply, and run.
+
+## Reports
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/gebalamariusz/cloud-audit/main/assets/report-preview.png" alt="cloud-audit HTML report" width="700">
+</p>
+
+```bash
+# HTML report (dark-mode, self-contained, client-ready)
+cloud-audit scan --format html --output report.html
+
+# JSON
+cloud-audit scan --format json --output report.json
+
+# SARIF (GitHub Code Scanning integration)
+cloud-audit scan --format sarif --output results.sarif
+
+# Markdown (for PR comments)
+cloud-audit scan --format markdown --output report.md
+```
+
+Format is auto-detected from file extension when using `--output`.
 
 ## Installation
 
@@ -81,12 +196,6 @@ pip install cloud-audit
 pipx install cloud-audit
 ```
 
-### Docker
-
-```bash
-docker run -v ~/.aws:/root/.aws ghcr.io/gebalamariusz/cloud-audit scan
-```
-
 ### From source
 
 ```bash
@@ -95,74 +204,9 @@ cd cloud-audit
 pip install -e .
 ```
 
-## What It Checks
-
-### Security
-
-| Check | ID | Severity | Description |
-|-------|----|----------|-------------|
-| Root account MFA | `aws-iam-001` | Critical | Root account without MFA is a single password away from total compromise |
-| IAM users without MFA | `aws-iam-002` | High | Console users without MFA are vulnerable to credential theft |
-| Access key rotation | `aws-iam-003` | Medium | Active access keys older than 90 days increase exposure window |
-| Unused access keys | `aws-iam-004` | Medium | Keys unused for 30+ days are forgotten attack vectors |
-| Public S3 buckets | `aws-s3-001` | High | S3 buckets without public access block expose data to the internet |
-| S3 bucket encryption | `aws-s3-002` | Medium | Unencrypted buckets risk data exposure at rest |
-| Public AMIs | `aws-ec2-001` | High | Publicly shared AMIs may contain secrets or proprietary code |
-| Unencrypted EBS volumes | `aws-ec2-002` | Medium | EBS volumes without encryption expose data if disks are compromised |
-| Open security groups | `aws-vpc-002` | Critical | Security groups open to 0.0.0.0/0 on sensitive ports (SSH, RDP, DB) |
-| VPC flow logs disabled | `aws-vpc-003` | Medium | Without flow logs, you have zero network visibility for forensics |
-| Public RDS instances | `aws-rds-001` | Critical | Publicly accessible databases are the #1 cause of cloud data breaches |
-| RDS encryption at rest | `aws-rds-002` | High | Unencrypted databases risk data exposure in case of disk-level compromise |
-| CloudTrail not enabled | `aws-ct-001` | Critical | No multi-region trail means API activity goes unmonitored |
-| CloudTrail log validation | `aws-ct-002` | High | Without log validation, attackers can modify logs undetected |
-| CloudTrail bucket public | `aws-ct-003` | Critical | Public CloudTrail S3 bucket exposes all API logs |
-| GuardDuty not enabled | `aws-gd-001` | High | No threat detection for malicious activity or unauthorized behavior |
-| GuardDuty unresolved findings | `aws-gd-002` | Medium | Unresolved findings older than 30 days indicate ignored threats |
-| AWS Config not enabled | `aws-cfg-001` | Medium | No configuration history or change tracking for resources |
-| Config recorder stopped | `aws-cfg-002` | High | Config recorder exists but not recording changes |
-| KMS key rotation disabled | `aws-kms-001` | Medium | Customer-managed keys without automatic rotation (CIS 3.6) |
-| KMS wildcard key policy | `aws-kms-002` | High | Key policy with Principal: * allows any AWS principal to use the key |
-| Root usage alarm missing | `aws-cw-001` | High | No CloudWatch alarm for root account usage (CIS 4.3) |
-| Overly permissive IAM policy | `aws-iam-005` | Critical | IAM policy with Action: * and Resource: * grants full admin access |
-| Weak password policy | `aws-iam-006` | Medium | Account password policy doesn't meet CIS requirements (CIS 1.8) |
-| S3 access logging disabled | `aws-s3-005` | Medium | No server access logging to track bucket requests |
-| EC2 IMDSv1 enabled | `aws-ec2-004` | High | Instance metadata v1 is vulnerable to SSRF credential theft |
-| Lambda public function URL | `aws-lambda-001` | High | Lambda function URL with AuthType=NONE (unauthenticated) |
-| Lambda deprecated runtime | `aws-lambda-002` | Medium | EOL runtime without security patches |
-| Lambda env var secrets | `aws-lambda-003` | High | Potential secrets in Lambda environment variables |
-| ECS privileged container | `aws-ecs-001` | Critical | Container runs with privileged mode (root host access) |
-| ECS missing log config | `aws-ecs-002` | High | Container without logging makes debugging impossible |
-| ECS Exec enabled | `aws-ecs-003` | Medium | Interactive shell access enabled (risky in production) |
-| EC2 not managed by SSM | `aws-ssm-001` | Medium | Running instance not registered with Systems Manager |
-| SSM insecure parameter | `aws-ssm-002` | High | Secret-like parameter stored as String instead of SecureString |
-| Secret rotation disabled | `aws-sm-001` | Medium | Secrets Manager secret without automatic rotation |
-
-### Cost
-
-| Check | ID | Severity | Description |
-|-------|----|----------|-------------|
-| Unattached Elastic IPs | `aws-eip-001` | Low | Unattached EIPs cost ~$3.65/month each |
-| Stopped EC2 instances | `aws-ec2-003` | Low | Stopped instances still incur EBS charges |
-| S3 no lifecycle policy | `aws-s3-004` | Low | No lifecycle rules to transition/expire old objects |
-| Unused secret | `aws-sm-002` | Low | Secret not accessed in 90+ days ($0.40/month) |
-
-### Reliability
-
-| Check | ID | Severity | Description |
-|-------|----|----------|-------------|
-| S3 bucket versioning | `aws-s3-003` | Low | Without versioning, accidental deletes are permanent |
-| Default VPC in use | `aws-vpc-001` | Medium | Default VPCs have permissive defaults not suitable for production |
-| RDS Multi-AZ disabled | `aws-rds-003` | Medium | Single-AZ RDS instances have no automatic failover |
-
 ## Usage
 
 ```bash
-# Scan with default AWS profile and region
-cloud-audit scan
-
-# Specific profile and regions
-cloud-audit scan --profile production --regions eu-central-1,eu-west-1
-
 # Scan all enabled regions
 cloud-audit scan --regions all
 
@@ -172,63 +216,28 @@ cloud-audit scan --categories security,cost
 # Filter by minimum severity
 cloud-audit scan --min-severity high
 
-# Show remediation details (CLI commands, Terraform, docs)
-cloud-audit scan -R
-
-# Export all fix commands as a dry-run bash script
-cloud-audit scan --export-fixes fixes.sh
-
-# Quiet mode (exit code only, no output)
-cloud-audit scan --quiet
-
 # Cross-account scanning via IAM role
 cloud-audit scan --role-arn arn:aws:iam::987654321098:role/auditor
 
-# Show version
-cloud-audit version
+# Quiet mode (exit code only - for CI/CD)
+cloud-audit scan --quiet
 
 # List all available checks
 cloud-audit list-checks
 cloud-audit list-checks --categories security
 ```
 
-### Output Formats
-
-```bash
-# Rich terminal output (default)
-cloud-audit scan
-
-# JSON (to stdout)
-cloud-audit scan --format json
-
-# JSON (to file)
-cloud-audit scan --format json --output report.json
-
-# SARIF for GitHub Code Scanning
-cloud-audit scan --format sarif --output results.sarif
-
-# Markdown (for PR comments)
-cloud-audit scan --format markdown --output report.md
-
-# HTML report (requires --output)
-cloud-audit scan --format html --output report.html
-
-# Auto-detect format from file extension
-cloud-audit scan --output report.json
-cloud-audit scan --output results.sarif
-```
-
-### Exit Codes
+### Exit codes
 
 | Code | Meaning |
 |------|---------|
-| 0 | Clean - no findings |
+| 0 | No findings (after suppressions and severity filter) |
 | 1 | Findings detected |
-| 2 | Scan error (bad credentials, invalid config, etc.) |
+| 2 | Scan error (bad credentials, invalid config) |
 
-### Configuration File
+### Configuration file
 
-Create a `.cloud-audit.yml` in your project root:
+Create `.cloud-audit.yml` in your project root:
 
 ```yaml
 provider: aws
@@ -243,13 +252,15 @@ suppressions:
   - check_id: aws-vpc-001
     resource_id: vpc-abc123
     reason: "Legacy VPC, migration planned for Q3"
+    accepted_by: "jane@example.com"
+    expires: "2026-09-30"
 ```
 
-Config is auto-detected from the current directory. Override with `--config path/to/.cloud-audit.yml`.
+Auto-detected from the current directory. Override with `--config path/to/.cloud-audit.yml`.
 
 **Precedence:** CLI flags > environment variables > config file > defaults.
 
-### Environment Variables
+### Environment variables
 
 | Variable | Description | Example |
 |----------|-------------|---------|
@@ -272,7 +283,7 @@ on:
     branches: [main]
 
 permissions:
-  id-token: write      # required for OIDC
+  id-token: write
   contents: read
   security-events: write
   actions: read
@@ -292,14 +303,12 @@ jobs:
       - name: Install cloud-audit
         run: pip install cloud-audit
 
-      # Recommended: OIDC (no static credentials stored in GitHub)
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::123456789012:role/cloud-audit-github
           aws-region: eu-central-1
 
-      # SARIF upload to GitHub Security tab
       - name: Scan (SARIF)
         continue-on-error: true
         run: cloud-audit scan --format sarif --output results.sarif
@@ -311,7 +320,6 @@ jobs:
           sarif_file: results.sarif
           category: cloud-audit
 
-      # Markdown report as PR comment
       - name: Scan (Markdown)
         if: github.event_name == 'pull_request'
         continue-on-error: true
@@ -324,19 +332,16 @@ jobs:
           path: report.md
 ```
 
-This gives you:
-- **Security tab**: findings appear as Code Scanning alerts with deduplication across runs
-- **PR comments**: a Markdown summary posted automatically on every pull request
-- **Exit code 1** when findings exist (use `continue-on-error: true` to prevent blocking)
+This gives you findings in the GitHub Security tab (via SARIF) and a Markdown summary on every PR.
 
-### AWS Authentication
+The example uses **OIDC** - GitHub generates a short-lived token per workflow run, no static keys stored.
 
-The example above uses **OIDC** (recommended). GitHub generates a short-lived token per workflow run, and AWS exchanges it for temporary credentials. No static keys stored in GitHub.
+<details>
+<summary>OIDC setup instructions</summary>
 
-To set this up in your AWS account:
+1. Create an [OIDC Identity Provider](https://docs.github.com/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) in your AWS account with provider URL `https://token.actions.githubusercontent.com` and audience `sts.amazonaws.com`.
 
-1. Create an [OIDC Identity Provider](https://docs.github.com/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) with provider URL `https://token.actions.githubusercontent.com` and audience `sts.amazonaws.com`
-2. Create an IAM role with the `SecurityAudit` policy and a trust policy scoped to your repo:
+2. Create an IAM role with the `SecurityAudit` managed policy and this trust policy:
 
 ```json
 {
@@ -359,9 +364,12 @@ To set this up in your AWS account:
 }
 ```
 
-3. Replace `role-to-assume` in the workflow with your role ARN
+3. Replace `role-to-assume` in the workflow with your role ARN.
 
-**Alternative:** If you cannot use OIDC, you can use static credentials as a fallback:
+</details>
+
+<details>
+<summary>Static credentials fallback</summary>
 
 ```yaml
       - name: Configure AWS credentials
@@ -372,27 +380,23 @@ To set this up in your AWS account:
           aws-region: eu-central-1
 ```
 
+</details>
+
 ## AWS Permissions
 
-cloud-audit requires **read-only** access. Attach the AWS-managed `SecurityAudit` policy to your IAM user or role:
+cloud-audit requires **read-only** access. Attach the AWS-managed `SecurityAudit` policy:
 
 ```bash
-# For an IAM user
-aws iam attach-user-policy \
-  --user-name auditor \
-  --policy-arn arn:aws:iam::aws:policy/SecurityAudit
-
-# For an IAM role (recommended)
 aws iam attach-role-policy \
   --role-name auditor-role \
   --policy-arn arn:aws:iam::aws:policy/SecurityAudit
 ```
 
-cloud-audit **never modifies** your infrastructure. It only makes read API calls.
+cloud-audit never modifies your infrastructure. It only makes read API calls.
 
 ## Health Score
 
-The health score starts at 100 and decreases based on findings:
+Starts at 100, decreases per finding:
 
 | Severity | Points deducted |
 |----------|----------------|
@@ -401,60 +405,46 @@ The health score starts at 100 and decreases based on findings:
 | Medium | -5 |
 | Low | -2 |
 
-A score of **80+** is good, **50-79** needs attention, and **below 50** requires immediate action.
+80+ is good, 50-79 needs attention, below 50 requires immediate action.
 
-## How It Compares
+## Alternatives
 
-| Feature | cloud-audit | Prowler | ScoutSuite* |
-|---------|-------------|---------|-------------|
-| Checks | 42 (curated) | 576 (AWS) | ~200 |
-| Scan time | ~12 seconds | 1-4 hours | 30-60 minutes |
-| Setup | `pip install` | `pip install` + config | `pip install` + config |
-| Alert fatigue | Zero - every finding matters | High - hundreds of findings | Moderate |
-| **Terraform fix code** | **Yes (copy-paste)** | No | No |
-| **CLI fix commands** | **Yes (copy-paste)** | Text descriptions | No |
-| **CIS Benchmark mapping** | Yes (15 controls) | Yes (full) | No |
-| HTML report | Dark-mode, client-ready | Functional | Interactive |
-| Maintenance | Active | Active | Inactive (12+ months) |
+There are mature tools in this space. Pick the right one for your use case:
 
-\* ScoutSuite has had no releases in over 12 months and is effectively unmaintained.
+- **[Prowler](https://github.com/prowler-cloud/prowler)** - 576+ checks across AWS/Azure/GCP, full CIS benchmark coverage, auto-remediation with `--fix`. The most comprehensive open-source scanner. Best for teams that need exhaustive compliance audits and don't mind longer scan times.
+- **[ScoutSuite](https://github.com/nccgroup/ScoutSuite)** - Multi-cloud scanner with an interactive HTML report. No releases in over 12 months - effectively unmaintained.
+- **[Trivy](https://github.com/aquasecurity/trivy)** - Container, IaC, and cloud scanner. Strong on containers, growing cloud coverage (~517 cloud checks).
+- **[Steampipe](https://github.com/turbot/steampipe)** - SQL-based cloud querying. Very flexible, but requires writing or configuring queries.
+- **[AWS Security Hub](https://aws.amazon.com/security-hub/)** - Native AWS service with continuous monitoring and ~223 checks. Free 30-day trial, then charges per check evaluation.
 
-## Development
-
-```bash
-# Clone and install in development mode
-git clone https://github.com/gebalamariusz/cloud-audit.git
-cd cloud-audit
-pip install -e ".[dev]"
-
-# Run tests
-pytest -v
-
-# Lint and format
-ruff check src/ tests/
-ruff format --check src/ tests/
-
-# Type check
-mypy src/
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
+cloud-audit fills a specific niche: a focused audit with copy-paste remediation for each finding. If you need full CIS compliance coverage, Prowler is the better choice. If you need a quick scan that tells you exactly how to fix each issue, cloud-audit is built for that.
 
 ## Roadmap
 
 - ~~**v0.1.0** - 17 AWS checks, CLI, HTML/JSON reports~~
-- ~~**v0.2.0** - Remediation engine (CLI + Terraform), CIS Benchmark mapping, 45 moto tests~~
+- ~~**v0.2.0** - Remediation engine (CLI + Terraform), CIS Benchmark mapping~~
 - ~~**v0.3.0** - CloudTrail, GuardDuty, Config, KMS, CloudWatch checks (27 total)~~
 - ~~**v0.4.0** - Lambda, ECS, SSM, Secrets Manager checks (42 total)~~
-- ~~**v0.5.1** - SARIF output (GitHub Security integration), config file, suppressions, CI/CD~~
-- **v1.0.0** - Executive-ready reports, scan diff/compare, 45 curated checks
+- ~~**v0.5.1** - SARIF output, config file, suppressions, Markdown reports (45 total)~~
+- **v1.0.0** - Enhanced HTML reports, scan diff/compare
 
-See [ROADMAP.md](ROADMAP.md) for the full plan.
+See [ROADMAP.md](ROADMAP.md) for details.
+
+## Development
+
+```bash
+git clone https://github.com/gebalamariusz/cloud-audit.git
+cd cloud-audit
+pip install -e ".[dev]"
+
+pytest -v                          # tests
+ruff check src/ tests/             # lint
+ruff format --check src/ tests/    # format
+mypy src/                          # type check
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a new check.
 
 ## License
 
 [MIT](LICENSE) - Mariusz Gebala / [HAIT](https://haitmg.pl)
-
-## Author
-
-Built by [Mariusz Gebala](https://github.com/gebalamariusz) at [HAIT](https://haitmg.pl) - Cloud Infrastructure & Security Consulting.

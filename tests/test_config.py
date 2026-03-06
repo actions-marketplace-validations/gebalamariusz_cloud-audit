@@ -152,3 +152,12 @@ def test_suppression_is_expired() -> None:
 def test_suppression_no_expiry_never_expired() -> None:
     s = Suppression(check_id="aws-iam-001", reason="OK")
     assert not s.is_expired(today=date(2099, 12, 31))
+
+
+def test_load_auto_detects_from_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """load_config(None) finds .cloud-audit.yml in the current directory."""
+    _write_yaml(tmp_path, "provider: aws\nmin_severity: high\n")
+    monkeypatch.chdir(tmp_path)
+    config = load_config()
+    assert config.min_severity is not None
+    assert config.min_severity.value == "high"

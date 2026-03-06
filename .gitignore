@@ -39,8 +39,19 @@ coverage.xml
 !src/cloud_audit/reports/templates/*.html.j2
 
 # Internal / local-only files (never push)
-CLAUDE.md
-ROADMAP.md
+*.md
+!CODE_OF_CONDUCT.md
+!README.md
+!CONTRIBUTING.md
+!SECURITY.md
+!CHANGELOG.md
+!ROADMAP.md
+
+# Demo recording
+demo.tape
+
+# Test infrastructure
+terraform/
 
 # OS
 .DS_Store

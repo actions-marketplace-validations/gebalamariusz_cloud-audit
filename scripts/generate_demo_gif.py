@@ -1,18 +1,17 @@
 """Generate animated demo GIF for README using Rich console export + Pillow."""
 
 import io
-import textwrap
+import os
 
 from PIL import Image
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-# We'll render multiple frames as SVG, convert to PNG via cairosvg, then combine into GIF
 import cairosvg
 
 
-TARGET_LINES = 52  # Fixed terminal height in lines
+TARGET_LINES = 52
 
 
 def pad_to_height(console, current_lines: int):
@@ -26,29 +25,29 @@ def render_frame(lines_to_show: int, progress: int = 0) -> bytes:
     buf = io.StringIO()
     console = Console(record=True, width=90, force_terminal=True, file=buf)
 
-    # Frame 1: just the command
+    # Frame 0: just the command
     console.print()
-    console.print("[bold]$[/bold] cloud-audit scan --provider aws -R --output report.html")
+    console.print("[bold]$[/bold] cloud-audit scan -R")
 
     if lines_to_show < 1:
         pad_to_height(console, 3)
         svg = console.export_svg(title="cloud-audit")
         return cairosvg.svg2png(bytestring=svg.encode(), scale=1.5)
 
-    # Frame 2+: progress bar
+    # Frame 1+: progress bar
     console.print()
-    console.print("[bold]Running 17 checks on AWS...[/bold]")
+    console.print("[bold]Running 45 checks on AWS...[/bold]")
     bar_len = min(progress, 40)
     bar = "\u2501" * bar_len + " " * (40 - bar_len)
-    done = int(progress * 17 / 40)
-    console.print(f"[green]{bar}[/green] {done}/17")
+    done = int(progress * 45 / 40)
+    console.print(f"[green]{bar}[/green] {done}/45")
 
     if lines_to_show < 2:
         pad_to_height(console, 6)
         svg = console.export_svg(title="cloud-audit")
         return cairosvg.svg2png(bytestring=svg.encode(), scale=1.5)
 
-    # Frame 3+: health score + summary
+    # Frame 2+: health score + summary
     console.print()
     console.print(
         Panel(
@@ -65,18 +64,17 @@ def render_frame(lines_to_show: int, progress: int = 0) -> bytes:
     table.add_row("Provider", "AWS")
     table.add_row("Account", "123456789012")
     table.add_row("Regions", "eu-central-1")
-    table.add_row("Duration", "12s")
     table.add_row("Resources scanned", "147")
-    table.add_row("Checks passed", "[green]11[/green]")
-    table.add_row("Checks failed", "[red]6[/red]")
+    table.add_row("Checks passed", "[green]29[/green]")
+    table.add_row("Checks failed", "[red]16[/red]")
     console.print(table)
 
     if lines_to_show < 3:
-        pad_to_height(console, 16)
+        pad_to_height(console, 15)
         svg = console.export_svg(title="cloud-audit")
         return cairosvg.svg2png(bytestring=svg.encode(), scale=1.5)
 
-    # Frame 4+: severity
+    # Frame 3+: severity
     console.print("\n[bold]Findings by severity:[/bold]")
     console.print("  [bold red]\u2716 CRITICAL: 2[/bold red]")
     console.print("  [red]\u2716 HIGH: 4[/red]")
@@ -88,7 +86,7 @@ def render_frame(lines_to_show: int, progress: int = 0) -> bytes:
         svg = console.export_svg(title="cloud-audit")
         return cairosvg.svg2png(bytestring=svg.encode(), scale=1.5)
 
-    # Frame 5+: findings table
+    # Frame 4+: findings table
     console.print("\n[bold]Top findings (5 of 16):[/bold]\n")
 
     ft = Table(box=None, padding=(0, 1), show_header=True, header_style="bold")
@@ -123,7 +121,7 @@ def render_frame(lines_to_show: int, progress: int = 0) -> bytes:
         svg = console.export_svg(title="cloud-audit")
         return cairosvg.svg2png(bytestring=svg.encode(), scale=1.5)
 
-    # Frame 6+: remediation
+    # Frame 5+: remediation
     console.print("\n[bold]Remediation (2 of 6 actionable):[/bold]\n")
 
     console.print("  [bold red]CRITICAL[/bold red]  Root account without MFA")
@@ -158,38 +156,38 @@ def render_frame(lines_to_show: int, progress: int = 0) -> bytes:
 def main():
     frames = []
 
-    # Frame 0: command typed (hold 1s = 2 frames at 500ms)
+    # Frame 0: command typed
     png_data = render_frame(0)
     img = Image.open(io.BytesIO(png_data))
     frames.append(img.copy())
 
-    # Frames 1-8: progress bar animation (fast)
+    # Frames 1-8: progress bar animation
     for p in range(0, 41, 5):
         png_data = render_frame(1, progress=p)
         img = Image.open(io.BytesIO(png_data))
         frames.append(img.copy())
 
-    # Frame: health score + summary (hold 1.5s)
+    # Frame: health score + summary
     png_data = render_frame(2)
     img = Image.open(io.BytesIO(png_data))
     frames.append(img.copy())
 
-    # Frame: severity (hold 1s)
+    # Frame: severity
     png_data = render_frame(3)
     img = Image.open(io.BytesIO(png_data))
     frames.append(img.copy())
 
-    # Frame: findings table (hold 2s)
+    # Frame: findings table
     png_data = render_frame(4)
     img = Image.open(io.BytesIO(png_data))
     frames.append(img.copy())
 
-    # Frame: findings table done (hold 1s)
+    # Frame: findings table done
     png_data = render_frame(5)
     img = Image.open(io.BytesIO(png_data))
     frames.append(img.copy())
 
-    # Final frame: full output with remediation (hold 4s)
+    # Final frame: full output with remediation
     png_data = render_frame(6)
     img = Image.open(io.BytesIO(png_data))
     frames.append(img.copy())
@@ -205,21 +203,19 @@ def main():
         + [5000]        # final with remediation (long hold)
     )
 
-    # Ensure all frames same size (pad to largest)
+    # Ensure all frames same size
     max_w = max(f.width for f in frames)
     max_h = max(f.height for f in frames)
 
     padded_frames = []
     for f in frames:
         if f.width < max_w or f.height < max_h:
-            # Create dark background and paste frame
             bg = Image.new("RGBA", (max_w, max_h), (40, 42, 54, 255))
             bg.paste(f, (0, 0))
             padded_frames.append(bg.convert("RGB"))
         else:
             padded_frames.append(f.convert("RGB"))
 
-    # Save as animated GIF
     padded_frames[0].save(
         "assets/demo.gif",
         save_all=True,
@@ -229,7 +225,6 @@ def main():
         optimize=True,
     )
 
-    import os
     size = os.path.getsize("assets/demo.gif")
     print(f"GIF saved to assets/demo.gif ({size / 1024:.0f} KB, {len(frames)} frames)")
 

@@ -313,10 +313,11 @@ def scan(
     # Resolve precedence: CLI flags > env vars > config > defaults
 
     # Regions: CLI > env > config
+    env_regions = _resolve_env_regions()
     if regions:
         region_list = [r.strip() for r in regions.split(",")]
-    elif _resolve_env_regions():
-        region_list = [r.strip() for r in _resolve_env_regions().split(",")]  # type: ignore[union-attr]
+    elif env_regions:
+        region_list = [r.strip() for r in env_regions.split(",")]
     elif cfg.regions:
         region_list = cfg.regions
     else:
@@ -326,11 +327,12 @@ def scan(
     effective_role_arn = role_arn or _resolve_env_role_arn()
 
     # Min severity: CLI > env > config
+    env_severity = _resolve_env_min_severity()
     effective_severity: Severity | None = None
     if min_severity:
         effective_severity = Severity(min_severity.lower())
-    elif _resolve_env_min_severity():
-        effective_severity = _resolve_env_min_severity()
+    elif env_severity:
+        effective_severity = env_severity
     elif cfg.min_severity:
         effective_severity = cfg.min_severity
 
@@ -348,7 +350,7 @@ def scan(
         suppressions=cfg.suppressions,
     )
 
-    category_list = [c.strip() for c in categories.split(",")] if categories else None
+    category_list = [c.strip().lower() for c in categories.split(",")] if categories else None
 
     # Initialize provider
     if provider == "aws":
@@ -417,12 +419,12 @@ def _handle_format(fmt: str, report: ScanReport, output: Path | None, quiet: boo
 
         content = generate_markdown(report)
     elif fmt == "html":
-        from cloud_audit.reports.html import render_html
-
-        content = render_html(report)
         if not output:
             console.print("[red]HTML format requires --output <file.html>[/red]")
             raise typer.Exit(2)
+        from cloud_audit.reports.html import render_html
+
+        content = render_html(report)
     else:
         console.print(f"[red]Unknown format '{fmt}'. Available: json, html, sarif, markdown[/red]")
         raise typer.Exit(2)
@@ -450,7 +452,7 @@ def list_checks(
         console.print(f"[red]Provider '{provider}' is not supported yet. Available: aws[/red]")
         raise typer.Exit(2)
 
-    category_list = [c.strip() for c in categories.split(",")] if categories else None
+    category_list = [c.strip().lower() for c in categories.split(",")] if categories else None
 
     table = Table(title=f"Available checks ({provider.upper()})", show_lines=False)
     table.add_column("Check", style="bold")
@@ -462,11 +464,11 @@ def list_checks(
         # Module name = service name (e.g., iam, s3, ec2)
         service = module.__name__.rsplit(".", 1)[-1].rstrip("_")
 
-        # get_checks requires a provider, but we just need function metadata
-        # Use a sentinel — we won't call the checks, just inspect the partials
+        # get_checks requires a provider but we only inspect the returned partials, never call them.
+        # Using a sentinel avoids passing None which could break if get_checks validates its argument.
+        _sentinel = type("_Sentinel", (), {})()
         try:
-            # Create a minimal mock-like object to get check list
-            checks = module.get_checks(None)
+            checks = module.get_checks(_sentinel)
         except Exception:  # noqa: S112
             continue
 
@@ -507,14 +509,14 @@ def demo() -> None:
 
     # Simulate progress bar
     with Progress(
-        TextColumn("[bold]Running 17 checks on AWS..."),
+        TextColumn("[bold]Running 45 checks on AWS..."),
         BarColumn(bar_width=40),
         TextColumn("{task.completed}/{task.total}"),
         TimeElapsedColumn(),
         console=console,
     ) as progress:
-        task = progress.add_task("Scanning", total=17)
-        for _ in range(17):
+        task = progress.add_task("Scanning", total=45)
+        for _ in range(45):
             time.sleep(0.08)
             progress.advance(task)
 

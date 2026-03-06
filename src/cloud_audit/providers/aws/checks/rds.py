@@ -41,7 +41,7 @@ def check_rds_public_access(provider: AWSProvider) -> CheckResult:
                                 remediation=Remediation(
                                     cli=(
                                         f"aws rds modify-db-instance --db-instance-identifier {db_id} "
-                                        f"--no-publicly-accessible --apply-immediately"
+                                        f"--no-publicly-accessible --apply-immediately --region {region}"
                                     ),
                                     terraform=(
                                         f'resource "aws_db_instance" "{db_id}" {{\n'
@@ -91,11 +91,11 @@ def check_rds_encryption(provider: AWSProvider) -> CheckResult:
                                         f"# RDS encryption cannot be enabled on existing instances.\n"
                                         f"# Migrate via snapshot:\n"
                                         f"aws rds create-db-snapshot --db-instance-identifier {db_id} "
-                                        f"--db-snapshot-identifier {db_id}-pre-encrypt\n"
+                                        f"--db-snapshot-identifier {db_id}-pre-encrypt --region {region}\n"
                                         f"aws rds copy-db-snapshot --source-db-snapshot-identifier {db_id}-pre-encrypt "
-                                        f"--target-db-snapshot-identifier {db_id}-encrypted --kms-key-id alias/aws/rds\n"
+                                        f"--target-db-snapshot-identifier {db_id}-encrypted --kms-key-id alias/aws/rds --region {region}\n"
                                         f"aws rds restore-db-instance-from-db-snapshot --db-instance-identifier {db_id}-new "
-                                        f"--db-snapshot-identifier {db_id}-encrypted"
+                                        f"--db-snapshot-identifier {db_id}-encrypted --region {region}"
                                     ),
                                     terraform=(
                                         f'resource "aws_db_instance" "{db_id}" {{\n'
@@ -149,7 +149,7 @@ def check_rds_multi_az(provider: AWSProvider) -> CheckResult:
                                 remediation=Remediation(
                                     cli=(
                                         f"aws rds modify-db-instance --db-instance-identifier {db_id} "
-                                        f"--multi-az --apply-immediately"
+                                        f"--multi-az --apply-immediately --region {region}"
                                     ),
                                     terraform=(
                                         f'resource "aws_db_instance" "{db_id}" {{\n  # ...\n  multi_az = true\n}}'
@@ -194,7 +194,7 @@ def check_rds_auto_minor_upgrade(provider: AWSProvider) -> CheckResult:
                                 remediation=Remediation(
                                     cli=(
                                         f"aws rds modify-db-instance --db-instance-identifier {db_id} "
-                                        f"--auto-minor-version-upgrade --apply-immediately"
+                                        f"--auto-minor-version-upgrade --apply-immediately --region {region}"
                                     ),
                                     terraform=(
                                         f'resource "aws_db_instance" "{db_id}" {{\n'

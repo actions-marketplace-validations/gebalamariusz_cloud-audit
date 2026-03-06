@@ -40,14 +40,6 @@ class Remediation(BaseModel):
     effort: Effort = Field(description="Estimated remediation effort")
 
 
-SEVERITY_SCORE = {
-    Severity.CRITICAL: 0,
-    Severity.HIGH: 5,
-    Severity.MEDIUM: 15,
-    Severity.LOW: 25,
-    Severity.INFO: 35,
-}
-
 SEVERITY_WEIGHT = {
     Severity.CRITICAL: 20,
     Severity.HIGH: 10,

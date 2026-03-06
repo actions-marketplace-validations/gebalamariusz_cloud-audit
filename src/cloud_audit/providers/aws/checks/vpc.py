@@ -102,35 +102,79 @@ def check_open_security_groups(provider: AWSProvider) -> CheckResult:
                         from_port = rule.get("FromPort", 0)
                         to_port = rule.get("ToPort", 65535)
 
+                        # Collect all open CIDRs (IPv4 + IPv6)
+                        open_cidrs: list[str] = []
                         for ip_range in rule.get("IpRanges", []):
-                            cidr = ip_range.get("CidrIp", "")
-                            if cidr != "0.0.0.0/0":
-                                continue
+                            if ip_range.get("CidrIp") == "0.0.0.0/0":
+                                open_cidrs.append("0.0.0.0/0")
+                        for ipv6_range in rule.get("Ipv6Ranges", []):
+                            if ipv6_range.get("CidrIpv6") == "::/0":
+                                open_cidrs.append("::/0")
 
-                            # Check if all traffic is allowed
-                            if rule.get("IpProtocol") == "-1":
+                        if not open_cidrs:
+                            continue
+
+                        cidr_display = ", ".join(open_cidrs)
+
+                        # Check if all traffic is allowed
+                        if rule.get("IpProtocol") == "-1":
+                            result.findings.append(
+                                Finding(
+                                    check_id="aws-vpc-002",
+                                    title=f"Security group '{sg_name}' allows ALL inbound traffic from internet",
+                                    severity=Severity.CRITICAL,
+                                    category=Category.SECURITY,
+                                    resource_type="AWS::EC2::SecurityGroup",
+                                    resource_id=sg_id,
+                                    region=region,
+                                    description=f"Security group {sg_id} ({sg_name}) allows all inbound traffic from {cidr_display}.",
+                                    recommendation="Restrict inbound rules to specific ports and source IP ranges.",
+                                    remediation=Remediation(
+                                        cli=f"aws ec2 revoke-security-group-ingress --group-id {sg_id} --protocol -1 --cidr 0.0.0.0/0 --region {region}",
+                                        terraform=(
+                                            f"# Restrict to specific ports and IPs:\n"
+                                            f'resource "aws_security_group_rule" "restrict" {{\n'
+                                            f'  type              = "ingress"\n'
+                                            f'  security_group_id = "{sg_id}"\n'
+                                            f"  from_port         = 443\n"
+                                            f"  to_port           = 443\n"
+                                            f'  protocol          = "tcp"\n'
+                                            f'  cidr_blocks       = ["YOUR_IP/32"]\n'
+                                            f"}}"
+                                        ),
+                                        doc_url="https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html",
+                                        effort=Effort.LOW,
+                                    ),
+                                    compliance_refs=["CIS 5.2"],
+                                )
+                            )
+                            continue
+
+                        # Check sensitive ports
+                        for port, service in sensitive_ports.items():
+                            if from_port <= port <= to_port:
                                 result.findings.append(
                                     Finding(
                                         check_id="aws-vpc-002",
-                                        title=f"Security group '{sg_name}' allows ALL inbound traffic from internet",
-                                        severity=Severity.CRITICAL,
+                                        title=f"Security group '{sg_name}' exposes {service} (port {port}) to internet",
+                                        severity=Severity.CRITICAL if port in (22, 3389, 3306, 5432) else Severity.HIGH,
                                         category=Category.SECURITY,
                                         resource_type="AWS::EC2::SecurityGroup",
                                         resource_id=sg_id,
                                         region=region,
-                                        description=f"Security group {sg_id} ({sg_name}) allows all inbound traffic from 0.0.0.0/0.",
-                                        recommendation="Restrict inbound rules to specific ports and source IP ranges.",
+                                        description=f"Security group {sg_id} ({sg_name}) allows inbound {service} (port {port}) from {cidr_display}.",
+                                        recommendation=f"Restrict {service} access to specific IP ranges. Use a bastion host or VPN for remote access.",
                                         remediation=Remediation(
-                                            cli=f"aws ec2 revoke-security-group-ingress --group-id {sg_id} --protocol -1 --cidr 0.0.0.0/0 --region {region}",
+                                            cli=f"aws ec2 revoke-security-group-ingress --group-id {sg_id} --protocol tcp --port {port} --cidr 0.0.0.0/0 --region {region}",
                                             terraform=(
-                                                f"# Restrict to specific ports and IPs:\n"
-                                                f'resource "aws_security_group_rule" "restrict" {{\n'
+                                                f"# Restrict {service} access to known IPs:\n"
+                                                f'resource "aws_security_group_rule" "{service.lower()}" {{\n'
                                                 f'  type              = "ingress"\n'
                                                 f'  security_group_id = "{sg_id}"\n'
-                                                f"  from_port         = 443\n"
-                                                f"  to_port           = 443\n"
+                                                f"  from_port         = {port}\n"
+                                                f"  to_port           = {port}\n"
                                                 f'  protocol          = "tcp"\n'
-                                                f'  cidr_blocks       = ["YOUR_IP/32"]\n'
+                                                f'  cidr_blocks       = ["YOUR_VPN_IP/32"]\n'
                                                 f"}}"
                                             ),
                                             doc_url="https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html",
@@ -139,43 +183,6 @@ def check_open_security_groups(provider: AWSProvider) -> CheckResult:
                                         compliance_refs=["CIS 5.2"],
                                     )
                                 )
-                                break
-
-                            # Check sensitive ports
-                            for port, service in sensitive_ports.items():
-                                if from_port <= port <= to_port:
-                                    result.findings.append(
-                                        Finding(
-                                            check_id="aws-vpc-002",
-                                            title=f"Security group '{sg_name}' exposes {service} (port {port}) to internet",
-                                            severity=Severity.CRITICAL
-                                            if port in (22, 3389, 3306, 5432)
-                                            else Severity.HIGH,
-                                            category=Category.SECURITY,
-                                            resource_type="AWS::EC2::SecurityGroup",
-                                            resource_id=sg_id,
-                                            region=region,
-                                            description=f"Security group {sg_id} ({sg_name}) allows inbound {service} (port {port}) from 0.0.0.0/0.",
-                                            recommendation=f"Restrict {service} access to specific IP ranges. Use a bastion host or VPN for remote access.",
-                                            remediation=Remediation(
-                                                cli=f"aws ec2 revoke-security-group-ingress --group-id {sg_id} --protocol tcp --port {port} --cidr 0.0.0.0/0 --region {region}",
-                                                terraform=(
-                                                    f"# Restrict {service} access to known IPs:\n"
-                                                    f'resource "aws_security_group_rule" "{service.lower()}" {{\n'
-                                                    f'  type              = "ingress"\n'
-                                                    f'  security_group_id = "{sg_id}"\n'
-                                                    f"  from_port         = {port}\n"
-                                                    f"  to_port           = {port}\n"
-                                                    f'  protocol          = "tcp"\n'
-                                                    f'  cidr_blocks       = ["YOUR_VPN_IP/32"]\n'
-                                                    f"}}"
-                                                ),
-                                                doc_url="https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html",
-                                                effort=Effort.LOW,
-                                            ),
-                                            compliance_refs=["CIS 5.2"],
-                                        )
-                                    )
     except Exception as e:
         result.error = str(e)
 

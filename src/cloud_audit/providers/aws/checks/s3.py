@@ -3,13 +3,18 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cloud_audit.models import Category, CheckResult, Effort, Finding, Remediation, Severity
 
 if TYPE_CHECKING:
     from cloud_audit.providers.aws.provider import AWSProvider
     from cloud_audit.providers.base import CheckFn
+
+
+def _tf_name(name: str) -> str:
+    """Sanitize a resource name for use as a Terraform identifier."""
+    return name.replace(".", "_").replace("-", "_")
 
 
 def _s3_public_access_remediation(name: str) -> Remediation:
@@ -21,7 +26,7 @@ def _s3_public_access_remediation(name: str) -> Remediation:
             f"BlockPublicPolicy=true,RestrictPublicBuckets=true"
         ),
         terraform=(
-            f'resource "aws_s3_bucket_public_access_block" "{name}" {{\n'
+            f'resource "aws_s3_bucket_public_access_block" "{_tf_name(name)}" {{\n'
             f'  bucket                  = "{name}"\n'
             f"  block_public_acls       = true\n"
             f"  ignore_public_acls      = true\n"
@@ -34,13 +39,21 @@ def _s3_public_access_remediation(name: str) -> Remediation:
     )
 
 
+def _list_buckets(provider: AWSProvider) -> list[Any]:
+    """Fetch S3 bucket list once and cache on the provider."""
+    if not hasattr(provider, "_s3_bucket_cache"):
+        s3 = provider.session.client("s3")
+        provider._s3_bucket_cache = s3.list_buckets()["Buckets"]  # type: ignore[attr-defined]
+    return provider._s3_bucket_cache  # type: ignore[attr-defined,no-any-return]
+
+
 def check_public_buckets(provider: AWSProvider) -> CheckResult:
     """Check for S3 buckets with public access."""
     s3 = provider.session.client("s3")
     result = CheckResult(check_id="aws-s3-001", check_name="Public S3 buckets")
 
     try:
-        buckets = s3.list_buckets()["Buckets"]
+        buckets = _list_buckets(provider)
         for bucket in buckets:
             name = bucket["Name"]
             result.resources_scanned += 1
@@ -98,7 +111,7 @@ def check_bucket_encryption(provider: AWSProvider) -> CheckResult:
     result = CheckResult(check_id="aws-s3-002", check_name="S3 bucket encryption")
 
     try:
-        buckets = s3.list_buckets()["Buckets"]
+        buckets = _list_buckets(provider)
         for bucket in buckets:
             name = bucket["Name"]
             result.resources_scanned += 1
@@ -124,7 +137,7 @@ def check_bucket_encryption(provider: AWSProvider) -> CheckResult:
                                     f'\'{{"Rules":[{{"ApplyServerSideEncryptionByDefault":{{"SSEAlgorithm":"AES256"}}}}]}}\''
                                 ),
                                 terraform=(
-                                    f'resource "aws_s3_bucket_server_side_encryption_configuration" "{name}" {{\n'
+                                    f'resource "aws_s3_bucket_server_side_encryption_configuration" "{_tf_name(name)}" {{\n'
                                     f'  bucket = "{name}"\n'
                                     f"  rule {{\n"
                                     f"    apply_server_side_encryption_by_default {{\n"
@@ -151,7 +164,7 @@ def check_bucket_versioning(provider: AWSProvider) -> CheckResult:
     result = CheckResult(check_id="aws-s3-003", check_name="S3 bucket versioning")
 
     try:
-        buckets = s3.list_buckets()["Buckets"]
+        buckets = _list_buckets(provider)
         for bucket in buckets:
             name = bucket["Name"]
             result.resources_scanned += 1
@@ -173,7 +186,7 @@ def check_bucket_versioning(provider: AWSProvider) -> CheckResult:
                         remediation=Remediation(
                             cli=f"aws s3api put-bucket-versioning --bucket {name} --versioning-configuration Status=Enabled",
                             terraform=(
-                                f'resource "aws_s3_bucket_versioning" "{name}" {{\n'
+                                f'resource "aws_s3_bucket_versioning" "{_tf_name(name)}" {{\n'
                                 f'  bucket = "{name}"\n'
                                 f"  versioning_configuration {{\n"
                                 f'    status = "Enabled"\n'
@@ -197,7 +210,7 @@ def check_bucket_lifecycle(provider: AWSProvider) -> CheckResult:
     result = CheckResult(check_id="aws-s3-004", check_name="S3 bucket lifecycle policy")
 
     try:
-        buckets = s3.list_buckets()["Buckets"]
+        buckets = _list_buckets(provider)
         for bucket in buckets:
             name = bucket["Name"]
             result.resources_scanned += 1
@@ -226,7 +239,7 @@ def check_bucket_lifecycle(provider: AWSProvider) -> CheckResult:
                                     f'"Filter":{{"Prefix":""}}}}]}}\''
                                 ),
                                 terraform=(
-                                    f'resource "aws_s3_bucket_lifecycle_configuration" "{name}" {{\n'
+                                    f'resource "aws_s3_bucket_lifecycle_configuration" "{_tf_name(name)}" {{\n'
                                     f'  bucket = "{name}"\n'
                                     f"  rule {{\n"
                                     f'    id     = "auto-archive"\n'
@@ -265,7 +278,7 @@ def check_bucket_lifecycle(provider: AWSProvider) -> CheckResult:
                                     f'"Filter":{{"Prefix":""}}}}]}}\''
                                 ),
                                 terraform=(
-                                    f'resource "aws_s3_bucket_lifecycle_configuration" "{name}" {{\n'
+                                    f'resource "aws_s3_bucket_lifecycle_configuration" "{_tf_name(name)}" {{\n'
                                     f'  bucket = "{name}"\n'
                                     f"  rule {{\n"
                                     f'    id     = "auto-archive"\n'
@@ -296,7 +309,7 @@ def check_access_logging(provider: AWSProvider) -> CheckResult:
     result = CheckResult(check_id="aws-s3-005", check_name="S3 access logging")
 
     try:
-        buckets = s3.list_buckets()["Buckets"]
+        buckets = _list_buckets(provider)
         for bucket in buckets:
             name = bucket["Name"]
             result.resources_scanned += 1
@@ -321,7 +334,7 @@ def check_access_logging(provider: AWSProvider) -> CheckResult:
                                     f'"LoggingEnabled":{{"TargetBucket":"{name}-logs","TargetPrefix":"access-logs/"}}}}\''
                                 ),
                                 terraform=(
-                                    f'resource "aws_s3_bucket_logging" "{name}" {{\n'
+                                    f'resource "aws_s3_bucket_logging" "{_tf_name(name)}" {{\n'
                                     f'  bucket        = "{name}"\n'
                                     f'  target_bucket = "{name}-logs"\n'
                                     f'  target_prefix = "access-logs/"\n'
