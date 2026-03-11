@@ -1,0 +1,111 @@
+# cloud-audit GitHub Actions workflow
+#
+# Scans your AWS account on every push/PR and:
+# - Uploads SARIF results to GitHub Security tab
+# - Posts a Markdown summary as a PR comment
+#
+# Authentication: OIDC (recommended) - no static keys needed.
+# See "OIDC setup" below for AWS configuration.
+
+name: Cloud Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+  actions: read
+  pull-requests: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install cloud-audit
+        run: pip install cloud-audit
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/cloud-audit-github
+          aws-region: eu-central-1
+
+      - name: Scan (SARIF)
+        continue-on-error: true
+        run: cloud-audit scan --format sarif --output results.sarif
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
+          category: cloud-audit
+
+      - name: Scan (Markdown)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: cloud-audit scan --format markdown --output report.md
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: report.md
+
+# -------------------------------------------------------------------
+# OIDC setup (one-time)
+# -------------------------------------------------------------------
+#
+# 1. Create an OIDC Identity Provider in your AWS account:
+#    - Provider URL: https://token.actions.githubusercontent.com
+#    - Audience:     sts.amazonaws.com
+#    Docs: https://docs.github.com/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services
+#
+# 2. Create an IAM role with the SecurityAudit managed policy
+#    and this trust policy:
+#
+#    {
+#      "Version": "2012-10-17",
+#      "Statement": [{
+#        "Effect": "Allow",
+#        "Principal": {
+#          "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+#        },
+#        "Action": "sts:AssumeRoleWithWebIdentity",
+#        "Condition": {
+#          "StringEquals": {
+#            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+#          },
+#          "StringLike": {
+#            "token.actions.githubusercontent.com:sub": "repo:YOUR_ORG/YOUR_REPO:*"
+#          }
+#        }
+#      }]
+#    }
+#
+# 3. Replace role-to-assume above with your role ARN.
+#
+# -------------------------------------------------------------------
+# Static credentials (alternative - less secure)
+# -------------------------------------------------------------------
+#
+# Replace the OIDC step with:
+#
+#      - name: Configure AWS credentials
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-region: eu-central-1

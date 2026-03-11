@@ -10,6 +10,7 @@
   <a href="https://github.com/gebalamariusz/cloud-audit/actions/workflows/ci.yml"><img src="https://github.com/gebalamariusz/cloud-audit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow?style=flat" alt="License: MIT"></a>
   <a href="https://pypi.org/project/cloud-audit/"><img src="https://img.shields.io/pypi/dm/cloud-audit?style=flat" alt="PyPI downloads"></a>
+  <a href="https://ghcr.io/gebalamariusz/cloud-audit"><img src="https://img.shields.io/badge/Docker-GHCR-blue?style=flat&logo=docker" alt="Docker"></a>
   <a href="https://www.helpnetsecurity.com/2026/03/11/cloud-audit-open-source-aws-security-scanner/"><img src="https://img.shields.io/badge/Featured_in-HelpNet_Security-blue?style=flat" alt="Featured in HelpNet Security"></a>
 </p>
 
@@ -191,6 +192,18 @@ pip install cloud-audit
 pipx install cloud-audit
 ```
 
+### Docker
+
+```bash
+docker run ghcr.io/gebalamariusz/cloud-audit scan
+```
+
+Mount your AWS credentials:
+
+```bash
+docker run -v ~/.aws:/home/cloudaudit/.aws:ro ghcr.io/gebalamariusz/cloud-audit scan
+```
+
 ### From source
 
 ```bash
@@ -230,7 +243,8 @@ cloud-audit list-checks --categories security
 | 1 | Findings detected |
 | 2 | Scan error (bad credentials, invalid config) |
 
-### Configuration file
+<details>
+<summary>Configuration file</summary>
 
 Create `.cloud-audit.yml` in your project root:
 
@@ -253,9 +267,10 @@ suppressions:
 
 Auto-detected from the current directory. Override with `--config path/to/.cloud-audit.yml`.
 
-**Precedence:** CLI flags > environment variables > config file > defaults.
+</details>
 
-### Environment variables
+<details>
+<summary>Environment variables</summary>
 
 | Variable | Description | Example |
 |----------|-------------|---------|
@@ -263,6 +278,10 @@ Auto-detected from the current directory. Override with `--config path/to/.cloud
 | `CLOUD_AUDIT_MIN_SEVERITY` | Minimum severity filter | `high` |
 | `CLOUD_AUDIT_EXCLUDE_CHECKS` | Comma-separated check IDs to skip | `aws-eip-001,aws-iam-001` |
 | `CLOUD_AUDIT_ROLE_ARN` | IAM role ARN for cross-account | `arn:aws:iam::...:role/auditor` |
+
+</details>
+
+**Precedence:** CLI flags > environment variables > config file > defaults.
 
 ## CI/CD Integration
 
