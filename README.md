@@ -9,6 +9,8 @@
   <a href="https://pypi.org/project/cloud-audit/"><img src="https://img.shields.io/pypi/pyversions/cloud-audit?style=flat" alt="Python versions"></a>
   <a href="https://github.com/gebalamariusz/cloud-audit/actions/workflows/ci.yml"><img src="https://github.com/gebalamariusz/cloud-audit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow?style=flat" alt="License: MIT"></a>
+  <a href="https://pypi.org/project/cloud-audit/"><img src="https://img.shields.io/pypi/dm/cloud-audit?style=flat" alt="PyPI downloads"></a>
+  <a href="https://www.helpnetsecurity.com/2026/03/11/cloud-audit-open-source-aws-security-scanner/"><img src="https://img.shields.io/badge/Featured_in-HelpNet_Security-blue?style=flat" alt="Featured in HelpNet Security"></a>
 </p>
 
 ---
@@ -17,18 +19,24 @@
   <img src="https://raw.githubusercontent.com/gebalamariusz/cloud-audit/main/assets/demo.gif" alt="cloud-audit terminal demo" width="700">
 </p>
 
-cloud-audit scans your AWS account for security misconfigurations and gives you a finding-by-finding remediation plan - AWS CLI commands, Terraform HCL, and documentation links you can copy-paste to fix each issue.
+cloud-audit scans your AWS account and tells you exactly how to fix what it finds - AWS CLI commands, Terraform HCL, and documentation links you can copy-paste.
 
-It runs 45 curated checks across 15 AWS services, mapped to 16 CIS AWS Foundations Benchmark controls.
+45 checks across 15 AWS resource types. Mapped to 16 CIS AWS Foundations Benchmark controls.
 
-## Try it without an AWS account
+## Every finding includes a fix
 
-```bash
-pip install cloud-audit
-cloud-audit demo
+This is what makes cloud-audit different. You don't just get a list of problems - you get the exact commands to fix them:
+
 ```
+$ cloud-audit scan -R
 
-The `demo` command runs a simulated scan with sample data. You can see the output format, health score, and remediation details without any AWS credentials.
+  CRITICAL  Root account without MFA enabled
+  Resource:   arn:aws:iam::123456789012:root
+  Compliance: CIS 1.5
+  CLI:        aws iam create-virtual-mfa-device --virtual-mfa-device-name root-mfa
+  Terraform:  resource "aws_iam_virtual_mfa_device" "root" { ... }
+  Docs:       https://docs.aws.amazon.com/IAM/latest/UserGuide/...
+```
 
 ## Quick Start
 
@@ -50,18 +58,27 @@ cloud-audit scan --profile production --regions eu-central-1,eu-west-1
 cloud-audit scan --export-fixes fixes.sh
 ```
 
+## Try it without an AWS account
+
+```bash
+pip install cloud-audit
+cloud-audit demo
+```
+
+The `demo` command runs a simulated scan with sample data - output format, health score, and remediation details without any AWS credentials.
+
 ## Who is this for
 
-- **Small teams (1-10 people) without a dedicated security team** - get visibility into your AWS security posture without buying a platform
-- **DevOps/SRE engineers running a pre-deploy check** - scan before shipping, catch misconfigurations early
-- **Consultants doing client audits** - generate a professional HTML report you can hand to a client
-- **Teams that need CIS compliance evidence without paying for Security Hub** - 16 CIS controls mapped and included in reports
+- **Small teams without a security team** - get visibility into AWS security without buying a platform
+- **DevOps/SRE running pre-deploy checks** - catch misconfigurations before they ship
+- **Consultants auditing client accounts** - generate a professional HTML report in one command
+- **Teams that want CIS evidence without Security Hub** - 16 CIS controls mapped, included in reports
 
 ## What it checks
 
-45 checks across IAM, S3, EC2, VPC, RDS, Lambda, ECS, CloudTrail, GuardDuty, KMS, SSM, Secrets Manager, CloudWatch, and AWS Config.
+45 checks across IAM, S3, EC2, EIP, VPC, RDS, Lambda, ECS, CloudTrail, GuardDuty, KMS, SSM, Secrets Manager, CloudWatch, and AWS Config.
 
-**By severity:** 6 Critical, 13 High, 16 Medium, 10 Low.
+**By severity:** 7 Critical, 14 High, 17 Medium, 7 Low.
 
 Every check answers one question: *would an attacker exploit this?* If not, the check doesn't exist.
 
@@ -130,29 +147,7 @@ Every check answers one question: *would an attacker exploit this?* If not, the 
 
 </details>
 
-## Every finding includes a fix
-
-This is what makes cloud-audit different from most scanners. Run with `-R` to see remediation for each finding:
-
-```
-$ cloud-audit scan -R
-
-  CRITICAL  Root account without MFA enabled
-  Resource:   arn:aws:iam::123456789012:root
-  Compliance: CIS 1.5
-  Effort:     LOW
-  CLI:        aws iam create-virtual-mfa-device --virtual-mfa-device-name root-mfa
-  Terraform:  resource "aws_iam_virtual_mfa_device" "root" { ... }
-  Docs:       https://docs.aws.amazon.com/IAM/latest/UserGuide/...
-
-  CRITICAL  Security group open to 0.0.0.0/0 on port 22
-  Resource:   sg-0a1b2c3d4e5f67890
-  Compliance: CIS 5.2
-  CLI:        aws ec2 revoke-security-group-ingress --group-id sg-... --port 22
-  Terraform:  resource "aws_security_group_rule" "ssh_restricted" { ... }
-```
-
-Or export all fixes as a bash script:
+## Export fixes as a script
 
 ```bash
 cloud-audit scan --export-fixes fixes.sh
@@ -274,113 +269,16 @@ Auto-detected from the current directory. Override with `--config path/to/.cloud
 ### GitHub Actions
 
 ```yaml
-name: Cloud Audit
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-permissions:
-  id-token: write
-  contents: read
-  security-events: write
-  actions: read
-  pull-requests: write
-
-jobs:
-  audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install cloud-audit
-        run: pip install cloud-audit
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::123456789012:role/cloud-audit-github
-          aws-region: eu-central-1
-
-      - name: Scan (SARIF)
-        continue-on-error: true
-        run: cloud-audit scan --format sarif --output results.sarif
-
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: results.sarif
-          category: cloud-audit
-
-      - name: Scan (Markdown)
-        if: github.event_name == 'pull_request'
-        continue-on-error: true
-        run: cloud-audit scan --format markdown --output report.md
-
-      - name: Post PR comment
-        if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          path: report.md
+- run: pip install cloud-audit
+- run: cloud-audit scan --format sarif --output results.sarif
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
 ```
 
-This gives you findings in the GitHub Security tab (via SARIF) and a Markdown summary on every PR.
+This gives you findings in the GitHub Security tab (via SARIF). Add `--format markdown` for PR comments.
 
-The example uses **OIDC** - GitHub generates a short-lived token per workflow run, no static keys stored.
-
-<details>
-<summary>OIDC setup instructions</summary>
-
-1. Create an [OIDC Identity Provider](https://docs.github.com/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) in your AWS account with provider URL `https://token.actions.githubusercontent.com` and audience `sts.amazonaws.com`.
-
-2. Create an IAM role with the `SecurityAudit` managed policy and this trust policy:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": {
-      "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
-    },
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": {
-        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-      },
-      "StringLike": {
-        "token.actions.githubusercontent.com:sub": "repo:YOUR_ORG/YOUR_REPO:*"
-      }
-    }
-  }]
-}
-```
-
-3. Replace `role-to-assume` in the workflow with your role ARN.
-
-</details>
-
-<details>
-<summary>Static credentials fallback</summary>
-
-```yaml
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
-```
-
-</details>
+See [examples/github-actions.yml](examples/github-actions.yml) for a complete workflow with OIDC authentication.
 
 ## AWS Permissions
 
@@ -419,16 +317,13 @@ There are mature tools in this space. Pick the right one for your use case:
 
 cloud-audit fills a specific niche: a focused audit with copy-paste remediation for each finding. If you need full CIS compliance coverage, Prowler is the better choice. If you need a quick scan that tells you exactly how to fix each issue, cloud-audit is built for that.
 
-## Roadmap
+## What's next
 
-- ~~**v0.1.0** - 17 AWS checks, CLI, HTML/JSON reports~~
-- ~~**v0.2.0** - Remediation engine (CLI + Terraform), CIS Benchmark mapping~~
-- ~~**v0.3.0** - CloudTrail, GuardDuty, Config, KMS, CloudWatch checks (27 total)~~
-- ~~**v0.4.0** - Lambda, ECS, SSM, Secrets Manager checks (42 total)~~
-- ~~**v0.5.1** - SARIF output, config file, suppressions, Markdown reports (45 total)~~
-- **v1.0.0** - Enhanced HTML reports, scan diff/compare
+- Scan diff - compare two scans, see what changed
+- Enhanced HTML reports with trend charts
+- Azure provider
 
-See [ROADMAP.md](ROADMAP.md) for details.
+Past releases: [CHANGELOG.md](CHANGELOG.md)
 
 ## Development
 
