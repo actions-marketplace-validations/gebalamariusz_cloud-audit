@@ -1,0 +1,89 @@
+# Daily security scan with diff
+#
+# Runs Monday-Friday at 6:00 UTC. Compares today's scan with yesterday's
+# to detect changes: new issues, fixed issues, severity changes.
+#
+# Use case: catch ClickOps drift, manual console changes, and regressions
+# that Terraform/IaC scanning can't see (because they scan code, not live AWS).
+#
+# How it works:
+#   1. Restore yesterday's scan from GitHub Actions cache
+#   2. Run today's scan
+#   3. Diff: show what changed (new findings, fixed findings)
+#   4. Save today's scan as tomorrow's baseline
+#
+# Exit codes from `cloud-audit diff`:
+#   0 = no new findings (stable or improved)
+#   1 = new findings detected (regression)
+#
+# First run: no baseline exists, diff is skipped. Second run onward: diff works.
+
+name: Daily Security Scan
+
+on:
+  schedule:
+    - cron: '0 6 * * 1-5'  # Mon-Fri 6:00 UTC
+  workflow_dispatch:        # Manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install cloud-audit
+
+      # Replace with OIDC — see examples/github-actions.yml
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      # Step 1: Restore yesterday's scan
+      - name: Restore previous scan
+        id: baseline
+        uses: actions/cache/restore@v4
+        with:
+          path: previous.json
+          key: cloud-audit-daily
+          restore-keys: cloud-audit-daily
+
+      # Step 2: Run today's scan
+      - name: Scan
+        run: cloud-audit scan --format json --output today.json
+        continue-on-error: true
+
+      # Step 3: Compare with yesterday
+      - name: Diff
+        if: steps.baseline.outputs.cache-hit == 'true'
+        run: |
+          echo "=== Diff (terminal) ==="
+          cloud-audit diff previous.json today.json || true
+
+          echo "=== Diff (markdown) ==="
+          cloud-audit diff previous.json today.json --output diff.md || true
+
+      # Step 4: Save today's scan as tomorrow's baseline
+      - name: Save baseline
+        run: cp today.json previous.json
+      - uses: actions/cache/save@v4
+        with:
+          path: previous.json
+          key: cloud-audit-daily-${{ github.run_id }}
+
+      # Upload reports
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scan-${{ github.run_id }}
+          path: |
+            today.json
+            diff.md

@@ -24,9 +24,11 @@ cloud-audit scans your AWS account and tells you exactly how to fix what it find
 
 45 checks across 15 AWS resource types. Mapped to 16 CIS AWS Foundations Benchmark controls.
 
-## Every finding includes a fix
+**Two things no other open-source CLI scanner does:**
 
-This is what makes cloud-audit different. You don't just get a list of problems - you get the exact commands to fix them:
+### 1. Every finding includes a copy-paste fix
+
+You don't just get a list of problems - you get the exact commands to fix them:
 
 ```
 $ cloud-audit scan -R
@@ -38,6 +40,32 @@ $ cloud-audit scan -R
   Terraform:  resource "aws_iam_virtual_mfa_device" "root" { ... }
   Docs:       https://docs.aws.amazon.com/IAM/latest/UserGuide/...
 ```
+
+### 2. Built-in scan diff - track what changed
+
+Run daily scans and compare them. See what got fixed, what's new, and what stayed the same - without a SaaS dashboard or paid backend.
+
+```
+$ cloud-audit diff yesterday.json today.json
+
+╭───────── Score Change ──────────╮
+│ 54 -> 68 (+14)                  │
+╰─────────────────────────────────╯
+
+Fixed (2):
+  CRITICAL  aws-iam-001     root               Root account without MFA
+  HIGH      aws-vpc-002     sg-abc123          SG open on port 22
+
+New (1):
+  HIGH      aws-rds-001     staging-db         RDS publicly accessible
+
+Unchanged (8):
+  ...
+```
+
+This catches what IaC scanning misses: ClickOps changes, manual console edits, security group rules someone opened "temporarily" three months ago. Prowler offers similar tracking, but only through their paid cloud platform. Trivy, ScoutSuite, and Steampipe don't have it at all.
+
+Exit code 0 = no new findings, 1 = regression. Plug it into a cron job, get notified when something gets worse. See [daily-scan-with-diff.yml](examples/daily-scan-with-diff.yml) for a ready-to-use GitHub Actions workflow.
 
 ## Quick Start
 
@@ -79,7 +107,7 @@ The `demo` command runs a simulated scan with sample data - output format, healt
 
 45 checks across IAM, S3, EC2, EIP, VPC, RDS, Lambda, ECS, CloudTrail, GuardDuty, KMS, SSM, Secrets Manager, CloudWatch, and AWS Config.
 
-**By severity:** 7 Critical, 14 High, 17 Medium, 7 Low.
+**By severity:** 7 Critical, 14 High, 16 Medium, 8 Low.
 
 Every check answers one question: *would an attacker exploit this?* If not, the check doesn't exist.
 
@@ -97,7 +125,7 @@ Every check answers one question: *would an attacker exploit this?* If not, the 
 | `aws-iam-005` | Critical | IAM policy with Action: \* and Resource: \* |
 | `aws-iam-006` | Medium | Password policy below CIS requirements |
 | `aws-s3-001` | High | S3 bucket without public access block |
-| `aws-s3-002` | Medium | S3 bucket without encryption at rest |
+| `aws-s3-002` | Low | S3 bucket using SSE-S3 instead of SSE-KMS |
 | `aws-s3-005` | Medium | S3 bucket without access logging |
 | `aws-ec2-001` | High | Publicly shared AMI |
 | `aws-ec2-002` | Medium | Unencrypted EBS volume |
@@ -297,7 +325,15 @@ Auto-detected from the current directory. Override with `--config path/to/.cloud
 
 This gives you findings in the GitHub Security tab (via SARIF). Add `--format markdown` for PR comments.
 
-See [examples/github-actions.yml](examples/github-actions.yml) for a complete workflow with OIDC authentication.
+### Ready-to-use workflows
+
+| Workflow | Use case |
+|----------|----------|
+| [github-actions.yml](examples/github-actions.yml) | Basic scan with SARIF upload and PR comments |
+| [daily-scan-with-diff.yml](examples/daily-scan-with-diff.yml) | Scheduled daily scan + diff to catch drift |
+| [post-deploy-scan.yml](examples/post-deploy-scan.yml) | Scan before and after `terraform apply` |
+
+**Daily diff** is the most common setup - it catches ClickOps changes, manual console edits, and regressions that IaC scanning can't see (because IaC scans code, not live AWS).
 
 ## AWS Permissions
 
@@ -338,8 +374,8 @@ cloud-audit fills a specific niche: a focused audit with copy-paste remediation 
 
 ## What's next
 
-- Scan diff - compare two scans, see what changed
-- Enhanced HTML reports with trend charts
+- Enhanced HTML reports with executive summary
+- GitHub Action for easier CI integration
 - Azure provider
 
 Past releases: [CHANGELOG.md](CHANGELOG.md)

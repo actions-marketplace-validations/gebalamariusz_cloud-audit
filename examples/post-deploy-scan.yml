@@ -1,0 +1,74 @@
+# Post-deploy security scan
+#
+# Runs after Terraform apply to check if the deploy changed security posture.
+# Scans live AWS before and after apply, then diffs.
+#
+# Use case: "Did this deploy make things worse?"
+#
+# Flow:
+#   1. Scan AWS (pre-deploy baseline)
+#   2. Terraform apply
+#   3. Scan AWS again (post-deploy)
+#   4. Diff: did the deploy introduce new findings?
+
+name: Deploy with Security Check
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install cloud-audit
+
+      - uses: hashicorp/setup-terraform@v3
+
+      # Replace with OIDC — see examples/github-actions.yml
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      # Step 1: Scan BEFORE deploy
+      - name: Pre-deploy scan
+        run: cloud-audit scan --format json --output pre-deploy.json
+        continue-on-error: true
+
+      # Step 2: Deploy
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
+      # Step 3: Scan AFTER deploy
+      - name: Post-deploy scan
+        run: cloud-audit scan --format json --output post-deploy.json
+        continue-on-error: true
+
+      # Step 4: What changed?
+      - name: Diff
+        run: |
+          cloud-audit diff pre-deploy.json post-deploy.json || true
+          cloud-audit diff pre-deploy.json post-deploy.json --output deploy-diff.md || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deploy-scan-${{ github.run_id }}
+          path: |
+            pre-deploy.json
+            post-deploy.json
+            deploy-diff.md

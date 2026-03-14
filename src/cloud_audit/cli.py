@@ -6,15 +6,19 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from rich.console import Console
+from rich.markup import escape as rich_escape
 from rich.panel import Panel
 from rich.table import Table
 
 from cloud_audit import __version__
 from cloud_audit.models import Finding, ScanReport, Severity
+
+if TYPE_CHECKING:
+    from cloud_audit.diff import DiffResult
 
 app = typer.Typer(
     name="cloud-audit",
@@ -664,6 +668,150 @@ def demo() -> None:
     console.print(
         "[dim]This is sample output. Run [bold]cloud-audit scan[/bold] with AWS credentials for a real scan.[/dim]"
     )
+
+
+@app.command()
+def diff(
+    old_report: Annotated[Path, typer.Argument(help="Path to the baseline scan JSON file")],
+    new_report: Annotated[Path, typer.Argument(help="Path to the current scan JSON file")],
+    fmt: Annotated[str | None, typer.Option("--format", "-f", help="Output format: json, markdown")] = None,
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="Output file path")] = None,
+    quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Quiet mode - exit code only")] = False,
+) -> None:
+    """Compare two scan reports and show what changed.
+
+    Exit code 0 = no new findings. Exit code 1 = new findings detected.
+    """
+    from cloud_audit.diff import compute_diff, load_report
+
+    # Auto-detect format from output suffix if not specified
+    if fmt is None and output:
+        suffix_to_fmt = {".json": "json", ".md": "markdown"}
+        fmt = suffix_to_fmt.get(output.suffix.lower())
+
+    # Validate format early (before I/O)
+    if fmt is not None and fmt not in ("json", "markdown"):
+        console.print(f"[red]Unknown format '{fmt}'. Available: json, markdown[/red]")
+        raise typer.Exit(2)
+
+    # Validate inputs
+    if not old_report.exists():
+        console.print(f"[red]File not found: {old_report}[/red]")
+        raise typer.Exit(2)
+    if not new_report.exists():
+        console.print(f"[red]File not found: {new_report}[/red]")
+        raise typer.Exit(2)
+
+    try:
+        old = load_report(old_report)
+        new = load_report(new_report)
+    except Exception as e:
+        console.print(f"[red]Failed to load report: {e}[/red]")
+        raise typer.Exit(2) from None
+
+    result = compute_diff(old, new)
+
+    if fmt == "json":
+        content = result.model_dump_json(indent=2)
+        if output:
+            output.write_text(content, encoding="utf-8")
+            if not quiet:
+                console.print(f"[green]JSON diff saved to {output}[/green]")
+        else:
+            sys.stdout.write(content)
+            sys.stdout.write("\n")
+    elif fmt == "markdown":
+        from cloud_audit.reports.diff_markdown import generate_diff_markdown
+
+        content = generate_diff_markdown(result)
+        if output:
+            output.write_text(content, encoding="utf-8")
+            if not quiet:
+                console.print(f"[green]Markdown diff saved to {output}[/green]")
+        else:
+            sys.stdout.write(content)
+            sys.stdout.write("\n")
+    elif not quiet:
+        _print_diff(result)
+
+    # Exit code: 1 if new findings (regression)
+    if result.has_regression:
+        raise typer.Exit(1)
+
+
+def _print_diff(result: DiffResult) -> None:
+    """Print a Rich-formatted diff to the console."""
+    # Score
+    if result.score_change > 0:
+        sign, score_color = "+", "green"
+    elif result.score_change < 0:
+        sign, score_color = "", "red"
+    else:
+        sign, score_color = "", "dim"
+
+    console.print()
+    console.print(
+        Panel(
+            f"[{score_color}]{result.old_score} -> {result.new_score} ({sign}{result.score_change})[/{score_color}]",
+            title="[bold]Score Change[/bold]",
+            border_style=score_color,
+            width=35,
+        )
+    )
+
+    # Scope warnings
+    for w in result.scope_warnings:
+        console.print(f"[yellow]Warning: {rich_escape(w)}[/yellow]")
+
+    # Summary line
+    console.print(f"\n[dim]Findings: {result.old_total} -> {result.new_total}[/dim]")
+
+    # Fixed
+    if result.fixed_findings:
+        console.print(f"\n[bold green]Fixed ({len(result.fixed_findings)}):[/bold green]")
+        for f in result.fixed_findings:
+            sev_color = SEVERITY_COLORS.get(f.severity, "dim")
+            res = rich_escape(f.resource_id[:35])
+            title = rich_escape(f.title[:50])
+            console.print(
+                f"  [{sev_color}]{f.severity.value.upper():8s}[/{sev_color}]"
+                f"  {f.check_id:14s}  {res:35s}  {title}"
+            )
+
+    # New (regressions)
+    if result.new_findings:
+        console.print(f"\n[bold red]New ({len(result.new_findings)}):[/bold red]")
+        for f in result.new_findings:
+            sev_color = SEVERITY_COLORS.get(f.severity, "dim")
+            res = rich_escape(f.resource_id[:35])
+            title = rich_escape(f.title[:50])
+            console.print(
+                f"  [{sev_color}]{f.severity.value.upper():8s}[/{sev_color}]"
+                f"  {f.check_id:14s}  {res:35s}  {title}"
+            )
+
+    # Changed severity
+    if result.changed_findings:
+        console.print(f"\n[bold yellow]Changed severity ({len(result.changed_findings)}):[/bold yellow]")
+        for f in result.changed_findings:
+            old_sev = f.old_severity.value.upper() if f.old_severity else "?"
+            new_sev = f.severity.value.upper()
+            res = rich_escape(f.resource_id[:35])
+            console.print(f"  {f.check_id:14s}  {res:35s}  {old_sev} -> {new_sev}")
+
+    # Unchanged
+    if result.unchanged_findings:
+        console.print(f"\n[dim]Unchanged ({len(result.unchanged_findings)}):[/dim]")
+        for f in result.unchanged_findings:
+            res = rich_escape(f.resource_id[:35])
+            title = rich_escape(f.title[:50])
+            console.print(f"  [dim]{f.severity.value.upper():8s}  {f.check_id:14s}  {res:35s}  {title}[/dim]")
+
+    # No changes at all
+    if not result.new_findings and not result.fixed_findings and not result.changed_findings:
+        console.print("\n[green]No changes detected.[/green]")
+
+    console.print()
 
 
 @app.command()

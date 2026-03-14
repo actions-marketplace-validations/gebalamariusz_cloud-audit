@@ -1,6 +1,6 @@
 # Roadmap
 
-> Current version: **v0.7.0** (March 2026)
+> Current version: **v0.8.0** (March 2026)
 
 ## Completed
 
@@ -65,12 +65,19 @@
 - Ruff lint rules expanded (RUF, PIE, RET)
 - 179 tests passing
 
+### v0.8.0 -- Diff & CI/CD
+- `cloud-audit diff` command -- compare two scans, show new/fixed/changed findings
+- Terminal, markdown, and JSON diff output
+- Exit code 1 on regression (new findings) for CI gating
+- Scope warnings (region/account changes between scans)
+- CI/CD examples: daily scan with cache-based diff, post-deploy scan
+- 213 tests passing
+
 ## In Progress
 
 ### v1.0.0 -- Production Ready
 - **Enhanced HTML reports** -- executive summary, priority grouping, CIS compliance overview
-- **Diff/Compare** -- `cloud-audit diff <old.json> <new.json>` to track progress over time
-- **README overhaul** -- terminal demo GIF, performance benchmarks, comparison table
+- **GitHub Action** -- reusable action for easier CI integration
 - **Community** -- issue templates, contributing guide, GitHub Discussions
 - **Docker image** on GHCR (`ghcr.io/gebalamariusz/cloud-audit`)
 - Target: 50+ curated checks

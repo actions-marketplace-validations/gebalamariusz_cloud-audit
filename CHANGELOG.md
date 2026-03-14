@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-03-14
+
+### Added
+
+- `cloud-audit diff` command - compare two scan JSON files, show new/fixed/changed findings
+- Diff output formats: terminal (Rich), markdown (`--format markdown`), JSON (`--format json`)
+- Diff exit codes: 0 = no new findings, 1 = regression detected, 2 = error
+- Scope warnings when comparing scans from different regions or accounts
+- File size limit (50 MB) and `is_file()` validation on diff inputs
+- Rich markup escaping for user-controlled strings in diff output
+- Format auto-detection from `--output` file extension in diff command
+- CI/CD example: `examples/daily-scan-with-diff.yml` (scheduled daily scan with cache-based baseline)
+- CI/CD example: `examples/post-deploy-scan.yml` (pre/post terraform apply comparison)
+- 35 new tests for diff engine, markdown output, and CLI integration
+- 213 tests passing total
+
+### Changed
+
+- `unchanged_count` replaced with `unchanged_findings` list (shows what stayed the same)
+- README: added "Track changes between scans" section with diff usage
+- README: CI/CD section expanded with table of ready-to-use workflows
+- README: S3 encryption check updated to reflect SSE-KMS vs SSE-S3 pivot (LOW severity)
+- README: severity counts updated (7/14/16/8)
+
 ## [0.7.0] - 2026-03-14
 
 ### Changed
@@ -191,7 +215,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker image support
 - Rich terminal UI with progress bar and color-coded findings
 
-[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/gebalamariusz/cloud-audit/compare/v0.5.1...v0.5.2
