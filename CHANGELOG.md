@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-03-14
+
+### Changed
+
+- SARIF: use `physicalLocation` + `logicalLocations` (fixes GitHub Code Scanning compatibility)
+- SARIF: add `help.markdown` to rules (remediation now visible in GitHub Security tab)
+- SARIF: add `semanticVersion` to tool driver
+- S3 encryption check pivoted: SSE-S3 (AES-256) is now LOW severity, SSE-KMS = PASS (AWS auto-encrypts since Jan 2023)
+- Markdown: escape pipes and newlines in all table columns
+- Markdown: round duration to 1 decimal place
+- HTML report: duration formatted consistently (1 decimal)
+- HTML report: ARIA attributes on score ring (`role="meter"`) and severity badges
+- Imports moved to top level in HTML report renderer
+- Ruff: enabled `RUF`, `PIE`, `RET` rule groups; `S101` now per-file for tests only
+
+### Fixed
+
+- SARIF `physicalLocation` missing caused GitHub Code Scanning to reject uploads
+- S3 encryption check false positives on buckets using default SSE-S3
+- Extracted `_kms_encryption_remediation()` helper (DRY)
+
+### Tests
+
+- 179 tests passing (+5 new)
+- New SARIF tests: `semanticVersion`, `help.markdown`, `logicalLocations`, `physicalLocation`
+- New S3 tests: SSE-KMS pass, SSE-S3 LOW with compliance_refs, DSSE-KMS pass
+
 ## [0.6.0] - 2026-03-06
 
 ### Security
@@ -164,7 +191,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker image support
 - Rich terminal UI with progress bar and color-coded findings
 
-[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/gebalamariusz/cloud-audit/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/gebalamariusz/cloud-audit/compare/v0.5.0...v0.5.1

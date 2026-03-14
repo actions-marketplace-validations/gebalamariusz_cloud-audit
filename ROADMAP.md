@@ -1,6 +1,6 @@
 # Roadmap
 
-> Current version: **v0.6.0** (March 2026)
+> Current version: **v0.7.0** (March 2026)
 
 ## Completed
 
@@ -56,6 +56,14 @@
 - S3 bucket cache with proper reset between scans
 - SARIF, HTML, and Markdown report fixes
 - 173 tests passing
+
+### v0.7.0 -- Report Quality & Check Accuracy
+- SARIF spec compliance (physicalLocation + logicalLocations, help.markdown, semanticVersion)
+- S3 encryption check pivoted to SSE-KMS vs SSE-S3 (reflects AWS Jan 2023 default encryption)
+- Markdown table escaping hardened (all columns)
+- HTML report accessibility (ARIA attributes on score ring and severity badges)
+- Ruff lint rules expanded (RUF, PIE, RET)
+- 179 tests passing
 
 ## In Progress
 
