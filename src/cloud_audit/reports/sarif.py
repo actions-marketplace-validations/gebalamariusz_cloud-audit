@@ -41,6 +41,17 @@ def _build_rules(report: ScanReport) -> list[dict[str, Any]]:
                 "level": _SEVERITY_MAP.get(finding.severity.value, "warning"),
             },
         }
+        # help.markdown: GitHub Security tab uses this for finding details
+        help_lines = [finding.recommendation]
+        if finding.remediation:
+            if finding.remediation.cli:
+                help_lines.append(f"\n**AWS CLI:**\n```bash\n{finding.remediation.cli}\n```")
+            if finding.remediation.terraform:
+                help_lines.append(f"\n**Terraform:**\n```hcl\n{finding.remediation.terraform}\n```")
+        rule["help"] = {
+            "text": finding.recommendation,
+            "markdown": "\n".join(help_lines),
+        }
         if finding.remediation and finding.remediation.doc_url:
             rule["helpUri"] = finding.remediation.doc_url
         if finding.compliance_refs:
@@ -66,10 +77,17 @@ def _build_results(report: ScanReport) -> list[dict[str, Any]]:
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": finding.resource_id,
-                            "uriBaseId": "%CLOUD%",
+                            "uri": finding.check_id,
                         },
+                        "region": {"startLine": 1},
                     },
+                    "logicalLocations": [
+                        {
+                            "fullyQualifiedName": finding.resource_id,
+                            "kind": "resource",
+                            "name": finding.resource_id.rsplit("/", 1)[-1].rsplit(":", 1)[-1],
+                        }
+                    ],
                 }
             ],
             "properties": {
@@ -102,13 +120,9 @@ def generate_sarif(report: ScanReport) -> str:
                     "driver": {
                         "name": "cloud-audit",
                         "version": __version__,
+                        "semanticVersion": __version__,
                         "informationUri": "https://github.com/gebalamariusz/cloud-audit",
                         "rules": _build_rules(report),
-                    },
-                },
-                "originalUriBaseIds": {
-                    "%CLOUD%": {
-                        "description": {"text": "Cloud resource identifier"},
                     },
                 },
                 "results": _build_results(report),

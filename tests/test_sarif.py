@@ -169,3 +169,46 @@ def test_sarif_compliance_tags_in_rules() -> None:
     iam_rule = next(r for r in data["runs"][0]["tool"]["driver"]["rules"] if r["id"] == "aws-iam-001")
     assert "properties" in iam_rule
     assert "CIS 1.5" in iam_rule["properties"]["tags"]
+
+
+def test_sarif_semantic_version() -> None:
+    """Tool driver has semanticVersion field."""
+    report = _make_report()
+    data = json.loads(generate_sarif(report))
+    driver = data["runs"][0]["tool"]["driver"]
+    assert "semanticVersion" in driver
+    assert driver["semanticVersion"] == driver["version"]
+
+
+def test_sarif_help_markdown_in_rules() -> None:
+    """Rules with remediation have help.markdown with CLI and Terraform code blocks."""
+    report = _make_report()
+    data = json.loads(generate_sarif(report))
+    iam_rule = next(r for r in data["runs"][0]["tool"]["driver"]["rules"] if r["id"] == "aws-iam-001")
+    assert "help" in iam_rule
+    assert "text" in iam_rule["help"]
+    assert "markdown" in iam_rule["help"]
+    assert "```bash" in iam_rule["help"]["markdown"]
+    assert "```hcl" in iam_rule["help"]["markdown"]
+
+
+def test_sarif_logical_locations() -> None:
+    """Results have logicalLocations with resource info."""
+    report = _make_report()
+    data = json.loads(generate_sarif(report))
+    result = data["runs"][0]["results"][0]
+    location = result["locations"][0]
+    assert "logicalLocations" in location
+    logical = location["logicalLocations"][0]
+    assert logical["kind"] == "resource"
+    assert logical["fullyQualifiedName"] == "root"
+
+
+def test_sarif_physical_location_present() -> None:
+    """Results have physicalLocation (required by GitHub Code Scanning)."""
+    report = _make_report()
+    data = json.loads(generate_sarif(report))
+    result = data["runs"][0]["results"][0]
+    location = result["locations"][0]
+    assert "physicalLocation" in location
+    assert "artifactLocation" in location["physicalLocation"]

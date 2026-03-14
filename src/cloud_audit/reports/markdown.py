@@ -30,7 +30,7 @@ def generate_markdown(report: ScanReport) -> str:
     lines.append(f"**Account:** {report.account_id or 'unknown'}")
     if report.regions:
         lines.append(f"**Regions:** {', '.join(report.regions)}")
-    lines.append(f"**Duration:** {report.duration_seconds}s")
+    lines.append(f"**Duration:** {report.duration_seconds:.1f}s")
     lines.append(f"**Health Score:** {s.score}/100")
     lines.append("")
 
@@ -72,10 +72,12 @@ def generate_markdown(report: ScanReport) -> str:
             marker = _SEVERITY_MARKERS.get(f.severity.value, f.severity.value)
             resource = f.resource_id[:40] + "..." if len(f.resource_id) > 40 else f.resource_id
             title = f.title[:60] + "..." if len(f.title) > 60 else f.title
-            # Escape pipes in values to prevent breaking markdown table
-            resource = resource.replace("|", "\\|")
-            title = title.replace("|", "\\|")
-            lines.append(f"| **{marker}** | {f.check_id} | {f.region} | `{resource}` | {title} |")
+            # Escape pipes and newlines to prevent breaking markdown table
+            check_id = f.check_id.replace("|", "\\|").replace("\n", " ")
+            region = f.region.replace("|", "\\|").replace("\n", " ")
+            resource = resource.replace("|", "\\|").replace("\n", " ")
+            title = title.replace("|", "\\|").replace("\n", " ")
+            lines.append(f"| **{marker}** | {check_id} | {region} | `{resource}` | {title} |")
 
         lines.append("")
     else:

@@ -55,21 +55,62 @@ def test_public_buckets_fail(mock_aws_provider: AWSProvider) -> None:
     assert open_findings[0].compliance_refs == ["CIS 2.1.5"]
 
 
-def test_bucket_encryption_pass(mock_aws_provider: AWSProvider) -> None:
-    """Bucket with encryption - no finding."""
+def test_bucket_encryption_kms_pass(mock_aws_provider: AWSProvider) -> None:
+    """Bucket with SSE-KMS encryption - no finding."""
     s3 = mock_aws_provider.session.client("s3")
     s3.create_bucket(
-        Bucket="encrypted-bucket",
+        Bucket="kms-bucket",
         CreateBucketConfiguration={"LocationConstraint": "eu-central-1"},
     )
     s3.put_bucket_encryption(
-        Bucket="encrypted-bucket",
+        Bucket="kms-bucket",
+        ServerSideEncryptionConfiguration={
+            "Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "aws:kms"}}]
+        },
+    )
+    result = check_bucket_encryption(mock_aws_provider)
+    enc_findings = [f for f in result.findings if f.resource_id == "kms-bucket"]
+    assert len(enc_findings) == 0
+
+
+def test_bucket_encryption_sse_s3_low(mock_aws_provider: AWSProvider) -> None:
+    """Bucket with SSE-S3 (AES256) - LOW finding recommending SSE-KMS."""
+    s3 = mock_aws_provider.session.client("s3")
+    s3.create_bucket(
+        Bucket="sse-s3-bucket",
+        CreateBucketConfiguration={"LocationConstraint": "eu-central-1"},
+    )
+    s3.put_bucket_encryption(
+        Bucket="sse-s3-bucket",
         ServerSideEncryptionConfiguration={
             "Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}]
         },
     )
     result = check_bucket_encryption(mock_aws_provider)
-    enc_findings = [f for f in result.findings if f.resource_id == "encrypted-bucket"]
+    enc_findings = [f for f in result.findings if f.resource_id == "sse-s3-bucket"]
+    assert len(enc_findings) == 1
+    assert enc_findings[0].severity.value == "low"
+    assert "SSE-KMS" in enc_findings[0].title
+    assert enc_findings[0].remediation is not None
+    assert "aws:kms" in enc_findings[0].remediation.cli
+    assert enc_findings[0].compliance_refs == ["CIS 2.1.1"]
+
+
+def test_bucket_encryption_dsse_kms_pass(mock_aws_provider: AWSProvider) -> None:
+    """Bucket with DSSE-KMS (dual-layer) encryption - no finding."""
+    s3 = mock_aws_provider.session.client("s3")
+    s3.create_bucket(
+        Bucket="dsse-bucket",
+        CreateBucketConfiguration={"LocationConstraint": "eu-central-1"},
+    )
+    s3.put_bucket_encryption(
+        Bucket="dsse-bucket",
+        ServerSideEncryptionConfiguration={
+            "Rules": [{"ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "aws:kms:dsse"}}]
+        },
+    )
+    result = check_bucket_encryption(mock_aws_provider)
+    enc_findings = [f for f in result.findings if f.resource_id == "dsse-bucket"]
     assert len(enc_findings) == 0
 
 

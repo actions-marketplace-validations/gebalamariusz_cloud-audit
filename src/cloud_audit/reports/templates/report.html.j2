@@ -418,14 +418,14 @@
       <span>&middot;</span>
       <span>{{ report.timestamp.strftime('%Y-%m-%d %H:%M UTC') }}</span>
       <span>&middot;</span>
-      <span>{{ report.duration_seconds }}s</span>
+      <span>{{ "%.1f"|format(report.duration_seconds) }}s</span>
     </div>
   </div>
 
   <!-- Score -->
   <div class="score-section">
     {% set score = report.summary.score %}
-    <div class="score-ring {% if score >= 80 %}score-good{% elif score >= 50 %}score-warn{% else %}score-bad{% endif %}">
+    <div class="score-ring {% if score >= 80 %}score-good{% elif score >= 50 %}score-warn{% else %}score-bad{% endif %}" role="meter" aria-valuenow="{{ score }}" aria-valuemin="0" aria-valuemax="100" aria-label="Health score: {{ score }} out of 100">
       {{ score }}
     </div>
   </div>
@@ -470,7 +470,7 @@
   {% for finding in findings %}
   <div class="finding">
     <div class="finding-header">
-      <span class="severity severity-{{ finding.severity.value }}">{{ finding.severity.value }}</span>
+      <span class="severity severity-{{ finding.severity.value }}" aria-label="Severity: {{ finding.severity.value }}">{{ finding.severity.value }}</span>
       <span class="finding-title">{{ finding.title }}</span>
       {% for ref in finding.compliance_refs %}
       <span class="compliance-ref">{{ ref }}</span>

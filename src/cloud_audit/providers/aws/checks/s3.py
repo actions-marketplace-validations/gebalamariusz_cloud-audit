@@ -46,13 +46,13 @@ _bucket_cache: list[Any] | None = None
 
 def _reset_bucket_cache() -> None:
     """Reset the bucket list cache (called between scans and in tests)."""
-    global _bucket_cache  # noqa: PLW0603
+    global _bucket_cache
     _bucket_cache = None
 
 
 def _list_buckets(provider: AWSProvider) -> list[Any]:
     """Fetch S3 bucket list once per scan (module-level cache)."""
-    global _bucket_cache  # noqa: PLW0603
+    global _bucket_cache
     if _bucket_cache is None:
         s3 = provider.session.client("s3")
         _bucket_cache = s3.list_buckets()["Buckets"]
@@ -120,8 +120,38 @@ def check_public_buckets(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def _kms_encryption_remediation(name: str) -> Remediation:
+    """Build remediation for upgrading bucket encryption to SSE-KMS."""
+    return Remediation(
+        cli=(
+            f"aws s3api put-bucket-encryption --bucket {name} "
+            f"--server-side-encryption-configuration "
+            f'\'{{"Rules":[{{"ApplyServerSideEncryptionByDefault":'
+            f'{{"SSEAlgorithm":"aws:kms"}},"BucketKeyEnabled":true}}]}}\''
+        ),
+        terraform=(
+            f'resource "aws_s3_bucket_server_side_encryption_configuration" "{_tf_name(name)}" {{\n'
+            f'  bucket = "{name}"\n'
+            f"  rule {{\n"
+            f"    apply_server_side_encryption_by_default {{\n"
+            f'      sse_algorithm     = "aws:kms"\n'
+            f"    }}\n"
+            f"    bucket_key_enabled = true\n"
+            f"  }}\n"
+            f"}}"
+        ),
+        doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-encryption.html",
+        effort=Effort.LOW,
+    )
+
+
 def check_bucket_encryption(provider: AWSProvider) -> CheckResult:
-    """Check if S3 buckets have default encryption enabled."""
+    """Check if S3 buckets use KMS encryption (CMK) instead of default SSE-S3.
+
+    Since January 2023, AWS encrypts all new S3 objects with SSE-S3 (AES-256) by default.
+    This check flags buckets NOT using SSE-KMS, which provides key rotation, access auditing
+    via CloudTrail, and granular access control through key policies.
+    """
     s3 = provider.session.client("s3")
     result = CheckResult(check_id="aws-s3-002", check_name="S3 bucket encryption")
 
@@ -132,42 +162,53 @@ def check_bucket_encryption(provider: AWSProvider) -> CheckResult:
             result.resources_scanned += 1
 
             try:
-                s3.get_bucket_encryption(Bucket=name)
-            except s3.exceptions.ClientError as e:
-                error_code = e.response.get("Error", {}).get("Code", "")
+                enc = s3.get_bucket_encryption(Bucket=name)
+                rules = enc.get("ServerSideEncryptionConfiguration", {}).get("Rules", [])
+                if rules:
+                    algo = rules[0].get("ApplyServerSideEncryptionByDefault", {}).get("SSEAlgorithm", "")
+                    if algo != "aws:kms" and algo != "aws:kms:dsse":
+                        result.findings.append(
+                            Finding(
+                                check_id="aws-s3-002",
+                                title=f"S3 bucket '{name}' uses SSE-S3 instead of SSE-KMS",
+                                severity=Severity.LOW,
+                                category=Category.SECURITY,
+                                resource_type="AWS::S3::Bucket",
+                                resource_id=name,
+                                description=(
+                                    f"Bucket '{name}' uses SSE-S3 (AES-256) default encryption. "
+                                    "SSE-KMS provides key rotation, access auditing via CloudTrail, "
+                                    "and granular access control through key policies."
+                                ),
+                                recommendation="Use SSE-KMS encryption for sensitive data buckets.",
+                                remediation=_kms_encryption_remediation(name),
+                                compliance_refs=["CIS 2.1.1"],
+                            )
+                        )
+            except Exception as exc:
+                error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
                 if error_code == "ServerSideEncryptionConfigurationNotFoundError":
+                    # No explicit config — AWS still encrypts with SSE-S3 since Jan 2023
                     result.findings.append(
                         Finding(
                             check_id="aws-s3-002",
-                            title=f"S3 bucket '{name}' has no default encryption",
-                            severity=Severity.MEDIUM,
+                            title=f"S3 bucket '{name}' uses default SSE-S3 (no explicit encryption config)",
+                            severity=Severity.LOW,
                             category=Category.SECURITY,
                             resource_type="AWS::S3::Bucket",
                             resource_id=name,
-                            description=f"Bucket '{name}' does not have default server-side encryption configured.",
-                            recommendation="Enable default encryption with SSE-S3 (AES-256) or SSE-KMS.",
-                            remediation=Remediation(
-                                cli=(
-                                    f"aws s3api put-bucket-encryption --bucket {name} "
-                                    f"--server-side-encryption-configuration "
-                                    f'\'{{"Rules":[{{"ApplyServerSideEncryptionByDefault":{{"SSEAlgorithm":"AES256"}}}}]}}\''
-                                ),
-                                terraform=(
-                                    f'resource "aws_s3_bucket_server_side_encryption_configuration" "{_tf_name(name)}" {{\n'
-                                    f'  bucket = "{name}"\n'
-                                    f"  rule {{\n"
-                                    f"    apply_server_side_encryption_by_default {{\n"
-                                    f'      sse_algorithm = "AES256"\n'
-                                    f"    }}\n"
-                                    f"  }}\n"
-                                    f"}}"
-                                ),
-                                doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-encryption.html",
-                                effort=Effort.LOW,
+                            description=(
+                                f"Bucket '{name}' has no explicit encryption configuration. "
+                                "AWS encrypts with SSE-S3 by default since January 2023, but "
+                                "SSE-KMS is recommended for sensitive data."
                             ),
+                            recommendation="Set explicit SSE-KMS encryption for sensitive data buckets.",
+                            remediation=_kms_encryption_remediation(name),
                             compliance_refs=["CIS 2.1.1"],
                         )
                     )
+                elif error_code == "AccessDenied":
+                    continue  # Skip buckets we can't access
     except Exception as e:
         result.error = str(e)
 
