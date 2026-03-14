@@ -24,7 +24,7 @@ def _make_zip() -> bytes:
     return buf.getvalue()
 
 
-def _create_role(iam_client) -> str:  # noqa: ANN001
+def _create_role(iam_client) -> str:
     """Create a minimal Lambda execution role and return ARN."""
     import json
 

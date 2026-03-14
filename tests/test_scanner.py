@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import partial
+from typing import ClassVar
 
 from cloud_audit.config import CloudAuditConfig, Suppression
 from cloud_audit.models import (
@@ -34,7 +35,7 @@ def _make_finding(
 class _FakeProvider:
     """Minimal provider stub for scanner tests."""
 
-    regions = ["eu-central-1"]
+    regions: ClassVar[list[str]] = ["eu-central-1"]
 
     def get_provider_name(self) -> str:
         return "fake"

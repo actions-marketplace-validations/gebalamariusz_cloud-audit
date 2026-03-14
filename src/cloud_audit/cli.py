@@ -501,7 +501,7 @@ def list_checks(
         _sentinel = type("_Sentinel", (), {})()
         try:
             checks = module.get_checks(_sentinel)
-        except Exception as exc:  # noqa: S112
+        except Exception as exc:
             console.print(f"[yellow]Warning: failed to load checks from {module.__name__}: {exc}[/yellow]")
             continue
 

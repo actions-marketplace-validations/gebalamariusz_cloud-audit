@@ -30,7 +30,7 @@ def _create_db_instance(
         DBInstanceClass=instance_class,
         Engine="mysql",
         MasterUsername="admin",
-        MasterUserPassword="SecurePassword123!",  # noqa: S106
+        MasterUserPassword="SecurePassword123!",
         AllocatedStorage=20,
         PubliclyAccessible=publicly_accessible,
         StorageEncrypted=storage_encrypted,
@@ -127,7 +127,7 @@ def test_rds_auto_minor_upgrade_fail(mock_aws_provider: AWSProvider) -> None:
         DBInstanceClass="db.m5.large",
         Engine="mysql",
         MasterUsername="admin",
-        MasterUserPassword="SecurePassword123!",  # noqa: S106
+        MasterUserPassword="SecurePassword123!",
         AllocatedStorage=20,
         AutoMinorVersionUpgrade=False,
     )

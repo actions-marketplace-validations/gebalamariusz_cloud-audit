@@ -168,7 +168,7 @@ def check_open_security_groups(provider: AWSProvider) -> CheckResult:
                         if exposed:
                             # Pick the most critical port for the primary finding
                             critical_ports = {22, 3389, 3306, 5432}
-                            best_port, best_service = next(
+                            best_port, _best_service = next(
                                 ((p, s) for p, s in exposed if p in critical_ports),
                                 exposed[0],
                             )
