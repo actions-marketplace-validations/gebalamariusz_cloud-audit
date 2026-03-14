@@ -774,8 +774,7 @@ def _print_diff(result: DiffResult) -> None:
             res = rich_escape(f.resource_id[:35])
             title = rich_escape(f.title[:50])
             console.print(
-                f"  [{sev_color}]{f.severity.value.upper():8s}[/{sev_color}]"
-                f"  {f.check_id:14s}  {res:35s}  {title}"
+                f"  [{sev_color}]{f.severity.value.upper():8s}[/{sev_color}]  {f.check_id:14s}  {res:35s}  {title}"
             )
 
     # New (regressions)
@@ -786,8 +785,7 @@ def _print_diff(result: DiffResult) -> None:
             res = rich_escape(f.resource_id[:35])
             title = rich_escape(f.title[:50])
             console.print(
-                f"  [{sev_color}]{f.severity.value.upper():8s}[/{sev_color}]"
-                f"  {f.check_id:14s}  {res:35s}  {title}"
+                f"  [{sev_color}]{f.severity.value.upper():8s}[/{sev_color}]  {f.check_id:14s}  {res:35s}  {title}"
             )
 
     # Changed severity
