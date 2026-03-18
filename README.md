@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="cloud-audit logo" width="200">
+  <img src="assets/logo-nobg.png" alt="cloud-audit logo" width="200">
 </p>
 
 <h1 align="center">cloud-audit</h1>
