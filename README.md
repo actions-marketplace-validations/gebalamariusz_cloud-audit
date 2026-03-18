@@ -1,7 +1,7 @@
 <h1 align="center">cloud-audit</h1>
 
 <p align="center">
-  <strong>Open-source AWS security scanner. 45 checks, each with a ready-to-use fix.</strong>
+  <strong>Open-source AWS security scanner. 46 checks, each with a ready-to-use fix.</strong>
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@
 
 cloud-audit scans your AWS account and tells you exactly how to fix what it finds - AWS CLI commands, Terraform HCL, and documentation links you can copy-paste.
 
-45 checks across 15 AWS resource types. Mapped to 16 CIS AWS Foundations Benchmark controls.
+46 checks across 15 AWS resource types. Mapped to 16 CIS AWS Foundations Benchmark controls.
 
 **Two things no other open-source CLI scanner does:**
 
@@ -105,9 +105,9 @@ The `demo` command runs a simulated scan with sample data - output format, healt
 
 ## What it checks
 
-45 checks across IAM, S3, EC2, EIP, VPC, RDS, Lambda, ECS, CloudTrail, GuardDuty, KMS, SSM, Secrets Manager, CloudWatch, and AWS Config.
+46 checks across IAM, S3, EC2, EIP, VPC, RDS, Lambda, ECS, CloudTrail, GuardDuty, KMS, SSM, Secrets Manager, CloudWatch, and AWS Config.
 
-**By severity:** 7 Critical, 14 High, 16 Medium, 8 Low.
+**By severity:** 8 Critical, 14 High, 16 Medium, 8 Low.
 
 Every check answers one question: *would an attacker exploit this?* If not, the check doesn't exist.
 
@@ -124,6 +124,7 @@ Every check answers one question: *would an attacker exploit this?* If not, the 
 | `aws-iam-004` | Medium | Access key unused for 30+ days |
 | `aws-iam-005` | Critical | IAM policy with Action: \* and Resource: \* |
 | `aws-iam-006` | Medium | Password policy below CIS requirements |
+| `aws-iam-007` | Critical | OIDC trust policy without sub condition |
 | `aws-s3-001` | High | S3 bucket without public access block |
 | `aws-s3-002` | Low | S3 bucket using SSE-S3 instead of SSE-KMS |
 | `aws-s3-005` | Medium | S3 bucket without access logging |

@@ -79,7 +79,6 @@
 - **Enhanced HTML reports** -- executive summary, priority grouping, CIS compliance overview
 - **GitHub Action** -- reusable action for easier CI integration
 - **Community** -- issue templates, contributing guide, GitHub Discussions
-- **Docker image** on GHCR (`ghcr.io/gebalamariusz/cloud-audit`)
 - Target: 50+ curated checks
 
 ## Future
