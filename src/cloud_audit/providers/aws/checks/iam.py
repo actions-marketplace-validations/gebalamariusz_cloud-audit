@@ -436,6 +436,155 @@ def check_weak_password_policy(provider: AWSProvider) -> CheckResult:
     return result
 
 
+_OIDC_PROVIDER_NAMES: dict[str, str] = {
+    "token.actions.githubusercontent.com": "GitHub Actions",
+    "gitlab.com": "GitLab CI/CD",
+    "oidc.circleci.com": "CircleCI",
+    "app.terraform.io": "Terraform Cloud",
+}
+
+
+def _extract_oidc_url(federated_value: str) -> str | None:
+    """Extract OIDC provider URL from a Federated principal ARN.
+
+    Handles: arn:aws:iam::ACCOUNT:oidc-provider/token.actions.githubusercontent.com
+    Returns the provider URL portion, or None if not an OIDC provider.
+    """
+    if ":oidc-provider/" in federated_value:
+        return federated_value.split(":oidc-provider/", 1)[1]
+    return None
+
+
+def _get_provider_display_name(oidc_url: str) -> str:
+    """Return human-readable name for a known OIDC provider, or the URL itself."""
+    for prefix, name in _OIDC_PROVIDER_NAMES.items():
+        if oidc_url == prefix or oidc_url.startswith(prefix + "/"):
+            return name
+    return oidc_url
+
+
+def _has_sub_condition(condition: dict[str, object], provider_url: str) -> bool:
+    """Check if any condition operator restricts the 'sub' claim for this OIDC provider."""
+    sub_key = f"{provider_url}:sub"
+    return any(isinstance(values, dict) and sub_key in values for _operator, values in condition.items())
+
+
+def check_oidc_trust_policy(provider: AWSProvider) -> CheckResult:
+    """Check IAM roles with OIDC federation for missing 'sub' condition.
+
+    Roles federated with OIDC providers (GitHub Actions, GitLab CI, etc.) that only
+    validate the 'aud' claim but not 'sub' allow ANY repository on the platform to
+    assume the role. Google's UNC6426 threat actor exploited this exact pattern.
+    """
+    iam = provider.session.client("iam")
+    result = CheckResult(check_id="aws-iam-007", check_name="OIDC trust policy without sub condition")
+
+    try:
+        paginator = iam.get_paginator("list_roles")
+        for page in paginator.paginate():
+            for role in page["Roles"]:
+                role_name = role["RoleName"]
+                role_arn = role["Arn"]
+
+                trust_policy = role.get("AssumeRolePolicyDocument", {})
+                if isinstance(trust_policy, str):
+                    trust_policy = json.loads(trust_policy)
+
+                statements = trust_policy.get("Statement", [])
+                if isinstance(statements, dict):
+                    statements = [statements]
+
+                for stmt in statements:
+                    if stmt.get("Effect") != "Allow":
+                        continue
+
+                    principal = stmt.get("Principal", {})
+                    if isinstance(principal, str):
+                        continue
+
+                    federated = principal.get("Federated", [])
+                    if isinstance(federated, str):
+                        federated = [federated]
+
+                    for fed_value in federated:
+                        oidc_url = _extract_oidc_url(fed_value)
+                        if oidc_url is None:
+                            continue
+
+                        result.resources_scanned += 1
+                        display_name = _get_provider_display_name(oidc_url)
+                        condition = stmt.get("Condition", {})
+
+                        if not _has_sub_condition(condition, oidc_url):
+                            result.findings.append(
+                                Finding(
+                                    check_id="aws-iam-007",
+                                    title=f"Role '{role_name}' allows any {display_name} repo to assume it",
+                                    severity=Severity.CRITICAL,
+                                    category=Category.SECURITY,
+                                    resource_type="AWS::IAM::Role",
+                                    resource_id=role_arn,
+                                    description=(
+                                        f"Role '{role_name}' trusts OIDC provider {display_name} "
+                                        f"({oidc_url}) without restricting the 'sub' claim. "
+                                        f"Any repository on the platform can assume this role and "
+                                        f"access all attached permissions. "
+                                        f"Google documented threat actor UNC6426 exploiting this "
+                                        f"pattern to escalate from npm package compromise to full "
+                                        f"AWS admin access."
+                                    ),
+                                    recommendation=(
+                                        f"Add a '{oidc_url}:sub' condition to the trust policy "
+                                        f"restricting access to specific repositories and branches."
+                                    ),
+                                    remediation=Remediation(
+                                        cli=(
+                                            f"# 1. Get current trust policy:\n"
+                                            f"aws iam get-role --role-name {role_name} "
+                                            f"--query 'Role.AssumeRolePolicyDocument' > trust-policy.json\n"
+                                            f"# 2. Add to Condition.StringEquals (or StringLike for wildcards):\n"
+                                            f'#    "{oidc_url}:sub": '
+                                            f'"repo:YOUR_ORG/YOUR_REPO:ref:refs/heads/main"\n'
+                                            f"# 3. Apply:\n"
+                                            f"aws iam update-assume-role-policy "
+                                            f"--role-name {role_name} "
+                                            f"--policy-document file://trust-policy.json"
+                                        ),
+                                        terraform=(
+                                            f"# Add 'sub' condition to restrict OIDC federation:\n"
+                                            f'resource "aws_iam_role" "{role_name}" {{\n'
+                                            f'  name = "{role_name}"\n'
+                                            f"\n"
+                                            f"  assume_role_policy = jsonencode({{\n"
+                                            f'    Version = "2012-10-17"\n'
+                                            f"    Statement = [{{\n"
+                                            f'      Effect = "Allow"\n'
+                                            f"      Principal = {{\n"
+                                            f'        Federated = "{fed_value}"\n'
+                                            f"      }}\n"
+                                            f'      Action = "sts:AssumeRoleWithWebIdentity"\n'
+                                            f"      Condition = {{\n"
+                                            f"        StringEquals = {{\n"
+                                            f'          "{oidc_url}:aud" = "sts.amazonaws.com"\n'
+                                            f'          "{oidc_url}:sub" = '
+                                            f'"repo:YOUR_ORG/YOUR_REPO:ref:refs/heads/main"\n'
+                                            f"        }}\n"
+                                            f"      }}\n"
+                                            f"    }}]\n"
+                                            f"  }})\n"
+                                            f"}}"
+                                        ),
+                                        doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-idp_oidc.html",
+                                        effort=Effort.LOW,
+                                    ),
+                                )
+                            )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all IAM checks bound to the provider."""
     from cloud_audit.providers.base import make_check
@@ -447,4 +596,5 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
         make_check(check_unused_access_keys, provider, check_id="aws-iam-004", category=Category.SECURITY),
         make_check(check_overly_permissive_policy, provider, check_id="aws-iam-005", category=Category.SECURITY),
         make_check(check_weak_password_policy, provider, check_id="aws-iam-006", category=Category.SECURITY),
+        make_check(check_oidc_trust_policy, provider, check_id="aws-iam-007", category=Category.SECURITY),
     ]

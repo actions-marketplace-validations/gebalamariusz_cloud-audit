@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from cloud_audit.providers.aws.checks.iam import (
     check_access_keys_rotation,
+    check_oidc_trust_policy,
     check_overly_permissive_policy,
     check_root_mfa,
     check_unused_access_keys,
@@ -146,3 +147,192 @@ def test_weak_password_policy_strong(mock_aws_provider: AWSProvider) -> None:
     )
     result = check_weak_password_policy(mock_aws_provider)
     assert len(result.findings) == 0
+
+
+# --- OIDC trust policy checks (aws-iam-007) ---
+
+
+def test_oidc_trust_policy_pass_with_sub(mock_aws_provider: AWSProvider) -> None:
+    """Role with OIDC federation AND sub condition - no finding."""
+    import json
+
+    iam = mock_aws_provider.session.client("iam")
+    trust_policy = json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+                    },
+                    "Action": "sts:AssumeRoleWithWebIdentity",
+                    "Condition": {
+                        "StringEquals": {
+                            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                            "token.actions.githubusercontent.com:sub": "repo:myorg/myrepo:ref:refs/heads/main",
+                        }
+                    },
+                }
+            ],
+        }
+    )
+    iam.create_role(RoleName="github-actions-safe", AssumeRolePolicyDocument=trust_policy)
+
+    result = check_oidc_trust_policy(mock_aws_provider)
+    findings = [f for f in result.findings if f.check_id == "aws-iam-007"]
+    assert len(findings) == 0
+    assert result.resources_scanned >= 1
+
+
+def test_oidc_trust_policy_fail_no_sub(mock_aws_provider: AWSProvider) -> None:
+    """Role with OIDC federation, aud but no sub - CRITICAL finding."""
+    import json
+
+    iam = mock_aws_provider.session.client("iam")
+    trust_policy = json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+                    },
+                    "Action": "sts:AssumeRoleWithWebIdentity",
+                    "Condition": {
+                        "StringEquals": {
+                            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                        }
+                    },
+                }
+            ],
+        }
+    )
+    iam.create_role(RoleName="github-actions-vulnerable", AssumeRolePolicyDocument=trust_policy)
+
+    result = check_oidc_trust_policy(mock_aws_provider)
+    findings = [f for f in result.findings if f.check_id == "aws-iam-007"]
+    assert len(findings) == 1
+    assert findings[0].severity.value == "critical"
+    assert findings[0].remediation is not None
+    assert "sub" in findings[0].remediation.cli
+    assert "GitHub Actions" in findings[0].title
+
+
+def test_oidc_trust_policy_pass_non_oidc_role(mock_aws_provider: AWSProvider) -> None:
+    """Regular service role (not OIDC) - no finding."""
+    import json
+
+    iam = mock_aws_provider.session.client("iam")
+    trust_policy = json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"Service": "ec2.amazonaws.com"},
+                    "Action": "sts:AssumeRole",
+                }
+            ],
+        }
+    )
+    iam.create_role(RoleName="ec2-service-role", AssumeRolePolicyDocument=trust_policy)
+
+    result = check_oidc_trust_policy(mock_aws_provider)
+    findings = [f for f in result.findings if f.check_id == "aws-iam-007"]
+    assert len(findings) == 0
+
+
+def test_oidc_trust_policy_fail_no_condition(mock_aws_provider: AWSProvider) -> None:
+    """Role with OIDC federation but no Condition at all - CRITICAL finding."""
+    import json
+
+    iam = mock_aws_provider.session.client("iam")
+    trust_policy = json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+                    },
+                    "Action": "sts:AssumeRoleWithWebIdentity",
+                }
+            ],
+        }
+    )
+    iam.create_role(RoleName="github-actions-no-condition", AssumeRolePolicyDocument=trust_policy)
+
+    result = check_oidc_trust_policy(mock_aws_provider)
+    findings = [f for f in result.findings if f.check_id == "aws-iam-007"]
+    assert len(findings) == 1
+    assert findings[0].severity.value == "critical"
+
+
+def test_oidc_trust_policy_pass_sub_in_string_like(mock_aws_provider: AWSProvider) -> None:
+    """Role with sub in StringLike (wildcard pattern) - no finding."""
+    import json
+
+    iam = mock_aws_provider.session.client("iam")
+    trust_policy = json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+                    },
+                    "Action": "sts:AssumeRoleWithWebIdentity",
+                    "Condition": {
+                        "StringEquals": {
+                            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                        },
+                        "StringLike": {
+                            "token.actions.githubusercontent.com:sub": "repo:myorg/*",
+                        },
+                    },
+                }
+            ],
+        }
+    )
+    iam.create_role(RoleName="github-actions-wildcard-safe", AssumeRolePolicyDocument=trust_policy)
+
+    result = check_oidc_trust_policy(mock_aws_provider)
+    findings = [f for f in result.findings if f.check_id == "aws-iam-007"]
+    assert len(findings) == 0
+
+
+def test_oidc_trust_policy_gitlab(mock_aws_provider: AWSProvider) -> None:
+    """Role with GitLab OIDC without sub condition - CRITICAL."""
+    import json
+
+    iam = mock_aws_provider.session.client("iam")
+    trust_policy = json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Federated": "arn:aws:iam::123456789012:oidc-provider/gitlab.com"
+                    },
+                    "Action": "sts:AssumeRoleWithWebIdentity",
+                    "Condition": {
+                        "StringEquals": {
+                            "gitlab.com:aud": "https://gitlab.com",
+                        }
+                    },
+                }
+            ],
+        }
+    )
+    iam.create_role(RoleName="gitlab-ci-vulnerable", AssumeRolePolicyDocument=trust_policy)
+
+    result = check_oidc_trust_policy(mock_aws_provider)
+    findings = [f for f in result.findings if f.check_id == "aws-iam-007"]
+    assert len(findings) == 1
+    assert "GitLab" in findings[0].title
+    assert findings[0].remediation is not None
