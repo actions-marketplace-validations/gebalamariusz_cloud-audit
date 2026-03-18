@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cloud_audit.providers.aws.checks.ec2 import (
+    check_ebs_default_encryption,
     check_imdsv1,
     check_public_amis,
     check_stopped_instances,
@@ -125,3 +126,25 @@ def test_termination_protection_pass(mock_aws_provider: AWSProvider) -> None:
     result = check_termination_protection(mock_aws_provider)
     findings = [f for f in result.findings if f.check_id == "aws-ec2-005" and f.resource_id == instance_id]
     assert len(findings) == 0
+
+
+def test_ebs_default_encryption_pass(mock_aws_provider: AWSProvider) -> None:
+    """EBS default encryption enabled - no finding."""
+    ec2 = mock_aws_provider.session.client("ec2", region_name="eu-central-1")
+    ec2.enable_ebs_encryption_by_default()
+    result = check_ebs_default_encryption(mock_aws_provider)
+    assert result.resources_scanned >= 1
+    findings = [f for f in result.findings if f.check_id == "aws-ec2-006"]
+    assert len(findings) == 0
+
+
+def test_ebs_default_encryption_fail(mock_aws_provider: AWSProvider) -> None:
+    """EBS default encryption disabled (default moto state) - MEDIUM finding."""
+    result = check_ebs_default_encryption(mock_aws_provider)
+    assert result.resources_scanned >= 1
+    findings = [f for f in result.findings if f.check_id == "aws-ec2-006"]
+    assert len(findings) >= 1
+    assert findings[0].severity.value == "medium"
+    assert findings[0].remediation is not None
+    assert "enable-ebs-encryption-by-default" in findings[0].remediation.cli
+    assert findings[0].compliance_refs == ["CIS 2.2.1"]

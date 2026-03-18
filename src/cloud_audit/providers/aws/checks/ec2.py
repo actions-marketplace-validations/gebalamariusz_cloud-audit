@@ -291,6 +291,43 @@ def check_termination_protection(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_ebs_default_encryption(provider: AWSProvider) -> CheckResult:
+    """Check if EBS default encryption is enabled in each region."""
+    result = CheckResult(check_id="aws-ec2-006", check_name="EBS default encryption")
+
+    try:
+        for region in provider.regions:
+            ec2 = provider.session.client("ec2", region_name=region)
+            resources_scanned = 1
+            result.resources_scanned += resources_scanned
+            response = ec2.get_ebs_encryption_by_default()
+            if not response.get("EbsEncryptionByDefault", False):
+                result.findings.append(
+                    Finding(
+                        check_id="aws-ec2-006",
+                        title=f"EBS default encryption is disabled in {region}",
+                        severity=Severity.MEDIUM,
+                        category=Category.SECURITY,
+                        resource_type="AWS::EC2::Region",
+                        resource_id=region,
+                        region=region,
+                        description=f"EBS default encryption is not enabled in {region}. New EBS volumes will not be encrypted by default.",
+                        recommendation="Enable EBS default encryption to ensure all new volumes are automatically encrypted.",
+                        remediation=Remediation(
+                            cli=f"aws ec2 enable-ebs-encryption-by-default --region {region}",
+                            terraform=('resource "aws_ebs_encryption_by_default" "this" {\n  enabled = true\n}'),
+                            doc_url="https://docs.aws.amazon.com/ebs/latest/userguide/encryption-by-default.html",
+                            effort=Effort.LOW,
+                        ),
+                        compliance_refs=["CIS 2.2.1"],
+                    )
+                )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all EC2 checks bound to the provider."""
     from cloud_audit.providers.base import make_check
@@ -301,4 +338,5 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
         make_check(check_stopped_instances, provider, check_id="aws-ec2-003", category=Category.COST),
         make_check(check_imdsv1, provider, check_id="aws-ec2-004", category=Category.SECURITY),
         make_check(check_termination_protection, provider, check_id="aws-ec2-005", category=Category.RELIABILITY),
+        make_check(check_ebs_default_encryption, provider, check_id="aws-ec2-006", category=Category.SECURITY),
     ]
