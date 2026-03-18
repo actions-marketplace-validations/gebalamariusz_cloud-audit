@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo-nobg.png" alt="cloud-audit logo" width="200">
+  <img src="assets/logo.png" alt="cloud-audit logo" width="200">
 </p>
 
 <h1 align="center">cloud-audit</h1>
@@ -21,7 +21,7 @@
 ---
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/gebalamariusz/cloud-audit/main/assets/demo.gif" alt="cloud-audit terminal demo" width="700">
+  <img src="assets/demo.gif" alt="cloud-audit terminal demo" width="700">
 </p>
 
 cloud-audit scans your AWS account and tells you exactly how to fix what it finds - AWS CLI commands, Terraform HCL, and documentation links you can copy-paste.
@@ -282,7 +282,7 @@ The script is commented and uses `set -e` - review it, uncomment what you want t
 ## Reports
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/gebalamariusz/cloud-audit/main/assets/report-preview.png" alt="cloud-audit HTML report" width="700">
+  <img src="assets/report-preview.png" alt="cloud-audit HTML report" width="700">
 </p>
 
 ```bash

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from cloud_audit.models import Finding, ScanReport
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
-LOGO_PATH = Path(__file__).parent.parent.parent.parent / "logo-nobg.png"
+LOGO_PATH = Path(__file__).parent.parent.parent.parent / "assets" / "logo-nobg.png"
 
 
 def _build_executive_summary(sorted_findings: list[Finding], checks_passed: int) -> str:
