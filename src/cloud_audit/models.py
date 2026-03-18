@@ -75,10 +75,24 @@ class CheckResult(BaseModel):
     error: str | None = None
 
 
+class AttackChain(BaseModel):
+    """A detected attack chain - multiple findings that together form an exploitable attack path."""
+
+    chain_id: str = Field(description="Unique chain identifier, e.g. 'AC-01'")
+    name: str = Field(description="Human-readable name, e.g. 'Internet-Exposed Admin Instance'")
+    severity: Severity
+    findings: list[Finding] = Field(description="Component findings that form this chain")
+    attack_narrative: str = Field(description="How an attacker exploits this chain step by step")
+    priority_fix: str = Field(description="The single fix that breaks the chain (lowest effort)")
+    mitre_refs: list[str] = Field(default_factory=list, description="MITRE ATT&CK technique IDs")
+    resources: list[str] = Field(default_factory=list, description="Affected resource IDs")
+
+
 class ScanSummary(BaseModel):
     """Aggregated summary of a full scan."""
 
     total_findings: int = 0
+    attack_chains_detected: int = 0
     by_severity: dict[Severity, int] = Field(default_factory=dict)
     by_category: dict[Category, int] = Field(default_factory=dict)
     resources_scanned: int = 0
@@ -98,6 +112,7 @@ class ScanReport(BaseModel):
     duration_seconds: float = 0.0
     summary: ScanSummary = Field(default_factory=ScanSummary)
     results: list[CheckResult] = Field(default_factory=list)
+    attack_chains: list[AttackChain] = Field(default_factory=list)
 
     @property
     def all_findings(self) -> list[Finding]:

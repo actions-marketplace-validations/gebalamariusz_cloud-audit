@@ -1,4 +1,4 @@
-"""Markdown report for diff results — designed for PR comments."""
+"""Markdown report for diff results - designed for PR comments."""
 
 from __future__ import annotations
 

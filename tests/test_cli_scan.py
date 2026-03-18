@@ -1,4 +1,4 @@
-"""Tests for CLI scan command — format, quiet, exit codes, env vars, config integration."""
+"""Tests for CLI scan command - format, quiet, exit codes, env vars, config integration."""
 
 from __future__ import annotations
 

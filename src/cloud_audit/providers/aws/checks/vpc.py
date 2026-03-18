@@ -161,7 +161,7 @@ def check_open_security_groups(provider: AWSProvider) -> CheckResult:
                             )
                             continue
 
-                        # Check sensitive ports — report only the highest-severity match per rule
+                        # Check sensitive ports - report only the highest-severity match per rule
                         exposed = [
                             (port, service) for port, service in sensitive_ports.items() if from_port <= port <= to_port
                         ]

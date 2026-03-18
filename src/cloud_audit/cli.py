@@ -116,6 +116,8 @@ def _print_summary(report: ScanReport, suppressed_count: int = 0) -> None:
     table.add_row("Checks failed", f"[red]{s.checks_failed}[/red]" if s.checks_failed else "0")
     if s.checks_errored:
         table.add_row("Checks errored", f"[yellow]{s.checks_errored}[/yellow]")
+    if s.attack_chains_detected:
+        table.add_row("Attack chains", f"[red]{s.attack_chains_detected}[/red]")
     if suppressed_count:
         table.add_row("Findings suppressed", f"[dim]{suppressed_count}[/dim]")
     console.print(table)
@@ -127,6 +129,42 @@ def _print_summary(report: ScanReport, suppressed_count: int = 0) -> None:
         for r in errored_results:
             err_short = (r.error or "Unknown")[:100]
             console.print(f"  [dim]{r.check_name}:[/dim] [yellow]{err_short}[/yellow]")
+
+    # Attack chains
+    if report.attack_chains:
+        chains_table = Table(
+            show_header=False,
+            box=None,
+            padding=(0, 2),
+            show_edge=False,
+        )
+        chains_table.add_column(width=10)
+        chains_table.add_column()
+
+        for chain in report.attack_chains:
+            sev_color = SEVERITY_COLORS.get(chain.severity, "dim")
+            chains_table.add_row(
+                f"[{sev_color}]{chain.severity.value.upper()}[/{sev_color}]",
+                f"[bold]{rich_escape(chain.name)}[/bold]",
+            )
+            resources_str = ", ".join(chain.resources[:3]) if chain.resources else ""
+            if resources_str:
+                chains_table.add_row("", f"[dim]{rich_escape(resources_str)}[/dim]")
+            chains_table.add_row("", f"[italic]{rich_escape(chain.attack_narrative)}[/italic]")
+            chains_table.add_row(
+                "",
+                f"Fix: {rich_escape(chain.priority_fix)}",
+            )
+            chains_table.add_row("", "")
+
+        console.print(
+            Panel(
+                chains_table,
+                title=f"[bold]Attack Chains ({len(report.attack_chains)} detected)[/bold]",
+                border_style="red",
+                width=80,
+            )
+        )
 
     # Findings by severity
     if s.by_severity:
@@ -546,14 +584,14 @@ def demo() -> None:
 
     # Simulate progress bar
     with Progress(
-        TextColumn("[bold]Running 45 checks on AWS..."),
+        TextColumn("[bold]Running 47 checks on AWS..."),
         BarColumn(bar_width=40),
         TextColumn("{task.completed}/{task.total}"),
         TimeElapsedColumn(),
         console=console,
     ) as progress:
-        task = progress.add_task("Scanning", total=45)
-        for _ in range(45):
+        task = progress.add_task("Scanning", total=47)
+        for _ in range(47):
             time.sleep(0.08)
             progress.advance(task)
 
@@ -580,6 +618,40 @@ def demo() -> None:
     table.add_row("Checks passed", "[green]11[/green]")
     table.add_row("Checks failed", "[red]6[/red]")
     console.print(table)
+
+    # Attack chains demo
+    demo_chains_table = Table(show_header=False, box=None, padding=(0, 2), show_edge=False)
+    demo_chains_table.add_column(width=10)
+    demo_chains_table.add_column()
+    demo_chains_table.add_row(
+        "[bold red]CRITICAL[/bold red]",
+        "[bold]Internet-Exposed Admin Instance[/bold]",
+    )
+    demo_chains_table.add_row("", "[dim]i-0abc123def456789[/dim]")
+    demo_chains_table.add_row(
+        "",
+        "[italic]Attacker lands on EC2 via public SG, queries IMDS for admin role credentials[/italic]",
+    )
+    demo_chains_table.add_row("", "Fix: Close security group ingress (effort: LOW)")
+    demo_chains_table.add_row("", "")
+    demo_chains_table.add_row(
+        "[bold red]CRITICAL[/bold red]",
+        "[bold]CI/CD to Admin Takeover[/bold]",
+    )
+    demo_chains_table.add_row("", "[dim]github-deploy-role[/dim]")
+    demo_chains_table.add_row(
+        "",
+        "[italic]Any GitHub repo assumes deploy role via OIDC without sub condition, gets admin[/italic]",
+    )
+    demo_chains_table.add_row("", "Fix: Add sub condition to OIDC trust policy (effort: LOW)")
+    console.print(
+        Panel(
+            demo_chains_table,
+            title="[bold]Attack Chains (2 detected)[/bold]",
+            border_style="red",
+            width=80,
+        )
+    )
 
     # Findings by severity
     console.print("\n[bold]Findings by severity:[/bold]")

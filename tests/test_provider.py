@@ -1,4 +1,4 @@
-"""Tests for AWSProvider — assume_role support."""
+"""Tests for AWSProvider - assume_role support."""
 
 from __future__ import annotations
 

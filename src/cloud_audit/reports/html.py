@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import logging
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -10,10 +12,13 @@ from jinja2 import Environment, FileSystemLoader
 
 from cloud_audit.models import Severity
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from cloud_audit.models import Finding, ScanReport
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
+LOGO_PATH = Path(__file__).parent.parent.parent.parent / "logo-nobg.png"
 
 
 def _build_executive_summary(sorted_findings: list[Finding], checks_passed: int) -> str:
@@ -111,6 +116,16 @@ def _build_cis_status(all_findings: list[Finding], cis_controls: list[str]) -> l
     return [{"ref": ref, "status": "fail" if ref in failed_refs else "pass"} for ref in cis_controls]
 
 
+def _load_logo_base64() -> str | None:
+    """Read logo.png from repo root and return base64 string, or None if missing."""
+    try:
+        if LOGO_PATH.is_file():
+            return base64.b64encode(LOGO_PATH.read_bytes()).decode("ascii")
+    except Exception:
+        logger.debug("Could not load logo from %s", LOGO_PATH)
+    return None
+
+
 def render_html(report: ScanReport) -> str:
     """Render a ScanReport to a self-contained HTML string."""
     env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)), autoescape=True)
@@ -139,6 +154,9 @@ def render_html(report: ScanReport) -> str:
     # CIS pass/fail status
     cis_status = _build_cis_status(report.all_findings, cis_controls)
 
+    # Logo (base64-embedded for self-contained HTML)
+    logo_base64 = _load_logo_base64()
+
     return template.render(
         report=report,
         sorted_findings=sorted_findings,
@@ -148,4 +166,6 @@ def render_html(report: ScanReport) -> str:
         executive_summary=executive_summary,
         priority_groups=priority_groups,
         cis_status=cis_status,
+        attack_chains=report.attack_chains,
+        logo_base64=logo_base64,
     )

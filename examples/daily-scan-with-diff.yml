@@ -40,7 +40,7 @@ jobs:
 
       - run: pip install cloud-audit
 
-      # Replace with OIDC — see examples/github-actions.yml
+      # Replace with OIDC - see examples/github-actions.yml
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}

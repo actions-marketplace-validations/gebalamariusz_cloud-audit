@@ -152,4 +152,21 @@ def run_scan(
 
     report.compute_summary()
 
+    # Attack chain detection
+    try:
+        from cloud_audit.correlate import collect_relationships, detect_attack_chains
+
+        try:
+            relationships = collect_relationships(provider, report.all_findings)  # type: ignore[arg-type]
+        except Exception:
+            relationships = None
+        report.attack_chains = detect_attack_chains(report.all_findings, relationships)
+        report.summary.attack_chains_detected = len(report.attack_chains)
+    except Exception as e:
+        if not quiet:
+            console.print(f"[yellow]Warning: Attack chain detection failed: {e}[/yellow]")
+
+    if not quiet and report.attack_chains:
+        console.print(f"[bold]{len(report.attack_chains)} attack chains detected[/bold]")
+
     return report, suppressed_count

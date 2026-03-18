@@ -73,28 +73,41 @@
 - CI/CD examples: daily scan with cache-based diff, post-deploy scan
 - 213 tests passing
 
-## In Progress
+### v0.9.0 -- Attack Chains (March 2026)
+- **Attack chain detection** -- 16 rules that correlate findings into exploitable attack paths
+- First open-source CLI scanner with compound risk detection
+- Rules based on MITRE ATT&CK, Datadog pathfinding.cloud, and AWS CIRT research
+- 5 tiers: Internet Exposure, Missing Controls, Data Protection, Container/Secrets, CI/CD
+- Resource relationship collection (EC2->IAM role, Lambda->role, OIDC->policies)
+- New checks: aws-iam-007 (OIDC trust policy), aws-ec2-006 (EBS default encryption)
+- Enhanced HTML report with executive summary, priority grouping, CIS pass/fail
+- 47 checks, 16 attack chains, 246 tests
 
-### v1.0.0 -- Production Ready
-- **Enhanced HTML reports** -- executive summary, priority grouping, CIS compliance overview
-- **GitHub Action** -- reusable action for easier CI integration
-- **Community** -- issue templates, contributing guide, GitHub Discussions
-- Target: 50+ curated checks
+## What's Next
 
-## Future
+### v1.0.0 - Production Ready
+- **Cost-Security Fusion** - dollar-cost estimates per finding ("$X/month at risk per attack chain")
+- **Historical Score Tracking** - persistent score history with trends ("73/100, up from 61 last week")
+- **50+ curated checks** - community contributions welcome
+- **Show HN launch** - demo refresh, blog post, community push
 
-### Post v1.0 -- Planned
-- Expand to ~60 checks based on community feedback (EKS, SNS, additional KMS/VPC)
-- `cloud-audit triage` command -- generate suppression YAML from scan results
-- Wildcard support in suppressions (`resource_id: "sg-*"`)
-- `--show-suppressed` flag for audit transparency
-- Performance benchmarks on accounts of various sizes
+### v1.1.0 - CI/CD Native
+- **GitHub Action** - reusable action for CI integration (`gebalamariusz/cloud-audit-action@v1`)
+- **Terraform Drift Detection** - compare scan results against tfstate to find security-relevant drift
+- **Root Cause Grouping** - "fix 1 setting, close 12 findings" for account-level misconfigurations
+- **More attack chain rules** - expand based on community feedback and new attack research
 
-### Considering
+### v1.2.0 - Enterprise Ready
+- **Multi-account scanning** - AWS Organizations support, aggregate attack chains across accounts
+- **OTel-Native Security Traces** - emit findings as OpenTelemetry spans for Grafana/Datadog
+- **Triage command** - generate suppression YAML from scan results
+- **Performance benchmarks** on accounts of various sizes
+
+## Considering
+
 - Azure provider (~25 checks)
 - Custom check plugins (user-defined checks via Python or YAML)
 - Slack/Teams notifications
-- Terraform Cloud integration
 
 ## Design Principles
 

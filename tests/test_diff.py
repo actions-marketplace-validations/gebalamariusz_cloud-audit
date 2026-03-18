@@ -1,4 +1,4 @@
-"""Tests for diff engine — compare two scan reports."""
+"""Tests for diff engine - compare two scan reports."""
 
 from __future__ import annotations
 

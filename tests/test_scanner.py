@@ -1,4 +1,4 @@
-"""Tests for scanner orchestrator — suppressions, min_severity, exclude_checks, quiet mode."""
+"""Tests for scanner orchestrator - suppressions, min_severity, exclude_checks, quiet mode."""
 
 from __future__ import annotations
 
@@ -229,4 +229,4 @@ def test_exclude_then_suppress_then_severity() -> None:
     assert "aws-excluded-001" not in finding_ids
     assert "aws-kept-001" not in finding_ids  # suppressed
     assert "aws-kept-002" not in finding_ids  # below min_severity
-    assert "aws-kept-003" in finding_ids  # CRITICAL — kept
+    assert "aws-kept-003" in finding_ids  # CRITICAL - kept

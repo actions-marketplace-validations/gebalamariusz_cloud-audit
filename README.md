@@ -1,7 +1,11 @@
+<p align="center">
+  <img src="logo-nobg.png" alt="cloud-audit logo" width="200">
+</p>
+
 <h1 align="center">cloud-audit</h1>
 
 <p align="center">
-  <strong>Open-source AWS security scanner. 46 checks, each with a ready-to-use fix.</strong>
+  <strong>Open-source AWS security scanner with Attack Chains - the first CLI tool that correlates findings into exploitable attack paths. 47 checks. 16 attack chain rules. Every finding includes a fix.</strong>
 </p>
 
 <p align="center">
@@ -22,11 +26,100 @@
 
 cloud-audit scans your AWS account and tells you exactly how to fix what it finds - AWS CLI commands, Terraform HCL, and documentation links you can copy-paste.
 
-46 checks across 15 AWS resource types. Mapped to 16 CIS AWS Foundations Benchmark controls.
+47 checks across 15 AWS resource types. Mapped to 16 CIS AWS Foundations Benchmark controls. 16 attack chain rules that correlate findings into exploitable attack paths.
 
-**Two things no other open-source CLI scanner does:**
+**Three things no other open-source CLI scanner does:**
 
-### 1. Every finding includes a copy-paste fix
+### 1. Attack Chains - correlate findings into real attack paths
+
+Other scanners give you a flat list of 200+ findings. cloud-audit **correlates them into attack paths** an attacker would actually exploit.
+
+<p align="center">
+  <a href="#"><img src="https://img.shields.io/badge/Attack_Chains-16_rules-red?style=for-the-badge" alt="16 attack chain rules"></a>
+  <a href="https://attack.mitre.org/matrices/enterprise/cloud/"><img src="https://img.shields.io/badge/Based_on-MITRE_ATT%26CK-blue?style=for-the-badge" alt="Based on MITRE ATT&CK"></a>
+  <a href="https://github.com/DataDog/pathfinding.cloud"><img src="https://img.shields.io/badge/Research-Datadog_pathfinding.cloud-purple?style=for-the-badge" alt="Datadog pathfinding.cloud"></a>
+</p>
+
+**How it works:** individual findings are correlated into real attack paths:
+
+```
+                    +-----------+      +----------+      +-----------+
+  Internet -------->| Public SG |----->| EC2 Inst |----->| IMDS (v1) |
+                    +-----------+      +----------+      +-----------+
+                     aws-vpc-002        aws-ec2-004            |
+                                                               v
+                                                      +-----------------+
+                                                      | Admin IAM Creds |
+                                                      +-----------------+
+                                                               |
+                                                               v
+                                                    +---------------------+
+                                                    | Full Account Takeover|
+                                                    +---------------------+
+                               Detected by: AC-01, AC-02
+```
+
+```
+cloud-audit scan --format html --output report.html
+
++---- Attack Chains (3 detected) -----------------------------------+
+|                                                                    |
+|  CRITICAL  Internet-Exposed Admin Instance                         |
+|            i-0abc123 - public SG + admin IAM role                  |
+|            > Attacker reaches EC2 > steals IMDS creds > admin      |
+|            Fix: Restrict security group (effort: LOW)              |
+|                                                                    |
+|  CRITICAL  CI/CD to Admin Takeover                                 |
+|            github-deploy - OIDC no sub + admin policy              |
+|            > Any GitHub repo can assume admin AWS role              |
+|            Fix: Add sub condition (effort: LOW)                    |
+|                                                                    |
+|  HIGH      Zero Security Visibility                                |
+|            No CloudTrail + No GuardDuty + No Config                |
+|            > Attackers operate completely undetected                |
+|            Fix: Enable CloudTrail (effort: LOW)                    |
+|                                                                    |
++--------------------------------------------------------------------+
+
+Found 3 attack chains from 22 individual findings.
+```
+
+#### What others don't have
+
+| Feature | Prowler | Trivy | Checkov | cloud-audit |
+|---------|---------|-------|---------|-------------|
+| Individual checks | 584 | 517 | 2500+ | **47** |
+| Attack chain detection | No | No | No | **16 rules** |
+| Remediation per finding | Partial | No | Links | **100%** |
+| Scan time (typical) | 4+ hours | Minutes | Seconds (IaC) | **Seconds** |
+
+<details>
+<summary><strong>All 16 attack chain rules</strong> (click to expand)</summary>
+
+| ID | Name | Severity | Component Checks |
+|---|---|---|---|
+| AC-01 | Internet-Exposed Admin Instance | CRITICAL | aws-vpc-002 + EC2 IAM role |
+| AC-02 | SSRF to Credential Theft | CRITICAL | aws-vpc-002 + aws-ec2-004 |
+| AC-05 | Public Lambda with Admin Access | CRITICAL | aws-lambda-001 + Lambda IAM role |
+| AC-07 | CI/CD to Admin Takeover | CRITICAL | aws-iam-007 + IAM role policies |
+| AC-09 | Unmonitored Admin Access | CRITICAL | aws-iam-001 + aws-ct-001 |
+| AC-10 | Completely Blind Admin | CRITICAL | aws-iam-001 + aws-ct-001 + aws-gd-001 |
+| AC-11 | Zero Security Visibility | HIGH | aws-ct-001 + aws-gd-001 + aws-cfg-001 |
+| AC-12 | Admin Without MFA | CRITICAL | aws-iam-005 + aws-iam-002 |
+| AC-13 | Wide Open and Unmonitored Network | HIGH | aws-vpc-002 + aws-vpc-003 |
+| AC-14 | No Network Security Layers | HIGH | aws-vpc-004 + aws-vpc-002 + aws-vpc-003 |
+| AC-17 | Exposed Database Without Audit Trail | CRITICAL | aws-rds-001 + aws-rds-002 + aws-ct-001 |
+| AC-19 | Container Breakout Path | CRITICAL | aws-ecs-001 + aws-ecs-003 |
+| AC-20 | Unmonitored Container Access | HIGH | aws-ecs-002 + aws-ecs-003 |
+| AC-21 | Secrets in Plaintext Across Services | HIGH | aws-ssm-002 + aws-lambda-003 |
+| AC-23 | CI/CD Data Exfiltration | HIGH | aws-iam-007 + IAM role S3 policies |
+| AC-24 | CI/CD Lateral Movement | HIGH | aws-iam-007 + IAM role EC2 policies |
+
+Based on [MITRE ATT&CK Cloud](https://attack.mitre.org/matrices/enterprise/cloud/), [Datadog pathfinding.cloud](https://github.com/DataDog/pathfinding.cloud), and AWS CIRT research.
+
+</details>
+
+### 2. Every finding includes a copy-paste fix
 
 You don't just get a list of problems - you get the exact commands to fix them:
 
@@ -41,7 +134,7 @@ $ cloud-audit scan -R
   Docs:       https://docs.aws.amazon.com/IAM/latest/UserGuide/...
 ```
 
-### 2. Built-in scan diff - track what changed
+### 3. Built-in scan diff - track what changed
 
 Run daily scans and compare them. See what got fixed, what's new, and what stayed the same - without a SaaS dashboard or paid backend.
 
@@ -98,16 +191,16 @@ The `demo` command runs a simulated scan with sample data - output format, healt
 
 ## Who is this for
 
-- **Small teams without a security team** - get visibility into AWS security without buying a platform
-- **DevOps/SRE running pre-deploy checks** - catch misconfigurations before they ship
-- **Consultants auditing client accounts** - generate a professional HTML report in one command
+- **Small teams without a security team** - get visibility into AWS security without buying a platform. Attack chains show you which findings actually matter
+- **DevOps/SRE running pre-deploy checks** - catch misconfigurations before they ship, with compound risk detection
+- **Consultants auditing client accounts** - generate a professional HTML report with attack chains and executive summary in one command
 - **Teams that want CIS evidence without Security Hub** - 16 CIS controls mapped, included in reports
 
 ## What it checks
 
-46 checks across IAM, S3, EC2, EIP, VPC, RDS, Lambda, ECS, CloudTrail, GuardDuty, KMS, SSM, Secrets Manager, CloudWatch, and AWS Config.
+47 checks across IAM, S3, EC2, EIP, VPC, RDS, Lambda, ECS, CloudTrail, GuardDuty, KMS, SSM, Secrets Manager, CloudWatch, and AWS Config. Plus 16 attack chain rules that correlate findings into exploitable attack paths.
 
-**By severity:** 8 Critical, 14 High, 16 Medium, 8 Low.
+**By severity:** 9 Critical, 14 High, 16 Medium, 8 Low.
 
 Every check answers one question: *would an attacker exploit this?* If not, the check doesn't exist.
 
@@ -174,6 +267,7 @@ Every check answers one question: *would an attacker exploit this?* If not, the 
 | `aws-rds-003` | Medium | Single-AZ RDS instance (no automatic failover) |
 | `aws-rds-004` | Low | RDS auto minor version upgrade disabled |
 | `aws-ec2-005` | Low | EC2 instance without termination protection |
+| `aws-ec2-006` | Medium | EBS default encryption disabled |
 
 </details>
 
@@ -371,13 +465,13 @@ There are mature tools in this space. Pick the right one for your use case:
 - **[Steampipe](https://github.com/turbot/steampipe)** - SQL-based cloud querying. Very flexible, but requires writing or configuring queries.
 - **[AWS Security Hub](https://aws.amazon.com/security-hub/)** - Native AWS service with continuous monitoring and ~223 checks. Free 30-day trial, then charges per check evaluation.
 
-cloud-audit fills a specific niche: a focused audit with copy-paste remediation for each finding. If you need full CIS compliance coverage, Prowler is the better choice. If you need a quick scan that tells you exactly how to fix each issue, cloud-audit is built for that.
+cloud-audit fills a specific niche: a focused audit with copy-paste remediation for each finding, plus **attack chain detection** that correlates individual findings into exploitable paths - the only open-source CLI scanner with compound risk detection. If you need full CIS compliance coverage, Prowler is the better choice. If you need a quick scan that shows how findings combine into real attack paths and tells you exactly how to fix each issue, cloud-audit is built for that.
 
 ## What's next
 
-- Enhanced HTML reports with executive summary
 - GitHub Action for easier CI integration
 - Azure provider
+- More attack chain rules based on community feedback
 
 Past releases: [CHANGELOG.md](CHANGELOG.md)
 

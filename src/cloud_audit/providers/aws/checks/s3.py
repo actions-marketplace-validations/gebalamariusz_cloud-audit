@@ -188,7 +188,7 @@ def check_bucket_encryption(provider: AWSProvider) -> CheckResult:
             except Exception as exc:
                 error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
                 if error_code == "ServerSideEncryptionConfigurationNotFoundError":
-                    # No explicit config — AWS still encrypts with SSE-S3 since Jan 2023
+                    # No explicit config - AWS still encrypts with SSE-S3 since Jan 2023
                     result.findings.append(
                         Finding(
                             check_id="aws-s3-002",

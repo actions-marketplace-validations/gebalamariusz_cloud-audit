@@ -3,15 +3,13 @@
 import io
 import os
 
+import cairosvg
 from PIL import Image
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-import cairosvg
-
-
-TARGET_LINES = 52
+TARGET_LINES = 65
 
 
 def pad_to_height(console, current_lines: int):
@@ -36,11 +34,11 @@ def render_frame(lines_to_show: int, progress: int = 0) -> bytes:
 
     # Frame 1+: progress bar
     console.print()
-    console.print("[bold]Running 45 checks on AWS...[/bold]")
+    console.print("[bold]Running 47 checks on AWS...[/bold]")
     bar_len = min(progress, 40)
     bar = "\u2501" * bar_len + " " * (40 - bar_len)
-    done = int(progress * 45 / 40)
-    console.print(f"[green]{bar}[/green] {done}/45")
+    done = int(progress * 47 / 40)
+    console.print(f"[green]{bar}[/green] {done}/47")
 
     if lines_to_show < 2:
         pad_to_height(console, 6)
@@ -67,6 +65,7 @@ def render_frame(lines_to_show: int, progress: int = 0) -> bytes:
     table.add_row("Resources scanned", "147")
     table.add_row("Checks passed", "[green]29[/green]")
     table.add_row("Checks failed", "[red]16[/red]")
+    table.add_row("Attack chains", "[bold red]3[/bold red]")
     console.print(table)
 
     if lines_to_show < 3:
@@ -74,20 +73,49 @@ def render_frame(lines_to_show: int, progress: int = 0) -> bytes:
         svg = console.export_svg(title="cloud-audit")
         return cairosvg.svg2png(bytestring=svg.encode(), scale=1.5)
 
-    # Frame 3+: severity
-    console.print("\n[bold]Findings by severity:[/bold]")
-    console.print("  [bold red]\u2716 CRITICAL: 2[/bold red]")
-    console.print("  [red]\u2716 HIGH: 4[/red]")
-    console.print("  [yellow]\u26a0 MEDIUM: 7[/yellow]")
-    console.print("  [cyan]\u25cb LOW: 3[/cyan]")
+    # Frame 3+: attack chains
+    console.print()
+    console.print(
+        Panel(
+            "[bold red]CRITICAL[/bold red]  Internet-Exposed Admin Instance\n"
+            "  [dim]i-0abc123 - public SG + admin IAM role[/dim]\n"
+            "  [italic]Attacker reaches EC2 via open SG, steals admin creds from IMDS[/italic]\n"
+            "  [bold]Fix:[/bold] [green]Restrict security group (effort: LOW)[/green]\n"
+            "\n"
+            "[bold red]CRITICAL[/bold red]  CI/CD to Admin Takeover\n"
+            "  [dim]github-deploy - OIDC no sub + admin policy[/dim]\n"
+            "  [italic]Any GitHub repo can assume admin AWS role[/italic]\n"
+            "  [bold]Fix:[/bold] [green]Add sub condition to trust policy (effort: LOW)[/green]\n"
+            "\n"
+            "[bold yellow]HIGH[/bold yellow]     Zero Security Visibility\n"
+            "  [dim]No CloudTrail + No GuardDuty + No Config[/dim]\n"
+            "  [italic]Attackers operate completely undetected[/italic]\n"
+            "  [bold]Fix:[/bold] [green]Enable CloudTrail (effort: LOW)[/green]",
+            title="[bold]Attack Chains (3 detected)[/bold]",
+            border_style="red",
+            width=88,
+        )
+    )
 
     if lines_to_show < 4:
-        pad_to_height(console, 22)
+        pad_to_height(console, 35)
         svg = console.export_svg(title="cloud-audit")
         return cairosvg.svg2png(bytestring=svg.encode(), scale=1.5)
 
-    # Frame 4+: findings table
-    console.print("\n[bold]Top findings (5 of 16):[/bold]\n")
+    # Frame 4+: severity
+    console.print("\n[bold]Findings by severity:[/bold]")
+    console.print("  [bold red]x CRITICAL: 3[/bold red]")
+    console.print("  [red]x HIGH: 5[/red]")
+    console.print("  [yellow]! MEDIUM: 7[/yellow]")
+    console.print("  [cyan]o LOW: 3[/cyan]")
+
+    if lines_to_show < 5:
+        pad_to_height(console, 42)
+        svg = console.export_svg(title="cloud-audit")
+        return cairosvg.svg2png(bytestring=svg.encode(), scale=1.5)
+
+    # Frame 5+: findings table
+    console.print("\n[bold]Top findings (5 of 18):[/bold]\n")
 
     ft = Table(box=None, padding=(0, 1), show_header=True, header_style="bold")
     ft.add_column("Sev", width=8)
@@ -95,60 +123,60 @@ def render_frame(lines_to_show: int, progress: int = 0) -> bytes:
     ft.add_column("Resource", width=28)
     ft.add_column("Title", max_width=35)
     ft.add_row(
-        "[bold red]CRITICAL[/bold red]", "aws-iam-001",
-        "arn:aws:iam::1234...:root", "Root account without MFA",
+        "[bold red]CRITICAL[/bold red]",
+        "aws-iam-001",
+        "arn:aws:iam::1234...:root",
+        "Root account without MFA",
     )
     ft.add_row(
-        "[bold red]CRITICAL[/bold red]", "aws-vpc-002",
-        "sg-0a1b2c3d4e5f67890", "SG open to 0.0.0.0/0 on port 22",
+        "[bold red]CRITICAL[/bold red]",
+        "aws-vpc-002",
+        "sg-0a1b2c3d4e5f67890",
+        "SG open to 0.0.0.0/0 on port 22",
     )
     ft.add_row(
-        "[red]HIGH[/red]", "aws-rds-001",
-        "production-db", "RDS publicly accessible",
+        "[red]HIGH[/red]",
+        "aws-rds-001",
+        "production-db",
+        "RDS publicly accessible",
     )
     ft.add_row(
-        "[red]HIGH[/red]", "aws-s3-001",
-        "company-backups-2024", "S3 public access block disabled",
+        "[red]HIGH[/red]",
+        "aws-s3-001",
+        "company-backups-2024",
+        "S3 public access block disabled",
     )
     ft.add_row(
-        "[yellow]MEDIUM[/yellow]", "aws-iam-003",
-        "deploy-key-AKIA...", "Access key 347 days old",
+        "[yellow]MEDIUM[/yellow]",
+        "aws-iam-003",
+        "deploy-key-AKIA...",
+        "Access key 347 days old",
     )
     console.print(ft)
 
-    if lines_to_show < 5:
-        pad_to_height(console, 30)
+    if lines_to_show < 6:
+        pad_to_height(console, 50)
         svg = console.export_svg(title="cloud-audit")
         return cairosvg.svg2png(bytestring=svg.encode(), scale=1.5)
 
-    # Frame 5+: remediation
+    # Frame 6+: remediation
     console.print("\n[bold]Remediation (2 of 6 actionable):[/bold]\n")
 
     console.print("  [bold red]CRITICAL[/bold red]  Root account without MFA")
     console.print("  [dim]Compliance:[/dim] CIS 1.5  [dim]Effort:[/dim] [green]LOW[/green]")
     console.print(
-        "  [dim]CLI:[/dim]  [cyan]aws iam create-virtual-mfa-device"
-        " --virtual-mfa-device-name root-mfa[/cyan]"
+        "  [dim]CLI:[/dim]  [cyan]aws iam create-virtual-mfa-device --virtual-mfa-device-name root-mfa[/cyan]"
     )
-    console.print(
-        '  [dim]Terraform:[/dim]  resource "aws_iam_virtual_mfa_device"'
-        ' "root" { ... }'
-    )
+    console.print('  [dim]Terraform:[/dim]  resource "aws_iam_virtual_mfa_device" "root" { ... }')
     console.print()
     console.print("  [bold red]CRITICAL[/bold red]  SG open to 0.0.0.0/0 on port 22")
     console.print("  [dim]Compliance:[/dim] CIS 5.2  [dim]Effort:[/dim] [green]LOW[/green]")
-    console.print(
-        "  [dim]CLI:[/dim]  [cyan]aws ec2 revoke-security-group-ingress"
-        " --group-id sg-... --port 22[/cyan]"
-    )
-    console.print(
-        '  [dim]Terraform:[/dim]  resource "aws_security_group_rule"'
-        ' "ssh" { ... }'
-    )
+    console.print("  [dim]CLI:[/dim]  [cyan]aws ec2 revoke-security-group-ingress --group-id sg-... --port 22[/cyan]")
+    console.print('  [dim]Terraform:[/dim]  resource "aws_security_group_rule" "ssh" { ... }')
     console.print()
     console.print("[green]HTML report saved to report.html[/green]")
 
-    pad_to_height(console, 48)
+    pad_to_height(console, 62)
     svg = console.export_svg(title="cloud-audit")
     return cairosvg.svg2png(bytestring=svg.encode(), scale=1.5)
 
@@ -172,35 +200,41 @@ def main():
     img = Image.open(io.BytesIO(png_data))
     frames.append(img.copy())
 
-    # Frame: severity
+    # Frame: attack chains
     png_data = render_frame(3)
     img = Image.open(io.BytesIO(png_data))
     frames.append(img.copy())
 
-    # Frame: findings table
+    # Frame: severity
     png_data = render_frame(4)
     img = Image.open(io.BytesIO(png_data))
     frames.append(img.copy())
 
-    # Frame: findings table done
+    # Frame: findings table
     png_data = render_frame(5)
     img = Image.open(io.BytesIO(png_data))
     frames.append(img.copy())
 
-    # Final frame: full output with remediation
+    # Frame: findings table done
     png_data = render_frame(6)
+    img = Image.open(io.BytesIO(png_data))
+    frames.append(img.copy())
+
+    # Final frame: full output with remediation
+    png_data = render_frame(7)
     img = Image.open(io.BytesIO(png_data))
     frames.append(img.copy())
 
     # Durations in ms per frame
     durations = (
-        [800]           # command
-        + [120] * 9     # progress bar (9 steps)
-        + [1500]        # health score
-        + [1000]        # severity
-        + [1500]        # findings table appearing
-        + [1000]        # findings done
-        + [5000]        # final with remediation (long hold)
+        [800]  # command
+        + [120] * 9  # progress bar (9 steps)
+        + [1500]  # health score
+        + [4000]  # attack chains (long hold - KEY FEATURE)
+        + [1000]  # severity
+        + [1500]  # findings table appearing
+        + [1000]  # findings done
+        + [5000]  # final with remediation (long hold)
     )
 
     # Ensure all frames same size

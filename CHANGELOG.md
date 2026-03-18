@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-03-18
+
+### Added
+
+- **Attack chain detection** - 16 rules correlating findings into exploitable multi-service attack paths
+- Attack chains output in terminal (Rich panel), HTML report, markdown, and JSON
+- Resource relationship collector (EC2->IAM role, Lambda->role, OIDC->policies)
+- 4 attack chain tiers: Internet Exposure + Privilege, Missing Controls, Data Protection, Container/Secrets + CI/CD
+- Rules based on MITRE ATT&CK Cloud Matrix, Datadog pathfinding.cloud, and AWS CIRT Threat Catalog
+- New check: `aws-iam-007` - OIDC trust policy without sub condition (CRITICAL)
+- New check: `aws-ec2-006` - EBS default encryption disabled (MEDIUM)
+- Enhanced HTML report: executive summary, priority grouping (Fix Now/This Week/Next Sprint), CIS pass/fail indicators
+- Logo added to README and HTML report
+- Pre-commit hook for ruff format
+
+### Changed
+
+- Check count: 45 -> 47
+- README: Attack Chains as primary feature, logo, updated tagline
+- ROADMAP: v0.9.0 Attack Chains milestone added
+
+### Fixed
+
+- False-confidence tests: ECS exec (mocked), secrets unused (mocked), config recorder assertion
+- New test scenarios: IPv6 ::/0 SG, RDP port 3389, multi-provider attack chains
+- SECURITY.md: supported version updated to 0.8.x
+- Bug report template: added WSL/Other OS options
+
 ## [0.8.0] - 2026-03-14
 
 ### Added
@@ -215,7 +243,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker image support
 - Rich terminal UI with progress bar and color-coded findings
 
-[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.5.2...v0.6.0

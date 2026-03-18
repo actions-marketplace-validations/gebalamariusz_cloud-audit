@@ -1,4 +1,4 @@
-"""Diff engine — compare two scan reports and produce a structured diff."""
+"""Diff engine - compare two scan reports and produce a structured diff."""
 
 from __future__ import annotations
 
@@ -92,7 +92,7 @@ def compute_diff(old: ScanReport, new: ScanReport) -> DiffResult:
     severity_order = list(Severity)
 
     # Build lookup dicts by (check_id, resource_id) key.
-    # If multiple findings share the same key (unlikely — each check produces
+    # If multiple findings share the same key (unlikely - each check produces
     # at most one finding per resource), only the last one is retained.
     old_findings: dict[str, Finding] = {}
     for f in old.all_findings:

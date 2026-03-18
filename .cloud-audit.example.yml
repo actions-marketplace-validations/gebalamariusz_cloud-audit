@@ -1,7 +1,7 @@
 # cloud-audit configuration file
 # Copy to .cloud-audit.yml and customize.
 
-# AWS profile (optional — uses default if not set)
+# AWS profile (optional - uses default if not set)
 # profile: my-profile
 
 # Regions to scan (default: session region only)

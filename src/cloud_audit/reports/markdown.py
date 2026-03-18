@@ -57,6 +57,22 @@ def generate_markdown(report: ScanReport) -> str:
                 lines.append(f"- **{sev.value.upper()}:** {count}")
         lines.append("")
 
+    # Attack chains
+    if report.attack_chains:
+        lines.append(f"## Attack Chains ({len(report.attack_chains)} detected)")
+        lines.append("")
+        lines.append("| Severity | Chain | Attack Narrative | Priority Fix |")
+        lines.append("|----------|-------|------------------|--------------|")
+        for chain in report.attack_chains:
+            chain_sev = chain.severity.value.upper()
+            name = chain.name.replace("|", "\\|").replace("\n", " ")
+            narrative = chain.attack_narrative.replace("|", "\\|").replace("\n", " ")
+            if len(narrative) > 80:
+                narrative = narrative[:77] + "..."
+            fix = chain.priority_fix.replace("|", "\\|").replace("\n", " ")
+            lines.append(f"| **{chain_sev}** | {name} | {narrative} | {fix} |")
+        lines.append("")
+
     # Findings table
     findings = report.all_findings
     if findings:
