@@ -74,6 +74,27 @@
   .score-warn { border: 4px solid var(--orange); color: var(--orange); }
   .score-bad { border: 4px solid var(--red); color: var(--red); }
 
+  /* Executive summary */
+  .executive-summary {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 40px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  .executive-summary-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
   /* Summary cards */
   .summary-grid {
     display: grid;
@@ -132,6 +153,41 @@
     letter-spacing: 0.05em;
     border: 1px solid var(--border);
     color: var(--text-dim);
+  }
+
+  /* Priority group sections */
+  .priority-group {
+    margin-bottom: 40px;
+  }
+
+  .priority-group-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 40px 0 20px;
+    padding-bottom: 10px;
+    padding-left: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .priority-group-header.priority-critical { border-left: 4px solid var(--red); }
+  .priority-group-header.priority-medium { border-left: 4px solid var(--orange); }
+  .priority-group-header.priority-low { border-left: 4px solid var(--cyan); }
+
+  .priority-group-label {
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .priority-group-count {
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+
+  .priority-group-description {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: -12px 0 16px 20px;
   }
 
   /* Findings */
@@ -334,12 +390,18 @@
   .cis-title {
     font-size: 16px;
     font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: 4px;
+  }
+
+  .cis-subtitle {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
   }
 
   .cis-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 8px;
   }
 
@@ -347,9 +409,29 @@
     font-size: 12px;
     padding: 6px 10px;
     border-radius: 6px;
-    background: rgba(45,212,191,0.06);
-    border: 1px solid rgba(45,212,191,0.1);
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .cis-item-pass {
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.15);
+    color: var(--green);
+  }
+
+  .cis-item-fail {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.15);
+    color: var(--red);
+  }
+
+  .cis-indicator {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
   }
 
   /* Severity bar */
@@ -399,9 +481,14 @@
     body { background: white; color: black; padding: 20px; }
     .container { max-width: 100%; }
     .copy-btn { display: none; }
-    .finding { break-inside: avoid; }
+    .finding { break-inside: avoid; border: 1px solid #ddd; }
     .remediation-panel { display: none; }
     .footer a { color: black; }
+    .executive-summary { background: white; border: 1px solid #ddd; }
+    .priority-group-header { border-bottom: 1px solid #ddd; }
+    .score-ring { border-color: black !important; color: black !important; }
+    .summary-card { background: white; border: 1px solid #ddd; }
+    .cis-section { background: white; border: 1px solid #ddd; }
   }
 </style>
 </head>
@@ -429,6 +516,14 @@
       {{ score }}
     </div>
   </div>
+
+  <!-- Executive Summary -->
+  {% if executive_summary %}
+  <div class="executive-summary">
+    <div class="executive-summary-label">Executive Summary</div>
+    {{ executive_summary }}
+  </div>
+  {% endif %}
 
   <!-- Severity breakdown -->
   <div class="severity-bar">
@@ -463,37 +558,43 @@
     </div>
   </div>
 
-  <!-- Findings by category -->
-  {% for category, findings in by_category.items() %}
-  <h2 class="section-title">{{ category | capitalize }} ({{ findings | length }})</h2>
-
-  {% for finding in findings %}
-  <div class="finding">
-    <div class="finding-header">
-      <span class="severity severity-{{ finding.severity.value }}" aria-label="Severity: {{ finding.severity.value }}">{{ finding.severity.value }}</span>
-      <span class="finding-title">{{ finding.title }}</span>
-      {% for ref in finding.compliance_refs %}
-      <span class="compliance-ref">{{ ref }}</span>
-      {% endfor %}
-      <span class="finding-resource">{{ finding.resource_id }}</span>
+  <!-- Findings by priority group -->
+  {% for group in priority_groups %}
+  <div class="priority-group">
+    <div class="priority-group-header {{ group.color_class }}">
+      <span class="priority-group-label">{{ group.label }}</span>
+      <span class="priority-group-count">({{ group.findings | length }})</span>
     </div>
-    <div class="finding-body">{{ finding.description }}</div>
-    <div class="finding-recommendation">{{ finding.recommendation }}</div>
-    {% if finding.remediation %}
-    <details class="remediation-panel">
-      <summary>How to fix</summary>
-      <div class="remediation-content">
-        <div class="remediation-label">Effort: <span class="effort-badge effort-{{ finding.remediation.effort.value }}">{{ finding.remediation.effort.value }}</span></div>
-        <div class="remediation-label">AWS CLI</div>
-        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" aria-label="Copy code to clipboard">Copy</button>{{ finding.remediation.cli }}</div>
-        <div class="remediation-label">Terraform</div>
-        <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" aria-label="Copy code to clipboard">Copy</button>{{ finding.remediation.terraform }}</div>
-        <div class="remediation-doc"><a href="{{ finding.remediation.doc_url }}" target="_blank" rel="noopener">AWS Documentation &rarr;</a></div>
+    <div class="priority-group-description">{{ group.description }}</div>
+
+    {% for finding in group.findings %}
+    <div class="finding">
+      <div class="finding-header">
+        <span class="severity severity-{{ finding.severity.value }}" aria-label="Severity: {{ finding.severity.value }}">{{ finding.severity.value }}</span>
+        <span class="finding-title">{{ finding.title }}</span>
+        {% for ref in finding.compliance_refs %}
+        <span class="compliance-ref">{{ ref }}</span>
+        {% endfor %}
+        <span class="finding-resource">{{ finding.resource_id }}</span>
       </div>
-    </details>
-    {% endif %}
+      <div class="finding-body">{{ finding.description }}</div>
+      <div class="finding-recommendation">{{ finding.recommendation }}</div>
+      {% if finding.remediation %}
+      <details class="remediation-panel">
+        <summary>How to fix</summary>
+        <div class="remediation-content">
+          <div class="remediation-label">Effort: <span class="effort-badge effort-{{ finding.remediation.effort.value }}">{{ finding.remediation.effort.value }}</span></div>
+          <div class="remediation-label">AWS CLI</div>
+          <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" aria-label="Copy code to clipboard">Copy</button>{{ finding.remediation.cli }}</div>
+          <div class="remediation-label">Terraform</div>
+          <div class="code-block"><button class="copy-btn" onclick="copyCode(this)" aria-label="Copy code to clipboard">Copy</button>{{ finding.remediation.terraform }}</div>
+          <div class="remediation-doc"><a href="{{ finding.remediation.doc_url }}" target="_blank" rel="noopener">AWS Documentation &rarr;</a></div>
+        </div>
+      </details>
+      {% endif %}
+    </div>
+    {% endfor %}
   </div>
-  {% endfor %}
   {% endfor %}
 
   {% if not sorted_findings %}
@@ -505,12 +606,18 @@
   {% endif %}
 
   <!-- CIS Benchmark Coverage -->
-  {% if cis_controls %}
+  {% if cis_status %}
   <div class="cis-section">
-    <div class="cis-title">CIS AWS Foundations Benchmark Coverage ({{ cis_controls | length }} controls mapped)</div>
+    <div class="cis-title">CIS AWS Foundations Benchmark Coverage</div>
+    {% set fail_count = cis_status | selectattr("status", "equalto", "fail") | list | length %}
+    {% set pass_count = cis_status | selectattr("status", "equalto", "pass") | list | length %}
+    <div class="cis-subtitle">{{ cis_status | length }} controls mapped &middot; {{ pass_count }} passed &middot; {{ fail_count }} with findings</div>
     <div class="cis-grid">
-      {% for ref in cis_controls %}
-      <div class="cis-item">{{ ref }}</div>
+      {% for item in cis_status %}
+      <div class="cis-item cis-item-{{ item.status }}">
+        <span class="cis-indicator">{% if item.status == "pass" %}&#10003;{% else %}&#10007;{% endif %}</span>
+        {{ item.ref }}
+      </div>
       {% endfor %}
     </div>
   </div>
