@@ -316,9 +316,7 @@ def test_oidc_trust_policy_gitlab(mock_aws_provider: AWSProvider) -> None:
             "Statement": [
                 {
                     "Effect": "Allow",
-                    "Principal": {
-                        "Federated": "arn:aws:iam::123456789012:oidc-provider/gitlab.com"
-                    },
+                    "Principal": {"Federated": "arn:aws:iam::123456789012:oidc-provider/gitlab.com"},
                     "Action": "sts:AssumeRoleWithWebIdentity",
                     "Condition": {
                         "StringEquals": {
