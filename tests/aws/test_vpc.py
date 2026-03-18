@@ -88,6 +88,50 @@ def test_open_security_groups_fail_ssh(mock_aws_provider: AWSProvider) -> None:
     assert "SSH" in ssh_findings[0].title
 
 
+def test_open_security_groups_fail_ipv6(mock_aws_provider: AWSProvider) -> None:
+    """Security group with SSH open to ::/0 (IPv6) - CRITICAL finding."""
+    ec2 = mock_aws_provider.session.client("ec2", region_name="eu-central-1")
+    sg = ec2.create_security_group(GroupName="ssh-ipv6-sg", Description="SSH open via IPv6")
+    ec2.authorize_security_group_ingress(
+        GroupId=sg["GroupId"],
+        IpPermissions=[
+            {
+                "IpProtocol": "tcp",
+                "FromPort": 22,
+                "ToPort": 22,
+                "Ipv6Ranges": [{"CidrIpv6": "::/0"}],
+            }
+        ],
+    )
+    result = check_open_security_groups(mock_aws_provider)
+    sg_findings = [f for f in result.findings if f.resource_id == sg["GroupId"]]
+    assert len(sg_findings) >= 1
+    assert sg_findings[0].severity.value == "critical"
+    assert "SSH" in sg_findings[0].title
+
+
+def test_open_security_groups_fail_rdp(mock_aws_provider: AWSProvider) -> None:
+    """Security group with RDP (3389) open to internet - CRITICAL finding."""
+    ec2 = mock_aws_provider.session.client("ec2", region_name="eu-central-1")
+    sg = ec2.create_security_group(GroupName="rdp-open-sg", Description="RDP open")
+    ec2.authorize_security_group_ingress(
+        GroupId=sg["GroupId"],
+        IpPermissions=[
+            {
+                "IpProtocol": "tcp",
+                "FromPort": 3389,
+                "ToPort": 3389,
+                "IpRanges": [{"CidrIp": "0.0.0.0/0"}],
+            }
+        ],
+    )
+    result = check_open_security_groups(mock_aws_provider)
+    sg_findings = [f for f in result.findings if f.resource_id == sg["GroupId"]]
+    assert len(sg_findings) >= 1
+    assert sg_findings[0].severity.value == "critical"
+    assert "RDP" in sg_findings[0].title
+
+
 def test_vpc_flow_logs_pass(mock_aws_provider: AWSProvider) -> None:
     """VPC with flow logs - no finding."""
     ec2 = mock_aws_provider.session.client("ec2", region_name="eu-central-1")

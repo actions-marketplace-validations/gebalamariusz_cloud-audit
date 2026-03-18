@@ -53,8 +53,10 @@ def test_config_recorder_not_active(mock_aws_provider: AWSProvider) -> None:
 
     result = check_config_recorder_active(mock_aws_provider)
     assert result.check_id == "aws-cfg-002"
-    # moto may or may not show recorder as inactive by default
     assert result.error is None
+    findings = [f for f in result.findings if f.check_id == "aws-cfg-002"]
+    assert len(findings) >= 1, "Expected at least one finding for inactive config recorder"
+    assert findings[0].severity.value == "high"
 
 
 def test_config_recorder_active(mock_aws_provider: AWSProvider) -> None:
