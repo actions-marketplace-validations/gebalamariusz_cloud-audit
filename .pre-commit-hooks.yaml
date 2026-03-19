@@ -1,0 +1,21 @@
+- id: cloud-audit
+  name: cloud-audit AWS security scan
+  entry: cloud-audit scan --format json --output /dev/null
+  language: python
+  pass_filenames: false
+  always_run: true
+  stages: [pre-push]
+  description: >-
+    Run cloud-audit against your AWS account and fail on findings.
+    Uses exit code 1 when security findings are detected.
+
+- id: cloud-audit-diff
+  name: cloud-audit baseline diff
+  entry: cloud-audit diff
+  language: python
+  pass_filenames: false
+  always_run: true
+  stages: [pre-push]
+  description: >-
+    Compare current scan against a baseline JSON report.
+    Requires args with paths to old and new report files.

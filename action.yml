@@ -1,0 +1,121 @@
+name: "cloud-audit - AWS Security Scanner"
+description: "Scan your AWS account for security misconfigurations with attack chain detection, Terraform remediation, and SARIF output"
+
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  format:
+    description: "Output format: sarif, json, html, markdown"
+    required: false
+    default: "sarif"
+  output:
+    description: "Output file path"
+    required: false
+    default: "results.sarif"
+  regions:
+    description: "Comma-separated AWS regions to scan (empty = default region)"
+    required: false
+    default: ""
+  remediation:
+    description: "Show remediation details in console output"
+    required: false
+    default: "false"
+  fail-on-findings:
+    description: "Fail the workflow if security findings are detected"
+    required: false
+    default: "true"
+  diff-baseline:
+    description: "Path to a baseline scan JSON file for diff comparison"
+    required: false
+    default: ""
+  extra-args:
+    description: "Additional arguments passed to cloud-audit scan"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install cloud-audit
+      shell: bash
+      run: pip install cloud-audit
+
+    - name: Run cloud-audit scan
+      id: scan
+      shell: bash
+      run: |
+        set +e
+
+        ARGS="--provider aws"
+        ARGS="$ARGS --format ${{ inputs.format }}"
+        ARGS="$ARGS --output ${{ inputs.output }}"
+
+        if [ -n "${{ inputs.regions }}" ]; then
+          ARGS="$ARGS --regions ${{ inputs.regions }}"
+        fi
+
+        if [ "${{ inputs.remediation }}" = "true" ]; then
+          ARGS="$ARGS --remediation"
+        fi
+
+        if [ -n "${{ inputs.extra-args }}" ]; then
+          ARGS="$ARGS ${{ inputs.extra-args }}"
+        fi
+
+        cloud-audit scan $ARGS
+        EXIT_CODE=$?
+
+        echo "exit-code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+        # Exit code 2 = scan error (always fail)
+        if [ $EXIT_CODE -eq 2 ]; then
+          echo "::error::cloud-audit scan failed with errors"
+          exit 2
+        fi
+
+        # Exit code 1 = findings detected
+        if [ $EXIT_CODE -eq 1 ]; then
+          if [ "${{ inputs.fail-on-findings }}" != "true" ]; then
+            echo "::warning::Security findings detected - see results for details"
+            exit 0
+          fi
+          exit 1
+        fi
+
+        exit 0
+
+    - name: Run cloud-audit diff
+      if: inputs.diff-baseline != ''
+      id: diff
+      shell: bash
+      run: |
+        set +e
+
+        # For diff, we need a JSON scan. Re-run if the primary format was not JSON.
+        CURRENT_JSON="${{ inputs.output }}"
+        if [ "${{ inputs.format }}" != "json" ]; then
+          CURRENT_JSON="current-scan.json"
+          DIFF_ARGS="--provider aws --format json --output $CURRENT_JSON"
+          if [ -n "${{ inputs.regions }}" ]; then
+            DIFF_ARGS="$DIFF_ARGS --regions ${{ inputs.regions }}"
+          fi
+          cloud-audit scan $DIFF_ARGS || true
+        fi
+
+        cloud-audit diff "${{ inputs.diff-baseline }}" "$CURRENT_JSON"
+        EXIT_CODE=$?
+
+        echo "diff-exit-code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+        if [ $EXIT_CODE -eq 1 ]; then
+          echo "::warning::New security findings detected compared to baseline"
+        fi
+
+    - name: Upload SARIF to GitHub Security tab
+      if: inputs.format == 'sarif' && always()
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.output }}
+        wait-for-processing: true

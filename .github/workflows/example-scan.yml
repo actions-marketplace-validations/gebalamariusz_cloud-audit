@@ -1,0 +1,42 @@
+# Example: Run cloud-audit as a GitHub Action with OIDC authentication
+#
+# Prerequisites:
+#   1. Create an IAM role with a trust policy for your GitHub repo:
+#      - Trusted entity: Web identity (token.actions.githubusercontent.com)
+#      - Condition: sub = "repo:<owner>/<repo>:ref:refs/heads/main"
+#      - Attach SecurityAudit managed policy (arn:aws:iam::aws:policy/SecurityAudit)
+#   2. Set the role ARN as a repository variable: AWS_AUDIT_ROLE_ARN
+#
+# Usage:
+#   Copy this file to your repository's .github/workflows/ directory.
+
+name: Security Scan
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Every Monday at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  id-token: write    # Required for OIDC
+  contents: read
+  security-events: write  # Required for SARIF upload
+
+jobs:
+  scan:
+    name: cloud-audit scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_AUDIT_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - uses: gebalamariusz/cloud-audit@v0
+        with:
+          format: sarif
+          output: results.sarif
+          regions: "eu-central-1,us-east-1"
+          fail-on-findings: "false"
