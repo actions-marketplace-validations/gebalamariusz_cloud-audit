@@ -21,7 +21,11 @@
 ---
 
 <p align="center">
-  <img src="assets/demo.gif" alt="cloud-audit terminal demo" width="700">
+  <a href="https://www.youtube.com/watch?v=5uHoqggmTB8">
+    <img src="https://img.youtube.com/vi/5uHoqggmTB8/hqdefault.jpg" alt="cloud-audit demo video" width="700">
+  </a>
+  <br>
+  <sub>Click to watch the demo video</sub>
 </p>
 
 cloud-audit scans your AWS account and tells you exactly how to fix what it finds - AWS CLI commands, Terraform HCL, and documentation links you can copy-paste.
