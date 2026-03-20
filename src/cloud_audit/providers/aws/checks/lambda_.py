@@ -11,22 +11,31 @@ if TYPE_CHECKING:
     from cloud_audit.providers.aws.provider import AWSProvider
     from cloud_audit.providers.base import CheckFn
 
-# Last verified: 2026-03-06. Update periodically from:
+# Maps runtime identifier -> EOL date (YYYY-MM-DD).
+# Last verified: 2026-03-20. Update periodically from:
 # https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html
-_DEPRECATED_RUNTIMES = {
-    "python3.6",
-    "python3.7",
-    "python3.8",
-    "python3.9",
-    "nodejs12.x",
-    "nodejs14.x",
-    "nodejs16.x",
-    "nodejs18.x",
-    "dotnetcore3.1",
-    "dotnet6",
-    "ruby2.7",
-    "java8",
-    "go1.x",
+_DEPRECATED_RUNTIMES: dict[str, str] = {
+    "python3.6":     "2022-07-18",
+    "python3.7":     "2023-11-27",
+    "python3.8":     "2024-10-14",
+    "python3.9":     "2025-06-30",
+    "nodejs10.x":    "2021-07-30",
+    "nodejs12.x":    "2023-03-31",
+    "nodejs14.x":    "2023-11-27",
+    "nodejs16.x":    "2024-06-12",
+    "nodejs18.x":    "2025-04-30",
+    "dotnetcore1.0": "2019-07-14",
+    "dotnetcore2.0": "2019-05-01",
+    "dotnetcore2.1": "2022-01-05",
+    "dotnetcore3.1": "2023-04-03",
+    "dotnet5.0":     "2022-05-10",
+    "dotnet6":       "2025-11-12",
+    "ruby2.5":       "2022-03-31",
+    "ruby2.7":       "2024-01-08",
+    "java8":         "2024-01-08",
+    "java8.al2":     "2024-06-30",
+    "go1.x":         "2025-01-01",
+    "provided":      "2024-01-08",
 }
 
 _SECRET_PATTERNS = re.compile(
@@ -116,7 +125,7 @@ def check_deprecated_runtime(provider: AWSProvider) -> CheckResult:
                                 resource_type="AWS::Lambda::Function",
                                 resource_id=fn_arn,
                                 region=region,
-                                description=f"Function '{fn_name}' uses runtime '{runtime}' which is end-of-life and no longer receives security patches.",
+                                description=f"Function '{fn_name}' uses runtime '{runtime}' which reached end-of-life on {_DEPRECATED_RUNTIMES[runtime]} and no longer receives security patches.",
                                 recommendation="Upgrade the function to a supported runtime version.",
                                 remediation=Remediation(
                                     cli=(
