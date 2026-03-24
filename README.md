@@ -41,7 +41,7 @@ cloud-audit scans your AWS account and tells you exactly how to fix what it find
 **One command to install:**
 
 ```bash
-claude mcp add cloud-audit -- uvx cloud-audit-mcp
+claude mcp add cloud-audit -- uvx --from cloud-audit cloud-audit-mcp
 ```
 
 **Then just ask:**

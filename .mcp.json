@@ -1,7 +1,7 @@
 {
   "cloud-audit": {
     "command": "uvx",
-    "args": ["cloud-audit-mcp"],
+    "args": ["--from", "cloud-audit", "cloud-audit-mcp"],
     "env": {
       "AWS_PROFILE": "${AWS_PROFILE}"
     }
