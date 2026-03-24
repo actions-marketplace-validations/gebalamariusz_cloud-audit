@@ -2,6 +2,7 @@
   <img src="assets/logo-nobg.png" alt="cloud-audit logo" width="200">
 </p>
 
+<!-- mcp-name: io.github.gebalamariusz/cloud-audit -->
 <h1 align="center">cloud-audit</h1>
 
 <p align="center">

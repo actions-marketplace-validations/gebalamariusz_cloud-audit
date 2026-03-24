@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cloud-audit"
-version = "1.0.1"
+version = "1.0.2"
 description = "Open-source AWS security scanner with Attack Chains, Breach Cost Estimation, and MCP Server for AI agents. 47 checks, copy-paste remediation, dollar-risk per finding. First free standalone AWS security MCP server."
 readme = "README.md"
 license = "MIT"
