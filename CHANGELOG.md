@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-03-24
+
+### Changed
+
+- MCP is now a regular dependency (not optional) - install with `uvx cloud-audit-mcp`
+- Updated pyproject.toml description and keywords for MCP discoverability
+- Updated CLAUDE.md architecture diagram with new modules
+
 ## [1.0.0] - 2026-03-24
 
 ### Added
@@ -280,7 +288,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker image support
 - Rich terminal UI with progress bar and color-coded findings
 
-[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/gebalamariusz/cloud-audit/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.9.1...v1.0.0
 [0.9.1]: https://github.com/gebalamariusz/cloud-audit/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.8.0...v0.9.0
