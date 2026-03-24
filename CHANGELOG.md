@@ -17,8 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `CostEstimateData` model for structured cost data in JSON output
 - **MCP Server** - Model Context Protocol server for AI agent integration (Claude Code, Cursor, VS Code Copilot)
 - 6 MCP tools: `scan_aws`, `get_findings`, `get_attack_chains`, `get_remediation`, `get_health_score`, `list_checks`
-- Optional dependency: `pip install cloud-audit[mcp]`
+- One-liner install: `claude mcp add cloud-audit -- uvx cloud-audit-mcp`
+- `cloud-audit-mcp` entry point for uvx/pipx
 - `.mcp.json` project configuration for team-wide MCP setup
+- `mcp` included as regular dependency (no extras needed)
 
 ### Changed
 

@@ -89,9 +89,9 @@
 - Lambda deprecated runtimes extended with EOL dates (community PR #18)
 
 ### v1.0.0 -- Production Ready (March 2026)
-- **Breach cost estimation** -- dollar-risk estimates per finding and attack chain based on IBM/Verizon/HIPAA data
-- **MCP Server** -- AI agent integration via Model Context Protocol (Claude Code, Cursor, VS Code)
-- 277 tests passing
+- **Breach cost estimation** -- dollar-risk estimates per finding and attack chain with verified source URLs (IBM, Verizon, OCC, MITRE)
+- **MCP Server** -- first free, standalone AWS security MCP server. Install: `claude mcp add cloud-audit -- uvx cloud-audit-mcp`
+- 278 tests passing
 
 ## What's Next
 
