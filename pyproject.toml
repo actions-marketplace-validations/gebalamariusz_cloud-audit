@@ -80,11 +80,19 @@ select = ["E", "F", "I", "N", "W", "UP", "S", "B", "A", "C4", "SIM", "TCH", "RUF
 "src/cloud_audit/cost_model.py" = ["E501"]
 "src/cloud_audit/cli.py" = ["TC003"]
 "src/cloud_audit/mcp_server.py" = ["TC003"]
-"tests/**" = ["S101", "TC003"]
+"tests/**" = ["S101", "TC003", "E402"]
 
 [tool.mypy]
 python_version = "3.10"
 strict = true
+
+[[tool.mypy.overrides]]
+module = ["mcp.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["cloud_audit.mcp_server"]
+disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

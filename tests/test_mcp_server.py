@@ -4,6 +4,17 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
+try:
+    import mcp  # noqa: F401
+
+    HAS_MCP = True
+except ImportError:
+    HAS_MCP = False
+
+pytestmark = pytest.mark.skipif(not HAS_MCP, reason="mcp package not installed")
+
 from cloud_audit.models import (
     AttackChain,
     Category,
@@ -78,8 +89,6 @@ class TestMcpTools:
     """Test MCP server tool functions directly (no MCP transport)."""
 
     def test_get_findings_no_report(self) -> None:
-        import pytest
-
         import cloud_audit.mcp_server as mcp_mod
 
         mcp_mod._last_report_json = None
