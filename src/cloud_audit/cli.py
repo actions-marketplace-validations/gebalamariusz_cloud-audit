@@ -118,6 +118,9 @@ def _print_summary(report: ScanReport, suppressed_count: int = 0) -> None:
         table.add_row("Checks errored", f"[yellow]{s.checks_errored}[/yellow]")
     if s.attack_chains_detected:
         table.add_row("Attack chains", f"[red]{s.attack_chains_detected}[/red]")
+    if s.total_risk_exposure and s.total_risk_exposure.high_usd > 0:
+        risk_display = s.total_risk_exposure.display
+        table.add_row("Risk exposure", f"[bold red]{risk_display}[/bold red]  [dim](IBM/Verizon data)[/dim]")
     if suppressed_count:
         table.add_row("Findings suppressed", f"[dim]{suppressed_count}[/dim]")
     console.print(table)
@@ -155,6 +158,11 @@ def _print_summary(report: ScanReport, suppressed_count: int = 0) -> None:
                 "",
                 f"Fix: {rich_escape(chain.priority_fix)}",
             )
+            if chain.cost_estimate and chain.cost_estimate.high_usd > 0:
+                chains_table.add_row(
+                    "",
+                    f"[bold]Risk: {chain.cost_estimate.display}[/bold]",
+                )
             chains_table.add_row("", "")
 
         console.print(
@@ -185,22 +193,54 @@ def _print_summary(report: ScanReport, suppressed_count: int = 0) -> None:
         shown = min(len(findings_sorted), 10)
         console.print(f"\n[bold]Top findings ({shown} of {len(findings_sorted)}):[/bold]\n")
 
+        has_costs = any(f.cost_estimate for f in findings_sorted[:10])
+
         findings_table = Table(box=None, padding=(0, 1), show_header=True, header_style="bold")
         findings_table.add_column("Sev", width=8)
         findings_table.add_column("Region", width=14)
         findings_table.add_column("Check")
         findings_table.add_column("Resource")
-        findings_table.add_column("Title", max_width=60)
+        findings_table.add_column("Title", max_width=50)
+        if has_costs:
+            findings_table.add_column("Risk", width=16)
 
         for f in findings_sorted[:10]:
             sev_color = SEVERITY_COLORS[f.severity]
-            findings_table.add_row(
+            row = [
                 f"[{sev_color}]{f.severity.value.upper()}[/{sev_color}]",
                 f"[dim]{f.region or 'global'}[/dim]",
                 f.check_id,
                 f.resource_id[:40],
-                f.title[:60],
-            )
+                f.title[:50],
+            ]
+            if has_costs:
+                if f.cost_estimate:
+                    cost_str = f.cost_estimate.display
+                    if f.cost_estimate.source_url:
+                        # Show short source tag
+                        url = f.cost_estimate.source_url
+                        if "ibm.com" in url:
+                            src = "IBM"
+                        elif "verizon.com" in url:
+                            src = "Verizon"
+                        elif "capitalone" in url:
+                            src = "CapitalOne"
+                        elif "mitre.org" in url:
+                            src = "MITRE"
+                        elif "owasp.org" in url:
+                            src = "OWASP"
+                        elif "nist.gov" in url:
+                            src = "NIST"
+                        elif "cisecurity" in url:
+                            src = "CIS"
+                        else:
+                            src = ""
+                        if src:
+                            cost_str = f"{cost_str} [dim]({src})[/dim]"
+                else:
+                    cost_str = "-"
+                row.append(cost_str)
+            findings_table.add_row(*row)
 
         console.print(findings_table)
 

@@ -49,6 +49,16 @@ SEVERITY_WEIGHT = {
 }
 
 
+class CostEstimateData(BaseModel):
+    """Estimated financial risk for a finding or attack chain."""
+
+    low_usd: int = Field(description="Low-end estimate in USD")
+    high_usd: int = Field(description="High-end estimate in USD")
+    display: str = Field(description="Human-readable range, e.g. '$50K - $500K'")
+    rationale: str = Field(description="Source/reasoning for the estimate")
+    source_url: str = Field(default="", description="URL to the source data backing this estimate")
+
+
 class Finding(BaseModel):
     """A single audit finding - one issue detected in the infrastructure."""
 
@@ -63,6 +73,7 @@ class Finding(BaseModel):
     recommendation: str = Field(description="How to fix it")
     remediation: Remediation | None = Field(default=None, description="Structured remediation details")
     compliance_refs: list[str] = Field(default_factory=list, description="Compliance references, e.g. ['CIS 1.5']")
+    cost_estimate: CostEstimateData | None = Field(default=None, description="Estimated breach cost range")
 
 
 class CheckResult(BaseModel):
@@ -86,6 +97,7 @@ class AttackChain(BaseModel):
     priority_fix: str = Field(description="The single fix that breaks the chain (lowest effort)")
     mitre_refs: list[str] = Field(default_factory=list, description="MITRE ATT&CK technique IDs")
     resources: list[str] = Field(default_factory=list, description="Affected resource IDs")
+    cost_estimate: CostEstimateData | None = Field(default=None, description="Estimated breach cost for this chain")
 
 
 class ScanSummary(BaseModel):
@@ -100,6 +112,7 @@ class ScanSummary(BaseModel):
     checks_failed: int = 0
     checks_errored: int = 0
     score: int = Field(default=100, description="Overall health score 0-100")
+    total_risk_exposure: CostEstimateData | None = Field(default=None, description="Aggregate risk exposure estimate")
 
 
 class ScanReport(BaseModel):

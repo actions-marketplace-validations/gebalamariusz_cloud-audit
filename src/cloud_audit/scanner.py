@@ -169,4 +169,41 @@ def run_scan(
     if not quiet and report.attack_chains:
         console.print(f"[bold]{len(report.attack_chains)} attack chains detected[/bold]")
 
+    # Breach cost estimation (post-scan, zero API calls)
+    try:
+        from cloud_audit.cost_model import (
+            CostEstimate,
+            estimate_chain_cost,
+            estimate_finding_cost,
+            estimate_total_exposure,
+        )
+        from cloud_audit.models import CostEstimateData
+
+        def _to_data(est: CostEstimate) -> CostEstimateData:
+            return CostEstimateData(
+                low_usd=est.low,
+                high_usd=est.high,
+                display=est.display,
+                rationale=est.rationale,
+                source_url=est.source_url,
+            )
+
+        # Annotate individual findings
+        for check_result in report.results:
+            for finding in check_result.findings:
+                est = estimate_finding_cost(finding)
+                if est:
+                    finding.cost_estimate = _to_data(est)
+
+        # Annotate attack chains
+        for chain in report.attack_chains:
+            chain.cost_estimate = _to_data(estimate_chain_cost(chain))
+
+        # Compute total exposure
+        total = estimate_total_exposure(report)
+        report.summary.total_risk_exposure = _to_data(total)
+    except Exception as e:
+        if not quiet:
+            console.print(f"[yellow]Warning: Cost estimation failed: {e}[/yellow]")
+
     return report, suppressed_count

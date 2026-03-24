@@ -5,7 +5,7 @@
 <h1 align="center">cloud-audit</h1>
 
 <p align="center">
-  <strong>Open-source AWS security scanner with Attack Chains - the first CLI tool that correlates findings into exploitable attack paths. 47 checks. 16 attack chain rules. Every finding includes a fix.</strong>
+  <strong>Open-source AWS security scanner with Attack Chains, Breach Cost Estimation, and MCP Server for AI agents. The first CLI scanner that correlates findings into exploitable attack paths AND puts a dollar sign on each one. 47 checks. Every finding includes a fix.</strong>
 </p>
 
 <p align="center">
@@ -32,7 +32,7 @@ cloud-audit scans your AWS account and tells you exactly how to fix what it find
 
 47 checks across 15 AWS resource types. Mapped to 16 CIS AWS Foundations Benchmark controls. 16 attack chain rules that correlate findings into exploitable attack paths.
 
-**Three things no other open-source CLI scanner does:**
+**Four things no other open-source CLI scanner does:**
 
 ### 1. Attack Chains - correlate findings into real attack paths
 
@@ -95,6 +95,8 @@ Found 3 attack chains from 22 individual findings.
 | Individual checks | 584 | 517 | 2500+ | **47** |
 | Attack chain detection | No | No | No | **16 rules** |
 | Remediation per finding | Partial | No | Links | **100%** |
+| Breach cost estimation | No | No | No | **Per finding + chain** |
+| MCP server (AI agents) | Paid ($99/mo) | No | No | **Free, standalone** |
 | Scan time (typical) | 4+ hours | Minutes | Seconds (IaC) | **Seconds** |
 
 <details>
@@ -163,6 +165,27 @@ Unchanged (8):
 This catches what IaC scanning misses: ClickOps changes, manual console edits, security group rules someone opened "temporarily" three months ago. Prowler offers similar tracking, but only through their paid cloud platform. Trivy, ScoutSuite, and Steampipe don't have it at all.
 
 Exit code 0 = no new findings, 1 = regression. Plug it into a cron job, get notified when something gets worse. See [daily-scan-with-diff.yml](examples/daily-scan-with-diff.yml) for a ready-to-use GitHub Actions workflow.
+
+### 4. Breach cost estimation - dollar signs on every finding
+
+Security teams speak in severities. Boards speak in dollars. cloud-audit translates findings into estimated financial risk based on published breach data (IBM Cost of a Data Breach 2024, Verizon DBIR, HIPAA enforcement actions).
+
+```
++---- Health Score ----+
+|  42 / 100            |   Risk exposure   $725K - $7.3M
++----------------------+
+
++---- Attack Chains (2 detected) ------------------------------------------+
+|                                                                           |
+|  CRITICAL  SSRF to Credential Theft                                       |
+|            i-0abc123 - public SG + IMDSv1                                 |
+|            Fix: Enforce IMDSv2 (effort: LOW)                              |
+|            Risk: $125K - $1.3M                                            |
+|                                                                           |
++--------------------------------------------------------------------------+
+```
+
+No other open-source scanner puts dollar amounts on findings. Every estimate links to its source (IBM, Verizon, OCC, MITRE) so you can verify it yourself.
 
 ## Quick Start
 
@@ -434,6 +457,49 @@ This gives you findings in the GitHub Security tab (via SARIF). Add `--format ma
 
 **Daily diff** is the most common setup - it catches ClickOps changes, manual console edits, and regressions that IaC scanning can't see (because IaC scans code, not live AWS).
 
+## MCP Server - Ask Your AI to Scan AWS
+
+> **The first free, standalone AWS security MCP server.** Prowler and Wiz have MCP servers, but both require their paid SaaS platform ($99+/month). cloud-audit MCP works locally with zero accounts, zero API keys, zero data sent anywhere.
+
+**Install (one command, nothing else needed):**
+
+```bash
+claude mcp add cloud-audit -- uvx --from "cloud-audit[mcp]" cloud-audit-mcp
+```
+
+**Then ask Claude Code:**
+
+> *"Scan my AWS account and show me the critical findings"*
+>
+> *"What attack chains were detected?"*
+>
+> *"How much risk exposure does my account have in dollars?"*
+>
+> *"Show me the Terraform code to fix aws-iam-001"*
+
+6 tools: `scan_aws`, `get_findings`, `get_attack_chains`, `get_remediation`, `get_health_score`, `list_checks`. Works with Claude Code, Cursor, and VS Code Copilot.
+
+<details>
+<summary>Alternative install methods</summary>
+
+```bash
+# With pip (if you don't have uvx)
+pip install cloud-audit[mcp]
+claude mcp add cloud-audit -- cloud-audit-mcp
+```
+
+```bash
+# Project-scoped config (.mcp.json in repo root - shared with team)
+{
+  "cloud-audit": {
+    "command": "uvx",
+    "args": ["--from", "cloud-audit[mcp]", "cloud-audit-mcp"]
+  }
+}
+```
+
+</details>
+
 ## AWS Permissions
 
 cloud-audit requires **read-only** access. Attach the AWS-managed `SecurityAudit` policy:
@@ -473,8 +539,8 @@ cloud-audit fills a specific niche: a focused audit with copy-paste remediation 
 
 ## What's next
 
-- GitHub Action for easier CI integration
-- Azure provider
+- Terraform drift detection - compare scan results against tfstate
+- Root cause grouping - "fix 1 setting, close 12 findings"
 - More attack chain rules based on community feedback
 
 Past releases: [CHANGELOG.md](CHANGELOG.md)

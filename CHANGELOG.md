@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-03-24
+
+### Added
+
+- **Breach cost estimation** - every finding and attack chain includes an estimated financial risk range (low/high USD) based on IBM Cost of a Data Breach 2024, Verizon DBIR, and published enforcement actions
+- Total risk exposure displayed in scan summary, CLI output, HTML report, and markdown report
+- Attack chain cost estimates use a compound risk multiplier (chained vulnerabilities have higher impact)
+- New `CostEstimateData` model for structured cost data in JSON output
+- **MCP Server** - Model Context Protocol server for AI agent integration (Claude Code, Cursor, VS Code Copilot)
+- 6 MCP tools: `scan_aws`, `get_findings`, `get_attack_chains`, `get_remediation`, `get_health_score`, `list_checks`
+- Optional dependency: `pip install cloud-audit[mcp]`
+- `.mcp.json` project configuration for team-wide MCP setup
+
+### Changed
+
+- Health Score panel now shows "Risk exposure: $X - $Y" when findings are present
+- Attack chain display in CLI includes per-chain cost estimates
+- Markdown report header includes total risk exposure
+- Markdown attack chain table shows cost column instead of narrative
+- Development Status classifier changed from Alpha to Beta
+
+## [0.9.1] - 2026-03-19
+
+### Added
+
+- **GitHub Action** - reusable composite action for CI/CD (`gebalamariusz/cloud-audit@v0`) with SARIF upload, OIDC auth, and diff baseline support
+- **pre-commit hooks** - `cloud-audit` and `cloud-audit-diff` hooks for the pre-commit framework (pre-push stage)
+- GitHub Sponsors funding link
+- YouTube demo video embedded in README
+
+### Changed
+
+- Lambda deprecated runtimes list extended with EOL dates (community contribution by @P-r-e-m-i-u-m, PR #18)
+- GitHub Actions bumped: checkout v6, codeql-action v4, configure-aws-credentials v6
+
 ## [0.9.0] - 2026-03-18
 
 ### Added
@@ -243,7 +278,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker image support
 - Rich terminal UI with progress bar and color-coded findings
 
-[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.9.1...v1.0.0
+[0.9.1]: https://github.com/gebalamariusz/cloud-audit/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.6.0...v0.7.0

@@ -622,6 +622,9 @@
         <span class="attack-chain-id">{{ chain.chain_id }}</span>
       </div>
       <div class="attack-chain-narrative">{{ chain.attack_narrative }}</div>
+      {% if chain.cost_estimate and chain.cost_estimate.high_usd > 0 %}
+      <div style="margin: 6px 0; font-size: 14px;"><strong style="color: var(--red);">Estimated risk: {{ chain.cost_estimate.display }}</strong> <span style="color: var(--text-dim);">- {{ chain.cost_estimate.rationale }}</span></div>
+      {% endif %}
       <div class="attack-chain-fix">Priority fix: {{ chain.priority_fix }}</div>
       <div class="attack-chain-findings">
         Based on {{ chain.findings|length }} findings:
@@ -672,6 +675,12 @@
       <div class="number" style="color: var(--red)">{{ report.summary.checks_failed }}</div>
       <div class="label">Checks Failed</div>
     </div>
+    {% if report.summary.total_risk_exposure and report.summary.total_risk_exposure.high_usd > 0 %}
+    <div class="summary-card">
+      <div class="number" style="color: var(--red); font-size: 20px;">{{ report.summary.total_risk_exposure.display }}</div>
+      <div class="label">Risk Exposure (<a href="https://www.ibm.com/reports/data-breach" target="_blank" rel="noopener" style="color: var(--teal);">methodology</a>)</div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Findings by priority group -->
@@ -694,6 +703,15 @@
         <span class="finding-resource">{{ finding.resource_id }}</span>
       </div>
       <div class="finding-body">{{ finding.description }}</div>
+      {% if finding.cost_estimate and finding.cost_estimate.high_usd > 0 %}
+      <div class="finding-cost" style="margin: 8px 0; padding: 8px 12px; background: rgba(239,68,68,0.06); border-radius: 6px; font-size: 13px;">
+        <strong style="color: var(--red);">Risk: {{ finding.cost_estimate.display }}</strong>
+        <span style="color: var(--text-dim);"> - {{ finding.cost_estimate.rationale }}</span>
+        {% if finding.cost_estimate.source_url %}
+        <a href="{{ finding.cost_estimate.source_url }}" target="_blank" rel="noopener" style="color: var(--teal); margin-left: 4px; text-decoration: none;">[source]</a>
+        {% endif %}
+      </div>
+      {% endif %}
       <div class="finding-recommendation">{{ finding.recommendation }}</div>
       {% if finding.remediation %}
       <details class="remediation-panel">

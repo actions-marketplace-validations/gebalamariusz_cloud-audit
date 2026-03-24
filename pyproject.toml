@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cloud-audit"
-version = "0.9.1"
+version = "1.0.0"
 description = "Open-source AWS security scanner with Attack Chains. 47 checks, 16 attack chain rules, copy-paste remediation (CLI + Terraform). The first CLI tool that correlates findings into exploitable attack paths."
 readme = "README.md"
 license = "MIT"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["aws", "cloud", "audit", "security", "compliance", "cis", "scanner", "devops", "terraform", "aws-security", "cloud-security", "security-scanner", "cis-benchmark", "remediation", "sarif", "devsecops", "iam-audit", "infrastructure-security"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: System Administrators",
     "Intended Audience :: Developers",
@@ -40,6 +40,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mcp = [
+    "mcp>=1.20.0",
+]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=6.0",
@@ -52,6 +55,7 @@ dev = [
 
 [project.scripts]
 cloud-audit = "cloud_audit.cli:app"
+cloud-audit-mcp = "cloud_audit.mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/gebalamariusz/cloud-audit"
@@ -73,7 +77,9 @@ select = ["E", "F", "I", "N", "W", "UP", "S", "B", "A", "C4", "SIM", "TCH", "RUF
 
 [tool.ruff.lint.per-file-ignores]
 "src/cloud_audit/providers/*/checks/*.py" = ["E501", "S112"]
+"src/cloud_audit/cost_model.py" = ["E501"]
 "src/cloud_audit/cli.py" = ["TC003"]
+"src/cloud_audit/mcp_server.py" = ["TC003"]
 "tests/**" = ["S101", "TC003"]
 
 [tool.mypy]

@@ -1,6 +1,6 @@
 # Roadmap
 
-> Current version: **v0.8.0** (March 2026)
+> Current version: **v1.0.0** (March 2026)
 
 ## Completed
 
@@ -83,19 +83,23 @@
 - Enhanced HTML report with executive summary, priority grouping, CIS pass/fail
 - 47 checks, 16 attack chains, 246 tests
 
+### v0.9.1 -- GitHub Action & Pre-commit (March 2026)
+- **GitHub Action** -- reusable composite action for CI/CD with SARIF upload, OIDC auth, diff baseline
+- **pre-commit hooks** -- scan and diff hooks for the pre-commit framework
+- Lambda deprecated runtimes extended with EOL dates (community PR #18)
+
+### v1.0.0 -- Production Ready (March 2026)
+- **Breach cost estimation** -- dollar-risk estimates per finding and attack chain based on IBM/Verizon/HIPAA data
+- **MCP Server** -- AI agent integration via Model Context Protocol (Claude Code, Cursor, VS Code)
+- 277 tests passing
+
 ## What's Next
 
-### v1.0.0 - Production Ready
-- **Cost-Security Fusion** - dollar-cost estimates per finding ("$X/month at risk per attack chain")
-- **Historical Score Tracking** - persistent score history with trends ("73/100, up from 61 last week")
-- **50+ curated checks** - community contributions welcome
-- **Show HN launch** - demo refresh, blog post, community push
-
-### v1.1.0 - CI/CD Native
-- **GitHub Action** - reusable action for CI integration (`gebalamariusz/cloud-audit-action@v1`)
+### v1.1.0 - Automation & Intelligence
 - **Terraform Drift Detection** - compare scan results against tfstate to find security-relevant drift
 - **Root Cause Grouping** - "fix 1 setting, close 12 findings" for account-level misconfigurations
 - **More attack chain rules** - expand based on community feedback and new attack research
+- **Historical Score Tracking** - persistent score history with trends
 
 ### v1.2.0 - Enterprise Ready
 - **Multi-account scanning** - AWS Organizations support, aggregate attack chains across accounts
