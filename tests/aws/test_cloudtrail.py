@@ -134,4 +134,4 @@ def test_cloudtrail_bucket_public_open(mock_aws_provider: AWSProvider) -> None:
     assert result.resources_scanned >= 1
     assert len(result.findings) >= 1
     assert result.findings[0].severity.value == "critical"
-    assert result.findings[0].compliance_refs == ["CIS 3.3"]
+    assert result.findings[0].compliance_refs == []  # CIS 3.3 removed in v3.0; check remains as best practice

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
 
 from cloud_audit.models import Category, CheckResult, Effort, Finding, Remediation, Severity
@@ -392,6 +393,171 @@ def check_access_logging(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_bucket_deny_http(provider: AWSProvider) -> CheckResult:
+    """Check if S3 buckets have a policy denying HTTP requests (CIS 2.1.1)."""
+    s3 = provider.session.client("s3")
+    result = CheckResult(check_id="aws-s3-006", check_name="S3 bucket denies HTTP")
+
+    try:
+        buckets = _list_buckets(provider)
+        for bucket in buckets:
+            name = bucket["Name"]
+            tf = _tf_name(name)
+            result.resources_scanned += 1
+
+            try:
+                policy_str = s3.get_bucket_policy(Bucket=name)["Policy"]
+                policy = json.loads(policy_str)
+            except Exception as exc:
+                error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+                if error_code == "NoSuchBucketPolicy":
+                    # No policy at all = no deny HTTP
+                    result.findings.append(
+                        Finding(
+                            check_id="aws-s3-006",
+                            title=f"S3 bucket '{name}' has no policy denying HTTP requests",
+                            severity=Severity.MEDIUM,
+                            category=Category.SECURITY,
+                            resource_type="AWS::S3::Bucket",
+                            resource_id=name,
+                            description=(
+                                f"Bucket '{name}' has no bucket policy. Without an explicit deny "
+                                f"for non-HTTPS requests, data could be transmitted unencrypted."
+                            ),
+                            recommendation="Add a bucket policy that denies requests where aws:SecureTransport is false.",
+                            remediation=Remediation(
+                                cli=(
+                                    f"aws s3api put-bucket-policy --bucket {name} --policy '{{"
+                                    f'"Version":"2012-10-17","Statement":[{{"Sid":"DenyHTTP","Effect":"Deny",'
+                                    f'"Principal":"*","Action":"s3:*","Resource":["arn:aws:s3:::{name}","arn:aws:s3:::{name}/*"],'
+                                    f'"Condition":{{"Bool":{{"aws:SecureTransport":"false"}}}}}}]}}\''
+                                ),
+                                terraform=(
+                                    f'resource "aws_s3_bucket_policy" "{tf}" {{\n'
+                                    f"  bucket = aws_s3_bucket.{tf}.id\n"
+                                    f"  policy = jsonencode({{\n"
+                                    f'    Version = "2012-10-17"\n'
+                                    f"    Statement = [{{\n"
+                                    f'      Sid       = "DenyHTTP"\n'
+                                    f'      Effect    = "Deny"\n'
+                                    f'      Principal = "*"\n'
+                                    f'      Action    = "s3:*"\n'
+                                    f"      Resource  = [\n"
+                                    f"        aws_s3_bucket.{tf}.arn,\n"
+                                    f'        "${{aws_s3_bucket.{tf}.arn}}/*"\n'
+                                    f"      ]\n"
+                                    f'      Condition = {{ Bool = {{ "aws:SecureTransport" = "false" }} }}\n'
+                                    f"    }}]\n"
+                                    f"  }})\n"
+                                    f"}}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/security-best-practices.html",
+                                effort=Effort.LOW,
+                            ),
+                            compliance_refs=["CIS 2.1.1"],
+                        )
+                    )
+                    continue
+                continue  # Other errors (AccessDenied) - skip
+
+            # Check if policy has deny for non-HTTPS
+            has_deny_http = False
+            for stmt in policy.get("Statement", []):
+                if stmt.get("Effect") != "Deny":
+                    continue
+                condition = stmt.get("Condition", {})
+                bool_cond = condition.get("Bool", {})
+                if bool_cond.get("aws:SecureTransport") in ("false", False):
+                    has_deny_http = True
+                    break
+
+            if not has_deny_http:
+                result.findings.append(
+                    Finding(
+                        check_id="aws-s3-006",
+                        title=f"S3 bucket '{name}' policy does not deny HTTP requests",
+                        severity=Severity.MEDIUM,
+                        category=Category.SECURITY,
+                        resource_type="AWS::S3::Bucket",
+                        resource_id=name,
+                        description=(
+                            f"Bucket '{name}' has a policy but it does not contain a Deny statement "
+                            f"for requests where aws:SecureTransport is false."
+                        ),
+                        recommendation="Add a Deny statement for aws:SecureTransport=false to the existing policy.",
+                        remediation=Remediation(
+                            cli=f"# Add deny HTTP statement to existing bucket policy for '{name}'",
+                            terraform=(
+                                "# Add condition to deny non-HTTPS:\n"
+                                '# Condition = { Bool = { "aws:SecureTransport" = "false" } }'
+                            ),
+                            doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/security-best-practices.html",
+                            effort=Effort.LOW,
+                        ),
+                        compliance_refs=["CIS 2.1.1"],
+                    )
+                )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_bucket_mfa_delete(provider: AWSProvider) -> CheckResult:
+    """Check if S3 buckets have MFA Delete enabled (CIS 2.1.2)."""
+    s3 = provider.session.client("s3")
+    result = CheckResult(check_id="aws-s3-007", check_name="S3 MFA Delete")
+
+    try:
+        buckets = _list_buckets(provider)
+        for bucket in buckets:
+            name = bucket["Name"]
+            result.resources_scanned += 1
+
+            try:
+                versioning = s3.get_bucket_versioning(Bucket=name)
+                mfa_delete = versioning.get("MFADelete", "Disabled")
+            except Exception:
+                continue
+
+            if mfa_delete != "Enabled":
+                result.findings.append(
+                    Finding(
+                        check_id="aws-s3-007",
+                        title=f"S3 bucket '{name}' does not have MFA Delete enabled",
+                        severity=Severity.LOW,
+                        category=Category.SECURITY,
+                        resource_type="AWS::S3::Bucket",
+                        resource_id=name,
+                        description=(
+                            f"Bucket '{name}' does not require MFA for delete operations. "
+                            f"MFA Delete adds an extra layer of protection against accidental "
+                            f"or malicious deletion of objects and versioning configuration."
+                        ),
+                        recommendation="Enable MFA Delete on the bucket (requires root account credentials).",
+                        remediation=Remediation(
+                            cli=(
+                                f"# MFA Delete must be enabled by the root account:\n"
+                                f"aws s3api put-bucket-versioning --bucket {name} "
+                                f"--versioning-configuration Status=Enabled,MFADelete=Enabled "
+                                f"--mfa 'arn:aws:iam::ACCOUNT:mfa/root-mfa TOTP_CODE'"
+                            ),
+                            terraform=(
+                                "# MFA Delete cannot be enabled via Terraform (requires root credentials).\n"
+                                "# Enable via AWS CLI with root account MFA."
+                            ),
+                            doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/MultiFactorAuthenticationDelete.html",
+                            effort=Effort.MEDIUM,
+                        ),
+                        compliance_refs=["CIS 2.1.2"],
+                    )
+                )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all S3 checks bound to the provider."""
     from cloud_audit.providers.base import make_check
@@ -402,4 +568,6 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
         make_check(check_bucket_versioning, provider, check_id="aws-s3-003", category=Category.RELIABILITY),
         make_check(check_bucket_lifecycle, provider, check_id="aws-s3-004", category=Category.COST),
         make_check(check_access_logging, provider, check_id="aws-s3-005", category=Category.SECURITY),
+        make_check(check_bucket_deny_http, provider, check_id="aws-s3-006", category=Category.SECURITY),
+        make_check(check_bucket_mfa_delete, provider, check_id="aws-s3-007", category=Category.SECURITY),
     ]

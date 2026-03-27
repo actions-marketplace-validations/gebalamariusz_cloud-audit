@@ -7,11 +7,13 @@ from typing import TYPE_CHECKING
 import boto3
 
 from cloud_audit.providers.aws.checks import (
+    account,
     cloudtrail,
     cloudwatch,
     config_,
     ec2,
     ecs,
+    efs,
     eip,
     guardduty,
     iam,
@@ -20,6 +22,7 @@ from cloud_audit.providers.aws.checks import (
     rds,
     s3,
     secrets,
+    securityhub,
     ssm,
     vpc,
 )
@@ -30,12 +33,14 @@ if TYPE_CHECKING:
 
 # Registry of all AWS checks, grouped by service
 _CHECK_MODULES = [
+    account,
     iam,
     s3,
     ec2,
     vpc,
     eip,
     rds,
+    efs,
     cloudtrail,
     guardduty,
     config_,
@@ -45,6 +50,7 @@ _CHECK_MODULES = [
     ecs,
     ssm,
     secrets,
+    securityhub,
 ]
 
 

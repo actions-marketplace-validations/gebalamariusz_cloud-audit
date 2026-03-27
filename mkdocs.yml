@@ -1,0 +1,78 @@
+site_name: cloud-audit
+site_description: Open-source AWS security scanner with attack chains, compliance, and copy-paste fixes
+site_url: https://haitmg.pl/cloud-audit
+repo_url: https://github.com/gebalamariusz/cloud-audit
+repo_name: gebalamariusz/cloud-audit
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - attr_list
+  - md_in_html
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quick-start.md
+    - Demo Mode: getting-started/demo.md
+  - Features:
+    - Attack Chains: features/attack-chains.md
+    - Breach Cost Estimation: features/breach-cost.md
+    - MCP Server: features/mcp-server.md
+    - Scan Diff: features/scan-diff.md
+    - Remediation: features/remediation.md
+    - Health Score: features/health-score.md
+  - Compliance:
+    - Overview: compliance/overview.md
+    - CIS AWS v3.0: compliance/cis-aws-v3.md
+  - Checks:
+    - All Checks: checks/index.md
+  - Configuration:
+    - Config File: configuration/config-file.md
+    - Environment Variables: configuration/environment-variables.md
+    - Suppressions: configuration/suppressions.md
+  - CI/CD:
+    - GitHub Actions: ci-cd/github-actions.md
+    - SARIF Integration: ci-cd/sarif.md
+    - Pre-commit Hooks: ci-cd/pre-commit.md
+  - Reports:
+    - HTML Report: reports/html.md
+    - JSON & SARIF: reports/json-sarif.md
+    - Markdown: reports/markdown.md
+  - Alternatives: alternatives.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md

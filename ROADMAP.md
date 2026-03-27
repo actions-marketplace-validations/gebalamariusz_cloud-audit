@@ -1,6 +1,6 @@
 # Roadmap
 
-> Current version: **v1.0.0** (March 2026)
+> Current version: **v1.1.0** (March 2026)
 
 ## Completed
 
@@ -93,18 +93,36 @@
 - **MCP Server** -- first free, standalone AWS security MCP server. Install: `claude mcp add cloud-audit -- uvx cloud-audit-mcp`
 - 278 tests passing
 
+### v1.1.0 -- CIS Compliance Engine (March 2026)
+- **CIS AWS Foundations Benchmark v3.0.0** -- 62 controls mapped, 55 automated, per-control evidence and remediation
+- `--compliance cis_aws_v3` CLI flag with readiness scoring
+- Compliance HTML and Markdown reports (auditor-ready, per-control PASS/FAIL with evidence)
+- `list-frameworks` and `show-framework` commands
+- 33 new checks (80 total) for full CIS v3.0 automated coverage
+- 4 new attack chain rules (20 total) with CIS control mapping
+- 3 new service modules (Account, EFS, Security Hub)
+- MkDocs documentation site (25 pages) at haitmg.pl/cloud-audit/
+- 303 tests passing
+
 ## What's Next
 
-### v1.1.0 - Automation & Intelligence
-- **Terraform Drift Detection** - compare scan results against tfstate to find security-relevant drift
-- **Root Cause Grouping** - "fix 1 setting, close 12 findings" for account-level misconfigurations
-- **More attack chain rules** - expand based on community feedback and new attack research
-- **Historical Score Tracking** - persistent score history with trends
+### v1.2.0 - Multi-Framework Compliance
+- **SOC 2 Type II** compliance mapping (64 Trust Services Criteria)
+- **BSI C5:2020** compliance mapping (121 criteria -- zero open-source competition)
+- **ISO 27001:2022** compliance mapping (93 Annex A controls, bundled with BSI C5)
+- **HIPAA Security Rule** compliance mapping (36 implementation specifications)
+- **NIS2 Directive** compliance mapping (~40 technical measures)
+- Compliance report improvements based on v1.1.0 feedback
 
-### v1.2.0 - Enterprise Ready
-- **Multi-account scanning** - AWS Organizations support, aggregate attack chains across accounts
-- **OTel-Native Security Traces** - emit findings as OpenTelemetry spans for Grafana/Datadog
-- **Triage command** - generate suppression YAML from scan results
+### v1.3.0 - Automation & Intelligence
+- **Terraform Drift Detection** -- compare scan results against tfstate to find security-relevant drift
+- **Root Cause Grouping** -- "fix 1 setting, close 12 findings" for account-level misconfigurations
+- **Historical Score Tracking** -- persistent score history with trends for Type II audits
+- **More attack chain rules** -- expand based on community feedback and new attack research
+
+### v1.4.0 - Enterprise Ready
+- **Multi-account scanning** -- AWS Organizations support, aggregate attack chains across accounts
+- **Triage command** -- generate suppression YAML from scan results
 - **Performance benchmarks** on accounts of various sizes
 
 ## Considering
@@ -112,12 +130,14 @@
 - Azure provider (~25 checks)
 - Custom check plugins (user-defined checks via Python or YAML)
 - Slack/Teams notifications
+- PCI DSS v4.0 compliance mapping
+- DORA (EU financial sector) compliance mapping
 
 ## Design Principles
 
 1. **High-signal only** -- if an attacker can't exploit it, the check doesn't exist
 2. **Every finding = a ready fix** -- AWS CLI + Terraform HCL + documentation link
-3. **Reports for engineers and managers** -- beautiful, useful, actionable
-4. **Zero config to start** -- `pip install cloud-audit && cloud-audit scan` gives value immediately
-5. **Fast** -- seconds, not hours
-6. **CIS mapping included** -- key CIS AWS Foundations Benchmark controls mapped to checks
+3. **Compliance-grade output** -- per-control evidence, readiness scoring, auditor-ready reports
+4. **Reports for engineers and managers** -- beautiful, useful, actionable
+5. **Zero config to start** -- `pip install cloud-audit && cloud-audit scan` gives value immediately
+6. **Fast** -- seconds, not hours

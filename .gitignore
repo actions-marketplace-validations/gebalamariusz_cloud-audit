@@ -56,3 +56,6 @@ terraform/
 # OS
 .DS_Store
 Thumbs.db
+site/
+screenshots/
+.claude/

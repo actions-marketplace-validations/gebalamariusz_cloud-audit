@@ -751,6 +751,134 @@ def _detect_cicd_lateral_movement(
     return chains
 
 
+# --- Tier 6: CIS-driven chains (new checks) ---
+
+
+def _detect_root_keys_no_trail(
+    by_check: dict[str, list[Finding]],
+) -> list[AttackChain]:
+    """AC-25: Root access keys exist + no CloudTrail."""
+    chains: list[AttackChain] = []
+    root_keys = by_check.get("aws-iam-008", [])
+    no_ct = by_check.get("aws-ct-001", [])
+    if not root_keys or not no_ct:
+        return chains
+
+    chains.append(
+        AttackChain(
+            chain_id="AC-25",
+            name="Root Access Keys Without Audit Trail",
+            severity=Severity.CRITICAL,
+            findings=[root_keys[0], no_ct[0]],
+            attack_narrative=(
+                "Root account has active access keys and CloudTrail is disabled. "
+                "An attacker with root keys has unrestricted access to all AWS "
+                "resources with zero audit trail. Root key usage cannot be "
+                "restricted by IAM policies."
+            ),
+            priority_fix="Delete root access keys immediately (effort: LOW).",
+            mitre_refs=["T1078.004", "T1562.008"],
+            resources=["root", "cloudtrail"],
+        )
+    )
+    return chains
+
+
+def _detect_admin_no_mfa_no_alarm(
+    by_check: dict[str, list[Finding]],
+) -> list[AttackChain]:
+    """AC-26: Admin policy + users without MFA + no root usage alarm."""
+    chains: list[AttackChain] = []
+    admin = by_check.get("aws-iam-005", [])
+    no_mfa = by_check.get("aws-iam-002", [])
+    no_alarm = by_check.get("aws-cw-001", [])
+    if not admin or not no_mfa or not no_alarm:
+        return chains
+
+    chains.append(
+        AttackChain(
+            chain_id="AC-26",
+            name="Unmonitored Admin Escalation Path",
+            severity=Severity.CRITICAL,
+            findings=[admin[0], no_mfa[0], no_alarm[0]],
+            attack_narrative=(
+                f"Admin-level IAM policy exists, user '{no_mfa[0].resource_id}' "
+                f"has console access without MFA, and root account usage is not "
+                f"monitored. An attacker can compromise the unprotected user, "
+                f"escalate to admin, and operate undetected."
+            ),
+            priority_fix=f"Enable MFA for '{no_mfa[0].resource_id}' (effort: LOW).",
+            mitre_refs=["T1078.004", "T1110", "T1562.008"],
+            resources=[admin[0].resource_id, no_mfa[0].resource_id],
+        )
+    )
+    return chains
+
+
+def _detect_default_sg_no_flow_logs(
+    by_check: dict[str, list[Finding]],
+) -> list[AttackChain]:
+    """AC-27: Default SG has rules + no VPC flow logs in same region."""
+    chains: list[AttackChain] = []
+    default_sg = by_check.get("aws-vpc-005", [])
+    no_flow = by_check.get("aws-vpc-003", [])
+    if not default_sg or not no_flow:
+        return chains
+
+    flow_regions = {f.region for f in no_flow}
+    for f in default_sg:
+        if f.region in flow_regions:
+            flow_f = next(fl for fl in no_flow if fl.region == f.region)
+            chains.append(
+                AttackChain(
+                    chain_id="AC-27",
+                    name="Default Network Access Without Logging",
+                    severity=Severity.HIGH,
+                    findings=[f, flow_f],
+                    attack_narrative=(
+                        f"Default security group in {f.region} allows traffic and "
+                        f"VPC flow logs are disabled. Resources launched without "
+                        f"explicit SG assignment get network access that is not logged."
+                    ),
+                    priority_fix=f"Remove rules from default SG {f.resource_id} (effort: LOW).",
+                    mitre_refs=["T1190", "T1562.008"],
+                    resources=[f.resource_id, flow_f.resource_id],
+                )
+            )
+            break
+    return chains
+
+
+def _detect_oidc_no_analyzer(
+    by_check: dict[str, list[Finding]],
+) -> list[AttackChain]:
+    """AC-28: OIDC trust without sub + no Access Analyzer."""
+    chains: list[AttackChain] = []
+    oidc = by_check.get("aws-iam-007", [])
+    no_aa = by_check.get("aws-iam-012", [])
+    if not oidc or not no_aa:
+        return chains
+
+    chains.append(
+        AttackChain(
+            chain_id="AC-28",
+            name="External Access Without Analysis",
+            severity=Severity.HIGH,
+            findings=[oidc[0], no_aa[0]],
+            attack_narrative=(
+                f"Role '{_role_name_from_arn(oidc[0].resource_id)}' trusts an "
+                f"OIDC provider without 'sub' restriction, and IAM Access "
+                f"Analyzer is not enabled. External access paths exist but "
+                f"the tool that detects them is not running."
+            ),
+            priority_fix="Enable IAM Access Analyzer and add 'sub' condition (effort: LOW).",
+            mitre_refs=["T1078.004", "T1550.001"],
+            resources=[oidc[0].resource_id],
+        )
+    )
+    return chains
+
+
 # ---------------------------------------------------------------------------
 # Main detection function
 # ---------------------------------------------------------------------------
@@ -767,6 +895,10 @@ _SIMPLE_RULES = [
     _detect_container_breakout,  # AC-19
     _detect_unmonitored_containers,  # AC-20
     _detect_plaintext_secrets,  # AC-21
+    _detect_root_keys_no_trail,  # AC-25
+    _detect_admin_no_mfa_no_alarm,  # AC-26
+    _detect_default_sg_no_flow_logs,  # AC-27
+    _detect_oidc_no_analyzer,  # AC-28
 ]
 
 _RELATIONSHIP_RULES = [
@@ -812,6 +944,7 @@ def detect_attack_chains(
     chain_ids = {c.chain_id for c in chains}
     suppress_map = {
         "AC-09": "AC-10",  # Blind Admin supersedes Unmonitored Admin
+        "AC-12": "AC-26",  # Unmonitored Admin Escalation supersedes Admin No MFA
     }
     chains = [c for c in chains if c.chain_id not in suppress_map or suppress_map[c.chain_id] not in chain_ids]
 

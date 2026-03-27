@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cloud-audit"
-version = "1.0.2"
-description = "Open-source AWS security scanner with Attack Chains, Breach Cost Estimation, and MCP Server for AI agents. 47 checks, copy-paste remediation, dollar-risk per finding. First free standalone AWS security MCP server."
+version = "1.1.0"
+description = "Open-source AWS security scanner with CIS AWS v3.0 compliance, attack chains, breach cost estimation, and MCP server. 80 checks, 20 attack chain rules, 62 CIS controls mapped. Every finding includes CLI + Terraform remediation."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -76,6 +76,8 @@ select = ["E", "F", "I", "N", "W", "UP", "S", "B", "A", "C4", "SIM", "TCH", "RUF
 [tool.ruff.lint.per-file-ignores]
 "src/cloud_audit/providers/*/checks/*.py" = ["E501", "S112"]
 "src/cloud_audit/cost_model.py" = ["E501"]
+"src/cloud_audit/reports/compliance_html.py" = ["E501"]
+"src/cloud_audit/reports/compliance_markdown.py" = ["E501"]
 "src/cloud_audit/cli.py" = ["TC003"]
 "src/cloud_audit/mcp_server.py" = ["TC003"]
 "tests/**" = ["S101", "TC003", "E402"]

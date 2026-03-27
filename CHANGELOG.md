@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-03-27
+
+### Added
+
+- **CIS AWS Foundations Benchmark v3.0.0 compliance engine** - 62 controls mapped, 55 fully automated, per-control evidence templates, readiness scoring
+- `--compliance cis_aws_v3` CLI flag - run compliance assessment alongside security scan
+- `list-frameworks` command - show available compliance frameworks
+- `show-framework` command - display control mappings without scanning
+- Compliance HTML report - auditor-ready, per-control PASS/FAIL with evidence statements, remediation (CLI + Terraform), and attack chain violations
+- Compliance Markdown report - same data for PR comments and documentation
+- **33 new security checks** (47 -> 80 total) covering CIS v3.0 requirements:
+  - IAM: root access keys (1.4), multiple active keys (1.13), direct user policies (1.15), support role (1.17), IAM Access Analyzer (1.20), expired certificates (1.19), CloudShell access (1.22), hardware MFA for root (1.6), EC2 instance roles (1.18)
+  - S3: deny HTTP policy (2.1.1), MFA Delete (2.1.2)
+  - VPC: default security group restricts all traffic (5.4), NACL admin port detection (5.1)
+  - CloudTrail: S3 bucket access logging (3.4), KMS encryption (3.5), S3 object-level write logging (3.8), S3 object-level read logging (3.9)
+  - CloudWatch: 14 CIS Section 4 monitoring checks (4.1-4.2, 4.4-4.15) using metric filter + alarm detection
+  - EFS: encryption at rest (2.4.1)
+  - Security Hub: enabled check (4.16)
+  - Account: security alternate contact (1.2)
+- **4 new attack chain rules** (16 -> 20 total):
+  - AC-25: Root Access Keys Without Audit Trail
+  - AC-26: Unmonitored Admin Escalation Path
+  - AC-27: Default Network Access Without Logging
+  - AC-28: External Access Without Analysis
+- **3 new AWS service modules**: Account, EFS, Security Hub
+- CloudTrail API call cache (7 -> 1 API call per scan for trail listing)
+- MkDocs Material documentation site (25 pages) at haitmg.pl/cloud-audit/
+- CIS control-to-attack-chain mapping (20 chains mapped to specific CIS controls)
+
+### Changed
+
+- Check count: 47 -> 80 across 18 AWS services (was 15)
+- Attack chains: 16 -> 20 rules
+- CIS coverage: 16 controls -> 62 controls (100% of automatable recommendations)
+- `aws-iam-004` threshold changed from 30 to 45 days (CIS 1.12 compliance)
+- `aws-iam-006` now validates password reuse prevention >= 24 (CIS 1.9)
+- `aws-vpc-004` now detects admin ports (22, 3389) specifically (CIS 5.1)
+- `aws-ct-003` compliance_refs cleared (CIS 3.3 removed in v3.0)
+- `aws-iam-002` compliance_refs corrected from CIS 1.4 to CIS 1.10
+- AccessDenied handling improved in check_support_role, check_iam_access_analyzer, check_cloudshell_access
+- README.md fully rewritten with updated numbers and documentation links
+
+### Fixed
+
+- S3 deny HTTP check CLI remediation was a tuple instead of string (trailing comma)
+- CloudTrail bucket access logging CLI remediation same issue
+- S3 Advanced Event Selector parsing now validates resources.type = AWS::S3::Object
+- Errored checks no longer counted as "passed" in compliance engine
+
 ## [1.0.1] - 2026-03-24
 
 ### Changed

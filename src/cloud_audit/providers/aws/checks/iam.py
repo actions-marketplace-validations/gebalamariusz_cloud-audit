@@ -55,6 +55,59 @@ def check_root_mfa(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_root_access_keys(provider: AWSProvider) -> CheckResult:
+    """Check if the root account has access keys (CIS 1.4)."""
+    iam = provider.session.client("iam")
+    result = CheckResult(check_id="aws-iam-008", check_name="Root account access keys")
+
+    try:
+        summary = iam.get_account_summary()["SummaryMap"]
+        result.resources_scanned = 1
+        if summary.get("AccountAccessKeysPresent", 0) > 0:
+            result.findings.append(
+                Finding(
+                    check_id="aws-iam-008",
+                    title="Root account has active access keys",
+                    severity=Severity.CRITICAL,
+                    category=Category.SECURITY,
+                    resource_type="AWS::IAM::Root",
+                    resource_id="root",
+                    description=(
+                        "The root account has access keys configured. "
+                        "Root access keys grant unrestricted access to all AWS resources "
+                        "and cannot be restricted by IAM policies. If compromised, "
+                        "an attacker has full control over the account."
+                    ),
+                    recommendation="Delete root access keys immediately. Use IAM users or roles for programmatic access.",
+                    remediation=Remediation(
+                        cli=(
+                            "# Root access keys must be deleted via AWS Console:\n"
+                            "# 1. Sign in as root: https://console.aws.amazon.com/\n"
+                            "# 2. Go to: IAM > Security credentials > Access keys\n"
+                            "# 3. Delete all access keys\n"
+                            "# Alternatively, use CLI if you have the root key (not recommended):\n"
+                            "# aws iam delete-access-key --access-key-id AKIAXXXXXXXXXXXXXXXX"
+                        ),
+                        terraform=(
+                            "# Root access keys cannot be managed via Terraform.\n"
+                            "# Delete them via AWS Console and use IAM roles instead:\n"
+                            'resource "aws_iam_role" "admin" {\n'
+                            '  name = "admin-role"\n'
+                            "  # Use this role instead of root access keys\n"
+                            "}"
+                        ),
+                        doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user_manage_delete-key.html",
+                        effort=Effort.LOW,
+                    ),
+                    compliance_refs=["CIS 1.4"],
+                )
+            )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def check_users_mfa(provider: AWSProvider) -> CheckResult:
     """Check if all IAM users with console access have MFA enabled."""
     iam = provider.session.client("iam")
@@ -105,7 +158,7 @@ def check_users_mfa(provider: AWSProvider) -> CheckResult:
                                 doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_enable_virtual.html",
                                 effort=Effort.LOW,
                             ),
-                            compliance_refs=["CIS 1.4"],
+                            compliance_refs=["CIS 1.10"],
                         )
                     )
     except Exception as e:
@@ -179,13 +232,13 @@ def check_access_keys_rotation(provider: AWSProvider) -> CheckResult:
 
 
 def check_unused_access_keys(provider: AWSProvider) -> CheckResult:
-    """Check for access keys that haven't been used in 30+ days."""
+    """Check for access keys that haven't been used in 45+ days (CIS 1.12)."""
     iam = provider.session.client("iam")
     result = CheckResult(check_id="aws-iam-004", check_name="Unused access keys")
 
     try:
         now = datetime.now(timezone.utc)
-        max_unused_days = 30
+        max_unused_days = 45  # CIS 1.12 requires 45 days
         paginator = iam.get_paginator("list_users")
 
         for page in paginator.paginate():
@@ -377,7 +430,7 @@ def check_weak_password_policy(provider: AWSProvider) -> CheckResult:
                         doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html",
                         effort=Effort.LOW,
                     ),
-                    compliance_refs=["CIS 1.8"],
+                    compliance_refs=["CIS 1.8", "CIS 1.9"],
                 )
             )
             return result
@@ -393,6 +446,9 @@ def check_weak_password_policy(provider: AWSProvider) -> CheckResult:
             issues.append("numbers not required")
         if not policy.get("RequireSymbols", False):
             issues.append("symbols not required")
+        if policy.get("PasswordReusePrevention", 0) < 24:
+            reuse_val = policy.get("PasswordReusePrevention", 0)
+            issues.append(f"password reuse prevention {reuse_val} (should be >= 24)")
 
         if issues:
             result.findings.append(
@@ -427,7 +483,7 @@ def check_weak_password_policy(provider: AWSProvider) -> CheckResult:
                         doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html",
                         effort=Effort.LOW,
                     ),
-                    compliance_refs=["CIS 1.8"],
+                    compliance_refs=["CIS 1.8", "CIS 1.9"],
                 )
             )
     except Exception as e:
@@ -585,16 +641,546 @@ def check_oidc_trust_policy(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_multiple_active_keys(provider: AWSProvider) -> CheckResult:
+    """Check if any IAM user has more than one active access key (CIS 1.13)."""
+    iam = provider.session.client("iam")
+    result = CheckResult(check_id="aws-iam-009", check_name="Multiple active access keys")
+
+    try:
+        paginator = iam.get_paginator("list_users")
+        for page in paginator.paginate():
+            for user in page["Users"]:
+                username = user["UserName"]
+                try:
+                    keys = iam.list_access_keys(UserName=username)["AccessKeyMetadata"]
+                except Exception:
+                    continue
+                active_keys = [k for k in keys if k["Status"] == "Active"]
+                result.resources_scanned += 1
+
+                if len(active_keys) > 1:
+                    key_ids = ", ".join(k["AccessKeyId"] for k in active_keys)
+                    result.findings.append(
+                        Finding(
+                            check_id="aws-iam-009",
+                            title=f"User '{username}' has {len(active_keys)} active access keys",
+                            severity=Severity.MEDIUM,
+                            category=Category.SECURITY,
+                            resource_type="AWS::IAM::User",
+                            resource_id=username,
+                            description=(
+                                f"User '{username}' has {len(active_keys)} active access keys ({key_ids}). "
+                                f"Multiple active keys increase the attack surface and make key management harder."
+                            ),
+                            recommendation="Deactivate the older access key after confirming the newer one is in use.",
+                            remediation=Remediation(
+                                cli=(
+                                    f"# Deactivate the older key (keep the newer one):\n"
+                                    f"aws iam update-access-key --user-name {username} "
+                                    f"--access-key-id {active_keys[0]['AccessKeyId']} --status Inactive"
+                                ),
+                                terraform=(
+                                    "# Manage access keys in Terraform to enforce single-key policy:\n"
+                                    f'resource "aws_iam_access_key" "{username}" {{\n'
+                                    f'  user = "{username}"\n'
+                                    f"}}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html",
+                                effort=Effort.LOW,
+                            ),
+                            compliance_refs=["CIS 1.13"],
+                        )
+                    )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_user_direct_policies(provider: AWSProvider) -> CheckResult:
+    """Check if IAM users have policies attached directly instead of through groups (CIS 1.15)."""
+    iam = provider.session.client("iam")
+    result = CheckResult(check_id="aws-iam-010", check_name="Direct user policies")
+
+    try:
+        paginator = iam.get_paginator("list_users")
+        for page in paginator.paginate():
+            for user in page["Users"]:
+                username = user["UserName"]
+                result.resources_scanned += 1
+
+                inline_policies = iam.list_user_policies(UserName=username)["PolicyNames"]
+                attached_policies = iam.list_attached_user_policies(UserName=username)["AttachedPolicies"]
+
+                if inline_policies or attached_policies:
+                    policy_names = [*inline_policies, *(p["PolicyName"] for p in attached_policies)]
+                    result.findings.append(
+                        Finding(
+                            check_id="aws-iam-010",
+                            title=f"User '{username}' has {len(policy_names)} direct policy attachment(s)",
+                            severity=Severity.MEDIUM,
+                            category=Category.SECURITY,
+                            resource_type="AWS::IAM::User",
+                            resource_id=username,
+                            description=(
+                                f"User '{username}' has policies attached directly: {', '.join(policy_names)}. "
+                                f"Direct policy attachments bypass group-based access control and make "
+                                f"permission auditing difficult."
+                            ),
+                            recommendation="Move policies to IAM groups and add users to appropriate groups instead.",
+                            remediation=Remediation(
+                                cli=(
+                                    "# Detach policies from user and attach to a group:\n"
+                                    + (
+                                        "\n".join(
+                                            f"aws iam detach-user-policy --user-name {username} --policy-arn {p['PolicyArn']}"
+                                            for p in attached_policies
+                                        )
+                                        if attached_policies
+                                        else "# No attached policies to detach"
+                                    )
+                                    + "\n"
+                                    + (
+                                        "\n".join(
+                                            f"aws iam delete-user-policy --user-name {username} --policy-name {p}"
+                                            for p in inline_policies
+                                        )
+                                        if inline_policies
+                                        else "# No inline policies to delete"
+                                    )
+                                    + f"\n# Then add user to appropriate group:\n"
+                                    f"aws iam add-user-to-group --user-name {username} --group-name APPROPRIATE_GROUP"
+                                ),
+                                terraform=(
+                                    f"# Use group membership instead of direct policy attachment:\n"
+                                    f'resource "aws_iam_group_membership" "{username}" {{\n'
+                                    f'  name  = "{username}-membership"\n'
+                                    f'  users = ["{username}"]\n'
+                                    f"  group = aws_iam_group.developers.name\n"
+                                    f"}}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#use-groups-for-permissions",
+                                effort=Effort.MEDIUM,
+                            ),
+                            compliance_refs=["CIS 1.15"],
+                        )
+                    )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_support_role(provider: AWSProvider) -> CheckResult:
+    """Check if a support role with AWSSupportAccess policy exists (CIS 1.17)."""
+    iam = provider.session.client("iam")
+    result = CheckResult(check_id="aws-iam-011", check_name="Support role exists")
+
+    try:
+        result.resources_scanned = 1
+        support_arn = "arn:aws:iam::aws:policy/AWSSupportAccess"
+        try:
+            entities = iam.list_entities_for_policy(PolicyArn=support_arn)
+            has_role = len(entities.get("PolicyRoles", [])) > 0
+            has_user = len(entities.get("PolicyUsers", [])) > 0
+            has_group = len(entities.get("PolicyGroups", [])) > 0
+        except Exception as exc:
+            error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+            if error_code in ("AccessDenied", "AccessDeniedException"):
+                result.error = "Missing permission: iam:ListEntitiesForPolicy"
+                return result
+            has_role = False
+            has_user = False
+            has_group = False
+
+        if not (has_role or has_user or has_group):
+            result.findings.append(
+                Finding(
+                    check_id="aws-iam-011",
+                    title="No IAM entity has AWSSupportAccess policy attached",
+                    severity=Severity.MEDIUM,
+                    category=Category.SECURITY,
+                    resource_type="AWS::IAM::Policy",
+                    resource_id="AWSSupportAccess",
+                    description=(
+                        "No IAM role, user, or group has the AWSSupportAccess managed policy attached. "
+                        "This means no one can manage incidents through AWS Support."
+                    ),
+                    recommendation="Create a support role and attach the AWSSupportAccess policy.",
+                    remediation=Remediation(
+                        cli=(
+                            "aws iam create-role --role-name aws-support-role "
+                            '--assume-role-policy-document \'{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"arn:aws:iam::ACCOUNT_ID:root"},"Action":"sts:AssumeRole"}]}\'\n'
+                            "aws iam attach-role-policy --role-name aws-support-role "
+                            "--policy-arn arn:aws:iam::aws:policy/AWSSupportAccess"
+                        ),
+                        terraform=(
+                            'resource "aws_iam_role" "support" {\n'
+                            '  name = "aws-support-role"\n'
+                            "  assume_role_policy = jsonencode({\n"
+                            '    Version = "2012-10-17"\n'
+                            "    Statement = [{\n"
+                            '      Effect    = "Allow"\n'
+                            '      Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }\n'
+                            '      Action    = "sts:AssumeRole"\n'
+                            "    }]\n"
+                            "  })\n"
+                            "}\n\n"
+                            'resource "aws_iam_role_policy_attachment" "support" {\n'
+                            "  role       = aws_iam_role.support.name\n"
+                            '  policy_arn = "arn:aws:iam::aws:policy/AWSSupportAccess"\n'
+                            "}"
+                        ),
+                        doc_url="https://docs.aws.amazon.com/awssupport/latest/user/getting-started.html",
+                        effort=Effort.LOW,
+                    ),
+                    compliance_refs=["CIS 1.17"],
+                )
+            )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_iam_access_analyzer(provider: AWSProvider) -> CheckResult:
+    """Check if IAM Access Analyzer is enabled in all regions (CIS 1.20)."""
+    result = CheckResult(check_id="aws-iam-012", check_name="IAM Access Analyzer enabled")
+
+    try:
+        for region in provider.regions:
+            result.resources_scanned += 1
+            try:
+                aa = provider.session.client("accessanalyzer", region_name=region)
+                analyzers = aa.list_analyzers(type="ACCOUNT")["analyzers"]
+                active_analyzers = [a for a in analyzers if a.get("status") == "ACTIVE"]
+            except Exception as exc:
+                error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+                if error_code in ("AccessDenied", "AccessDeniedException"):
+                    result.error = "Missing permission: access-analyzer:ListAnalyzers"
+                    return result
+                active_analyzers = []
+
+            if not active_analyzers:
+                result.findings.append(
+                    Finding(
+                        check_id="aws-iam-012",
+                        title=f"IAM Access Analyzer not enabled in {region}",
+                        severity=Severity.MEDIUM,
+                        category=Category.SECURITY,
+                        resource_type="AWS::AccessAnalyzer::Analyzer",
+                        resource_id=region,
+                        region=region,
+                        description=(
+                            f"No active IAM Access Analyzer found in {region}. "
+                            f"Access Analyzer identifies resources shared with external entities "
+                            f"(S3 buckets, IAM roles, KMS keys, Lambda functions, SQS queues)."
+                        ),
+                        recommendation=f"Enable IAM Access Analyzer in {region}.",
+                        remediation=Remediation(
+                            cli=(
+                                f"aws accessanalyzer create-analyzer "
+                                f"--analyzer-name account-analyzer "
+                                f"--type ACCOUNT "
+                                f"--region {region}"
+                            ),
+                            terraform=(
+                                'resource "aws_accessanalyzer_analyzer" "account" {\n'
+                                '  analyzer_name = "account-analyzer"\n'
+                                '  type          = "ACCOUNT"\n'
+                                "}"
+                            ),
+                            doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html",
+                            effort=Effort.LOW,
+                        ),
+                        compliance_refs=["CIS 1.20"],
+                    )
+                )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_expired_certificates(provider: AWSProvider) -> CheckResult:
+    """Check for expired SSL/TLS certificates in IAM (CIS 1.19)."""
+    iam = provider.session.client("iam")
+    result = CheckResult(check_id="aws-iam-013", check_name="Expired SSL/TLS certificates")
+
+    try:
+        now = datetime.now(timezone.utc)
+        paginator = iam.get_paginator("list_server_certificates")
+
+        for page in paginator.paginate():
+            for cert in page["ServerCertificateMetadataList"]:
+                result.resources_scanned += 1
+                cert_name = cert["ServerCertificateName"]
+                cert_id = cert["ServerCertificateId"]
+                expiration = cert["Expiration"]
+
+                if expiration < now:
+                    days_expired = (now - expiration).days
+                    result.findings.append(
+                        Finding(
+                            check_id="aws-iam-013",
+                            title=f"SSL/TLS certificate '{cert_name}' expired {days_expired} days ago",
+                            severity=Severity.MEDIUM,
+                            category=Category.SECURITY,
+                            resource_type="AWS::IAM::ServerCertificate",
+                            resource_id=cert_id,
+                            description=(
+                                f"Certificate '{cert_name}' expired on {expiration.strftime('%Y-%m-%d')}. "
+                                f"Expired certificates should be removed to avoid accidental use."
+                            ),
+                            recommendation="Delete the expired certificate and replace with a valid one (prefer ACM).",
+                            remediation=Remediation(
+                                cli=f"aws iam delete-server-certificate --server-certificate-name {cert_name}",
+                                terraform=(
+                                    "# Use ACM instead of IAM certificates:\n"
+                                    'resource "aws_acm_certificate" "cert" {\n'
+                                    '  domain_name       = "example.com"\n'
+                                    '  validation_method  = "DNS"\n'
+                                    "}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_server-certs.html",
+                                effort=Effort.LOW,
+                            ),
+                            compliance_refs=["CIS 1.19"],
+                        )
+                    )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_root_hardware_mfa(provider: AWSProvider) -> CheckResult:
+    """Check if root account uses hardware MFA (not virtual) (CIS 1.6)."""
+    iam = provider.session.client("iam")
+    result = CheckResult(check_id="aws-iam-015", check_name="Root hardware MFA")
+
+    try:
+        summary = iam.get_account_summary()["SummaryMap"]
+        result.resources_scanned = 1
+
+        # If root has no MFA at all, iam-001 handles that
+        if summary.get("AccountMFAEnabled", 0) == 0:
+            return result
+
+        # Root has MFA - check if it's virtual
+        mfa_devices = iam.list_virtual_mfa_devices()["VirtualMFADevices"]
+        root_virtual_mfa = any(d.get("SerialNumber", "").endswith(":mfa/root-account-mfa-device") for d in mfa_devices)
+
+        if root_virtual_mfa:
+            result.findings.append(
+                Finding(
+                    check_id="aws-iam-015",
+                    title="Root account uses virtual MFA instead of hardware MFA",
+                    severity=Severity.MEDIUM,
+                    category=Category.SECURITY,
+                    resource_type="AWS::IAM::Root",
+                    resource_id="root",
+                    description=(
+                        "The root account uses a virtual MFA device (software authenticator). "
+                        "Hardware MFA devices (YubiKey, Gemalto) provide stronger protection "
+                        "against phishing and device compromise."
+                    ),
+                    recommendation="Replace the virtual MFA with a hardware MFA device for the root account.",
+                    remediation=Remediation(
+                        cli=(
+                            "# 1. Purchase a hardware MFA device (FIDO2 or TOTP)\n"
+                            "# 2. Sign in as root to AWS Console\n"
+                            "# 3. Go to: IAM > Security credentials > MFA\n"
+                            "# 4. Remove current virtual MFA\n"
+                            "# 5. Assign hardware MFA device"
+                        ),
+                        terraform=(
+                            "# Root MFA cannot be managed via Terraform.\n# Use AWS Console to configure hardware MFA."
+                        ),
+                        doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa_enable_physical.html",
+                        effort=Effort.MEDIUM,
+                    ),
+                    compliance_refs=["CIS 1.6"],
+                )
+            )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_ec2_instance_roles(provider: AWSProvider) -> CheckResult:
+    """Check if EC2 instances have IAM instance profiles (CIS 1.18)."""
+    result = CheckResult(check_id="aws-iam-016", check_name="EC2 instance IAM roles")
+
+    try:
+        for region in provider.regions:
+            ec2 = provider.session.client("ec2", region_name=region)
+            paginator = ec2.get_paginator("describe_instances")
+
+            for page in paginator.paginate(Filters=[{"Name": "instance-state-name", "Values": ["running"]}]):
+                for reservation in page["Reservations"]:
+                    for instance in reservation["Instances"]:
+                        instance_id = instance["InstanceId"]
+                        result.resources_scanned += 1
+
+                        if not instance.get("IamInstanceProfile"):
+                            name_tag = next(
+                                (t["Value"] for t in instance.get("Tags", []) if t["Key"] == "Name"),
+                                instance_id,
+                            )
+                            result.findings.append(
+                                Finding(
+                                    check_id="aws-iam-016",
+                                    title=f"EC2 instance '{name_tag}' has no IAM instance profile",
+                                    severity=Severity.MEDIUM,
+                                    category=Category.SECURITY,
+                                    resource_type="AWS::EC2::Instance",
+                                    resource_id=instance_id,
+                                    region=region,
+                                    description=(
+                                        f"Instance {instance_id} ({name_tag}) in {region} does not have an "
+                                        f"IAM instance profile attached. Without a role, applications on "
+                                        f"this instance must use long-lived access keys instead of "
+                                        f"temporary role credentials."
+                                    ),
+                                    recommendation="Attach an IAM instance profile with least-privilege permissions.",
+                                    remediation=Remediation(
+                                        cli=(
+                                            f"# Create instance profile and attach to instance:\n"
+                                            f"aws iam create-instance-profile --instance-profile-name {instance_id}-profile\n"
+                                            f"aws iam add-role-to-instance-profile "
+                                            f"--instance-profile-name {instance_id}-profile --role-name YOUR_ROLE\n"
+                                            f"aws ec2 associate-iam-instance-profile "
+                                            f"--instance-id {instance_id} "
+                                            f"--iam-instance-profile Name={instance_id}-profile "
+                                            f"--region {region}"
+                                        ),
+                                        terraform=(
+                                            f'resource "aws_iam_instance_profile" "ec2" {{\n'
+                                            f'  name = "{instance_id}-profile"\n'
+                                            f"  role = aws_iam_role.ec2.name\n"
+                                            f"}}\n\n"
+                                            f'resource "aws_instance" "this" {{\n'
+                                            f"  # ...\n"
+                                            f"  iam_instance_profile = aws_iam_instance_profile.ec2.name\n"
+                                            f"}}"
+                                        ),
+                                        doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html",
+                                        effort=Effort.MEDIUM,
+                                    ),
+                                    compliance_refs=["CIS 1.18"],
+                                )
+                            )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_cloudshell_access(provider: AWSProvider) -> CheckResult:
+    """Check if AWSCloudShellFullAccess is attached to any entity (CIS 1.22)."""
+    iam = provider.session.client("iam")
+    result = CheckResult(check_id="aws-iam-014", check_name="CloudShell full access restricted")
+
+    try:
+        result.resources_scanned = 1
+        cloudshell_arn = "arn:aws:iam::aws:policy/AWSCloudShellFullAccess"
+        try:
+            entities = iam.list_entities_for_policy(PolicyArn=cloudshell_arn)
+            attached_roles = entities.get("PolicyRoles", [])
+            attached_users = entities.get("PolicyUsers", [])
+            attached_groups = entities.get("PolicyGroups", [])
+            total_attached = len(attached_roles) + len(attached_users) + len(attached_groups)
+        except Exception as exc:
+            error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+            if error_code in ("AccessDenied", "AccessDeniedException"):
+                result.error = "Missing permission: iam:ListEntitiesForPolicy"
+                return result
+            total_attached = 0
+
+        if total_attached > 0:
+            entity_names = (
+                [f"role:{r['RoleName']}" for r in attached_roles]
+                + [f"user:{u['UserName']}" for u in attached_users]
+                + [f"group:{g['GroupName']}" for g in attached_groups]
+            )
+            result.findings.append(
+                Finding(
+                    check_id="aws-iam-014",
+                    title=f"AWSCloudShellFullAccess attached to {total_attached} entity/entities",
+                    severity=Severity.MEDIUM,
+                    category=Category.SECURITY,
+                    resource_type="AWS::IAM::Policy",
+                    resource_id="AWSCloudShellFullAccess",
+                    description=(
+                        f"AWSCloudShellFullAccess is attached to: {', '.join(entity_names)}. "
+                        f"CloudShell provides a browser-based shell with your IAM credentials. "
+                        f"Full access allows file upload/download which could be used for data exfiltration."
+                    ),
+                    recommendation="Replace AWSCloudShellFullAccess with a custom policy that restricts file transfer.",
+                    remediation=Remediation(
+                        cli=(
+                            "# Detach AWSCloudShellFullAccess and use a restricted policy:\n"
+                            + "\n".join(
+                                [
+                                    f"aws iam detach-role-policy --role-name {r['RoleName']} --policy-arn {cloudshell_arn}"
+                                    for r in attached_roles
+                                ]
+                                + [
+                                    f"aws iam detach-user-policy --user-name {u['UserName']} --policy-arn {cloudshell_arn}"
+                                    for u in attached_users
+                                ]
+                                + [
+                                    f"aws iam detach-group-policy --group-name {g['GroupName']} --policy-arn {cloudshell_arn}"
+                                    for g in attached_groups
+                                ]
+                            )
+                        ),
+                        terraform=(
+                            "# Use a restricted CloudShell policy instead:\n"
+                            'resource "aws_iam_policy" "cloudshell_restricted" {\n'
+                            '  name = "CloudShellRestricted"\n'
+                            "  policy = jsonencode({\n"
+                            '    Version = "2012-10-17"\n'
+                            "    Statement = [\n"
+                            '      { Effect = "Allow", Action = ["cloudshell:CreateEnvironment", "cloudshell:GetEnvironmentStatus"], Resource = "*" },\n'
+                            '      { Effect = "Deny", Action = ["cloudshell:PutCredentials", "cloudshell:CreateSession"], Resource = "*" }\n'
+                            "    ]\n"
+                            "  })\n"
+                            "}"
+                        ),
+                        doc_url="https://docs.aws.amazon.com/cloudshell/latest/userguide/sec-auth-with-identities.html",
+                        effort=Effort.LOW,
+                    ),
+                    compliance_refs=["CIS 1.22"],
+                )
+            )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all IAM checks bound to the provider."""
     from cloud_audit.providers.base import make_check
 
     return [
         make_check(check_root_mfa, provider, check_id="aws-iam-001", category=Category.SECURITY),
+        make_check(check_root_access_keys, provider, check_id="aws-iam-008", category=Category.SECURITY),
         make_check(check_users_mfa, provider, check_id="aws-iam-002", category=Category.SECURITY),
         make_check(check_access_keys_rotation, provider, check_id="aws-iam-003", category=Category.SECURITY),
         make_check(check_unused_access_keys, provider, check_id="aws-iam-004", category=Category.SECURITY),
         make_check(check_overly_permissive_policy, provider, check_id="aws-iam-005", category=Category.SECURITY),
         make_check(check_weak_password_policy, provider, check_id="aws-iam-006", category=Category.SECURITY),
         make_check(check_oidc_trust_policy, provider, check_id="aws-iam-007", category=Category.SECURITY),
+        make_check(check_multiple_active_keys, provider, check_id="aws-iam-009", category=Category.SECURITY),
+        make_check(check_user_direct_policies, provider, check_id="aws-iam-010", category=Category.SECURITY),
+        make_check(check_support_role, provider, check_id="aws-iam-011", category=Category.SECURITY),
+        make_check(check_iam_access_analyzer, provider, check_id="aws-iam-012", category=Category.SECURITY),
+        make_check(check_expired_certificates, provider, check_id="aws-iam-013", category=Category.SECURITY),
+        make_check(check_cloudshell_access, provider, check_id="aws-iam-014", category=Category.SECURITY),
+        make_check(check_root_hardware_mfa, provider, check_id="aws-iam-015", category=Category.SECURITY),
+        make_check(check_ec2_instance_roles, provider, check_id="aws-iam-016", category=Category.SECURITY),
     ]

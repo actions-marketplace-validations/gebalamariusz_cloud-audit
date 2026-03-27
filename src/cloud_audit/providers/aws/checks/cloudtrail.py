@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cloud_audit.models import Category, CheckResult, Effort, Finding, Remediation, Severity
 
@@ -10,14 +10,31 @@ if TYPE_CHECKING:
     from cloud_audit.providers.aws.provider import AWSProvider
     from cloud_audit.providers.base import CheckFn
 
+# Module-level trail cache (reset between scans via _reset_trail_cache)
+_trail_cache: list[Any] | None = None
+
+
+def _reset_trail_cache() -> None:
+    """Reset the trail cache. Called between scans in tests."""
+    global _trail_cache
+    _trail_cache = None
+
+
+def _list_trails(provider: AWSProvider) -> list[Any]:
+    """Fetch CloudTrail trails once per scan (module-level cache)."""
+    global _trail_cache
+    if _trail_cache is None:
+        ct = provider.session.client("cloudtrail", region_name=provider.regions[0])
+        _trail_cache = ct.describe_trails(includeShadowTrails=True).get("trailList", [])
+    return _trail_cache
+
 
 def check_cloudtrail_enabled(provider: AWSProvider) -> CheckResult:
     """Check if CloudTrail is enabled with multi-region logging."""
     result = CheckResult(check_id="aws-ct-001", check_name="CloudTrail enabled")
 
     try:
-        ct = provider.session.client("cloudtrail", region_name=provider.regions[0])
-        trails = ct.describe_trails(includeShadowTrails=True).get("trailList", [])
+        trails = _list_trails(provider)
         result.resources_scanned = 1
 
         multi_region = any(t.get("IsMultiRegionTrail", False) for t in trails)
@@ -92,8 +109,7 @@ def check_cloudtrail_log_validation(provider: AWSProvider) -> CheckResult:
     result = CheckResult(check_id="aws-ct-002", check_name="CloudTrail log validation")
 
     try:
-        ct = provider.session.client("cloudtrail", region_name=provider.regions[0])
-        trails = ct.describe_trails(includeShadowTrails=True).get("trailList", [])
+        trails = _list_trails(provider)
         # Deduplicate by trail ARN (shadow trails appear in multiple regions)
         seen_arns: set[str] = set()
 
@@ -141,9 +157,8 @@ def check_cloudtrail_bucket_public(provider: AWSProvider) -> CheckResult:
     result = CheckResult(check_id="aws-ct-003", check_name="CloudTrail S3 bucket public")
 
     try:
-        ct = provider.session.client("cloudtrail", region_name=provider.regions[0])
         s3 = provider.session.client("s3")
-        trails = ct.describe_trails(includeShadowTrails=True).get("trailList", [])
+        trails = _list_trails(provider)
         seen_arns: set[str] = set()
 
         for trail in trails:
@@ -211,7 +226,287 @@ def check_cloudtrail_bucket_public(provider: AWSProvider) -> CheckResult:
                             doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html",
                             effort=Effort.LOW,
                         ),
-                        compliance_refs=["CIS 3.3"],
+                        compliance_refs=[],  # CIS 3.3 was removed in v3.0; this is a security best practice check
+                    )
+                )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_cloudtrail_kms_encryption(provider: AWSProvider) -> CheckResult:
+    """Check if CloudTrail logs are encrypted with KMS CMK (CIS 3.5)."""
+    result = CheckResult(check_id="aws-ct-005", check_name="CloudTrail KMS encryption")
+
+    try:
+        trails = _list_trails(provider)
+        seen_arns: set[str] = set()
+
+        for trail in trails:
+            trail_arn = trail.get("TrailARN", "")
+            if trail_arn in seen_arns:
+                continue
+            seen_arns.add(trail_arn)
+            trail_name = trail.get("Name", "unknown")
+            result.resources_scanned += 1
+
+            if not trail.get("KmsKeyId"):
+                result.findings.append(
+                    Finding(
+                        check_id="aws-ct-005",
+                        title=f"CloudTrail '{trail_name}' is not encrypted with KMS",
+                        severity=Severity.MEDIUM,
+                        category=Category.SECURITY,
+                        resource_type="AWS::CloudTrail::Trail",
+                        resource_id=trail_name,
+                        description=(
+                            f"Trail '{trail_name}' does not use SSE-KMS encryption. "
+                            f"Without KMS encryption, CloudTrail logs are encrypted with S3 "
+                            f"default encryption (SSE-S3) which offers less control over key management."
+                        ),
+                        recommendation="Enable SSE-KMS encryption on the CloudTrail trail.",
+                        remediation=Remediation(
+                            cli=(
+                                f"aws cloudtrail update-trail --name {trail_name} "
+                                f"--kms-key-id arn:aws:kms:REGION:ACCOUNT:key/KEY_ID"
+                            ),
+                            terraform=(
+                                'resource "aws_cloudtrail" "main" {\n'
+                                "  # ...\n"
+                                "  kms_key_id = aws_kms_key.cloudtrail.arn\n"
+                                "}"
+                            ),
+                            doc_url="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/encrypting-cloudtrail-log-files-with-aws-kms.html",
+                            effort=Effort.MEDIUM,
+                        ),
+                        compliance_refs=["CIS 3.5"],
+                    )
+                )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_s3_object_write_logging(provider: AWSProvider) -> CheckResult:
+    """Check if S3 object-level write events are logged in CloudTrail (CIS 3.8)."""
+    result = CheckResult(check_id="aws-ct-006", check_name="S3 object-level write logging")
+
+    try:
+        ct = provider.session.client("cloudtrail", region_name=provider.regions[0])
+        trails = _list_trails(provider)
+        result.resources_scanned = 1
+
+        has_s3_write_logging = False
+        for trail in trails:
+            if not trail.get("IsMultiRegionTrail", False):
+                continue
+            trail_arn = trail.get("TrailARN", "")
+            try:
+                selectors = ct.get_event_selectors(TrailName=trail_arn)
+                # Check advanced event selectors first
+                for aes in selectors.get("AdvancedEventSelectors", []):
+                    fields = {fs.get("Field"): fs.get("Equals", []) for fs in aes.get("FieldSelectors", [])}
+                    is_data = "Data" in fields.get("eventCategory", [])
+                    is_s3 = "AWS::S3::Object" in fields.get("resources.type", [])
+                    is_write = "false" in fields.get("readOnly", []) or "readOnly" not in fields
+                    if is_data and is_s3 and is_write:
+                        has_s3_write_logging = True
+                        break
+                # Check classic event selectors
+                for es in selectors.get("EventSelectors", []):
+                    for dr in es.get("DataResources", []):
+                        if dr.get("Type") == "AWS::S3::Object" and es.get("ReadWriteType") in ("WriteOnly", "All"):
+                            has_s3_write_logging = True
+                            break
+            except Exception:
+                continue
+
+        if not has_s3_write_logging:
+            result.findings.append(
+                Finding(
+                    check_id="aws-ct-006",
+                    title="S3 object-level write events are not logged in CloudTrail",
+                    severity=Severity.MEDIUM,
+                    category=Category.SECURITY,
+                    resource_type="AWS::CloudTrail::Trail",
+                    resource_id="s3-data-events",
+                    description=(
+                        "No multi-region CloudTrail trail is configured to log S3 object-level "
+                        "write events (PutObject, DeleteObject, etc.). Without this, you cannot "
+                        "detect unauthorized modifications to S3 data."
+                    ),
+                    recommendation="Enable S3 data event logging (write) on a multi-region trail.",
+                    remediation=Remediation(
+                        cli=(
+                            "aws cloudtrail put-event-selectors --trail-name main-trail "
+                            '--event-selectors \'[{"ReadWriteType":"WriteOnly","DataResources":[{"Type":"AWS::S3::Object","Values":["arn:aws:s3"]}]}]\''
+                        ),
+                        terraform=(
+                            'resource "aws_cloudtrail" "main" {\n'
+                            "  # ...\n"
+                            "  event_selector {\n"
+                            '    read_write_type           = "WriteOnly"\n'
+                            "    include_management_events = true\n"
+                            "    data_resource {\n"
+                            '      type   = "AWS::S3::Object"\n'
+                            '      values = ["arn:aws:s3"]\n'
+                            "    }\n"
+                            "  }\n"
+                            "}"
+                        ),
+                        doc_url="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html",
+                        effort=Effort.LOW,
+                    ),
+                    compliance_refs=["CIS 3.8"],
+                )
+            )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_s3_object_read_logging(provider: AWSProvider) -> CheckResult:
+    """Check if S3 object-level read events are logged in CloudTrail (CIS 3.9)."""
+    result = CheckResult(check_id="aws-ct-007", check_name="S3 object-level read logging")
+
+    try:
+        ct = provider.session.client("cloudtrail", region_name=provider.regions[0])
+        trails = _list_trails(provider)
+        result.resources_scanned = 1
+
+        has_s3_read_logging = False
+        for trail in trails:
+            if not trail.get("IsMultiRegionTrail", False):
+                continue
+            trail_arn = trail.get("TrailARN", "")
+            try:
+                selectors = ct.get_event_selectors(TrailName=trail_arn)
+                for aes in selectors.get("AdvancedEventSelectors", []):
+                    fields = {fs.get("Field"): fs.get("Equals", []) for fs in aes.get("FieldSelectors", [])}
+                    is_data = "Data" in fields.get("eventCategory", [])
+                    is_s3 = "AWS::S3::Object" in fields.get("resources.type", [])
+                    is_read = "true" in fields.get("readOnly", []) or "readOnly" not in fields
+                    if is_data and is_s3 and is_read:
+                        has_s3_read_logging = True
+                        break
+                for es in selectors.get("EventSelectors", []):
+                    for dr in es.get("DataResources", []):
+                        if dr.get("Type") == "AWS::S3::Object" and es.get("ReadWriteType") in ("ReadOnly", "All"):
+                            has_s3_read_logging = True
+                            break
+            except Exception:
+                continue
+
+        if not has_s3_read_logging:
+            result.findings.append(
+                Finding(
+                    check_id="aws-ct-007",
+                    title="S3 object-level read events are not logged in CloudTrail",
+                    severity=Severity.MEDIUM,
+                    category=Category.SECURITY,
+                    resource_type="AWS::CloudTrail::Trail",
+                    resource_id="s3-data-events",
+                    description=(
+                        "No multi-region CloudTrail trail is configured to log S3 object-level "
+                        "read events (GetObject). Without this, you cannot detect unauthorized "
+                        "access to S3 data."
+                    ),
+                    recommendation="Enable S3 data event logging (read) on a multi-region trail.",
+                    remediation=Remediation(
+                        cli=(
+                            "aws cloudtrail put-event-selectors --trail-name main-trail "
+                            '--event-selectors \'[{"ReadWriteType":"ReadOnly","DataResources":[{"Type":"AWS::S3::Object","Values":["arn:aws:s3"]}]}]\''
+                        ),
+                        terraform=(
+                            'resource "aws_cloudtrail" "main" {\n'
+                            "  # ...\n"
+                            "  event_selector {\n"
+                            '    read_write_type           = "ReadOnly"\n'
+                            "    include_management_events = true\n"
+                            "    data_resource {\n"
+                            '      type   = "AWS::S3::Object"\n'
+                            '      values = ["arn:aws:s3"]\n'
+                            "    }\n"
+                            "  }\n"
+                            "}"
+                        ),
+                        doc_url="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html",
+                        effort=Effort.LOW,
+                    ),
+                    compliance_refs=["CIS 3.9"],
+                )
+            )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
+def check_cloudtrail_bucket_access_logging(provider: AWSProvider) -> CheckResult:
+    """Check if CloudTrail S3 bucket has server access logging enabled (CIS 3.4)."""
+    result = CheckResult(check_id="aws-ct-004", check_name="CloudTrail S3 bucket access logging")
+
+    try:
+        s3 = provider.session.client("s3")
+        trails = _list_trails(provider)
+        seen_buckets: set[str] = set()
+
+        for trail in trails:
+            bucket_name = trail.get("S3BucketName")
+            trail_name = trail.get("Name", "unknown")
+            if not bucket_name or bucket_name in seen_buckets:
+                continue
+            seen_buckets.add(bucket_name)
+            result.resources_scanned += 1
+
+            try:
+                logging_config = s3.get_bucket_logging(Bucket=bucket_name)
+                logging_enabled = "LoggingEnabled" in logging_config
+            except Exception:
+                # Bucket might not exist or we don't have access
+                continue
+
+            if not logging_enabled:
+                result.findings.append(
+                    Finding(
+                        check_id="aws-ct-004",
+                        title=f"CloudTrail bucket '{bucket_name}' has no access logging",
+                        severity=Severity.HIGH,
+                        category=Category.SECURITY,
+                        resource_type="AWS::S3::Bucket",
+                        resource_id=bucket_name,
+                        description=(
+                            f"The S3 bucket '{bucket_name}' used by trail '{trail_name}' "
+                            "does not have server access logging enabled. "
+                            "Without access logging, you cannot detect unauthorized "
+                            "access to CloudTrail log files."
+                        ),
+                        recommendation="Enable server access logging on the CloudTrail S3 bucket.",
+                        remediation=Remediation(
+                            cli=(
+                                f"# Create a logging bucket first (if needed):\n"
+                                f"aws s3api create-bucket --bucket {bucket_name}-access-logs "
+                                f"--region {provider.regions[0]}\n"
+                                f"# Enable access logging:\n"
+                                f"aws s3api put-bucket-logging --bucket {bucket_name} "
+                                f"--bucket-logging-status '{{"
+                                f'"LoggingEnabled": {{"TargetBucket": "{bucket_name}-access-logs", '
+                                f'"TargetPrefix": "access-logs/"}}}}\''
+                            ),
+                            terraform=(
+                                'resource "aws_s3_bucket_logging" "cloudtrail" {\n'
+                                "  bucket        = aws_s3_bucket.cloudtrail.id\n"
+                                "  target_bucket = aws_s3_bucket.access_logs.id\n"
+                                '  target_prefix = "access-logs/"\n'
+                                "}"
+                            ),
+                            doc_url="https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html",
+                            effort=Effort.LOW,
+                        ),
+                        compliance_refs=["CIS 3.4"],
                     )
                 )
     except Exception as e:
@@ -228,4 +523,8 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
         make_check(check_cloudtrail_enabled, provider, check_id="aws-ct-001", category=Category.SECURITY),
         make_check(check_cloudtrail_log_validation, provider, check_id="aws-ct-002", category=Category.SECURITY),
         make_check(check_cloudtrail_bucket_public, provider, check_id="aws-ct-003", category=Category.SECURITY),
+        make_check(check_cloudtrail_bucket_access_logging, provider, check_id="aws-ct-004", category=Category.SECURITY),
+        make_check(check_cloudtrail_kms_encryption, provider, check_id="aws-ct-005", category=Category.SECURITY),
+        make_check(check_s3_object_write_logging, provider, check_id="aws-ct-006", category=Category.SECURITY),
+        make_check(check_s3_object_read_logging, provider, check_id="aws-ct-007", category=Category.SECURITY),
     ]

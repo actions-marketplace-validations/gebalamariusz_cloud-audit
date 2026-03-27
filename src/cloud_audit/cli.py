@@ -398,6 +398,10 @@ def scan(
     export_fixes: Annotated[
         Path | None, typer.Option("--export-fixes", help="Export CLI fix commands as bash script")
     ] = None,
+    compliance: Annotated[
+        str | None,
+        typer.Option("--compliance", help="Compliance framework: cis_aws_v3 (more coming soon)"),
+    ] = None,
 ) -> None:
     """Scan cloud infrastructure and generate an audit report."""
     from cloud_audit.config import CloudAuditConfig, load_config
@@ -460,6 +464,9 @@ def scan(
     if fmt and fmt not in ("json", "html", "sarif", "markdown"):
         console.print(f"[red]Unknown format '{fmt}'. Available: json, html, sarif, markdown[/red]")
         raise typer.Exit(2)
+    if compliance and fmt in ("json", "sarif"):
+        console.print(f"[red]--compliance does not support --format {fmt}. Use html or markdown.[/red]")
+        raise typer.Exit(2)
     if fmt == "html" and not output:
         console.print("[red]HTML format requires --output <file.html>[/red]")
         raise typer.Exit(2)
@@ -489,23 +496,47 @@ def scan(
     s = report.summary
     all_errored = s.checks_errored > 0 and s.checks_passed == 0 and s.checks_failed == 0
 
+    # Compliance assessment (if requested)
+    comp_report = None
+    if compliance:
+        from cloud_audit.compliance.engine import build_compliance_report
+
+        try:
+            # Get attack chains for compliance context
+            attack_chains = []
+            try:
+                from cloud_audit.correlate import collect_relationships, detect_attack_chains
+
+                rels = collect_relationships(cloud_provider, report.all_findings)
+                attack_chains = detect_attack_chains(report.all_findings, rels)
+            except Exception:  # noqa: S110 - attack chains are optional for compliance
+                pass
+
+            comp_report = build_compliance_report(compliance, report, attack_chains)
+        except FileNotFoundError as e:
+            console.print(f"[red]{e}[/red]")
+            raise typer.Exit(2) from None
+
     # Format output
     if fmt:
-        _handle_format(fmt, report, output, quiet)
+        _handle_format(fmt, report, output, quiet, comp_report)
     elif output:
         # Backward compat: detect format from suffix
         suffix = output.suffix.lower()
         suffix_to_fmt = {".json": "json", ".html": "html", ".sarif": "sarif", ".md": "markdown"}
         detected_fmt = suffix_to_fmt.get(suffix)
         if detected_fmt:
-            _handle_format(detected_fmt, report, output, quiet)
+            _handle_format(detected_fmt, report, output, quiet, comp_report)
         else:
             console.print(f"[red]Cannot detect format from suffix '{suffix}'. Use --format explicitly.[/red]")
             raise typer.Exit(2)
     else:
         # Default: Rich console output
         if not quiet:
-            _print_summary(report, suppressed_count)
+            if comp_report:
+                _print_compliance_summary(comp_report)
+            else:
+                _print_summary(report, suppressed_count)
 
             if remediation:
                 _print_remediation(report.all_findings)
@@ -520,7 +551,9 @@ def scan(
         raise typer.Exit(1)
 
 
-def _handle_format(fmt: str, report: ScanReport, output: Path | None, quiet: bool) -> None:
+def _handle_format(
+    fmt: str, report: ScanReport, output: Path | None, quiet: bool, comp_report: object | None = None
+) -> None:
     """Handle --format output. Writes to file or stdout."""
     if fmt == "json":
         content = report.model_dump_json(indent=2)
@@ -529,16 +562,26 @@ def _handle_format(fmt: str, report: ScanReport, output: Path | None, quiet: boo
 
         content = generate_sarif(report)
     elif fmt == "markdown":
-        from cloud_audit.reports.markdown import generate_markdown
+        if comp_report:
+            from cloud_audit.reports.compliance_markdown import generate_compliance_markdown
 
-        content = generate_markdown(report)
+            content = generate_compliance_markdown(comp_report)  # type: ignore[arg-type]
+        else:
+            from cloud_audit.reports.markdown import generate_markdown
+
+            content = generate_markdown(report)
     elif fmt == "html":
         if not output:
             console.print("[red]HTML format requires --output <file.html>[/red]")
             raise typer.Exit(2)
-        from cloud_audit.reports.html import render_html
+        if comp_report:
+            from cloud_audit.reports.compliance_html import generate_compliance_html
 
-        content = render_html(report)
+            content = generate_compliance_html(comp_report)  # type: ignore[arg-type]
+        else:
+            from cloud_audit.reports.html import render_html
+
+            content = render_html(report)
     else:
         console.print(f"[red]Unknown format '{fmt}'. Available: json, html, sarif, markdown[/red]")
         raise typer.Exit(2)
@@ -611,6 +654,129 @@ def list_checks(
 
     console.print(table)
     console.print(f"\n[dim]Total: {count} checks[/dim]")
+
+
+def _print_compliance_summary(comp_report: object) -> None:
+    """Print a Rich compliance assessment summary."""
+    from cloud_audit.compliance.engine import ComplianceReport  # noqa: TC001
+
+    cr: ComplianceReport = comp_report  # type: ignore[assignment]
+
+    # Header panel
+    score = cr.readiness_score
+    score_color = "green" if score >= 80 else ("yellow" if score >= 50 else "red")
+    header = (
+        f"[bold]{cr.framework_name} v{cr.version}[/bold]\n\n"
+        f"Readiness: [{score_color}]{score:.0f}%[/{score_color}]  "
+        f"({cr.controls_passing}/{cr.controls_assessed} assessed controls passing)\n"
+        f"Coverage: {cr.controls_assessed + cr.controls_not_assessed} controls total, "
+        f"{cr.controls_assessed} assessed, {cr.controls_not_assessed} not assessed"
+    )
+    console.print(Panel(header, title="[bold]Compliance Assessment[/bold]", border_style=score_color))
+
+    # Controls table
+    table = Table(title="Controls", show_lines=False, padding=(0, 1))
+    table.add_column("Status", width=6)
+    table.add_column("ID", width=7, style="bold")
+    table.add_column("Title", max_width=55)
+    table.add_column("Checks", width=12, justify="right")
+
+    status_style = {
+        "PASS": "[green]PASS[/green]",
+        "FAIL": "[red]FAIL[/red]",
+        "PARTIAL": "[yellow]PART[/yellow]",
+        "NOT_ASSESSED": "[dim]N/A[/dim]",
+    }
+
+    for ctrl in cr.controls:
+        status_str = status_style.get(ctrl.status, ctrl.status)
+        chain_marker = " [red]![/red]" if ctrl.violated_by_chains else ""
+        checks_str = f"{ctrl.checks_passed}/{ctrl.checks_total}" if ctrl.checks_total > 0 else "[dim]-[/dim]"
+        table.add_row(
+            status_str,
+            ctrl.control_id,
+            rich_escape(ctrl.title[:55]) + chain_marker,
+            checks_str,
+        )
+
+    console.print(table)
+
+    # Attack chain violations
+    if cr.chain_violations:
+        console.print(f"\n[bold red]Attack Chain Violations ({len(cr.chain_violations)}):[/bold red]")
+        for chain, controls in cr.chain_violations:
+            ctrl_ids = ", ".join(controls)
+            sev_color = SEVERITY_COLORS.get(chain.severity, "dim")
+            console.print(
+                f"  [{sev_color}]{chain.severity.value.upper():8s}[/{sev_color}]  "
+                f"{rich_escape(chain.name)} -> violates {ctrl_ids}"
+            )
+
+    # Footer
+    console.print()
+    if cr.controls_failing > 0 or cr.controls_partial > 0:
+        console.print("[dim]For per-control remediation, evidence statements, and compliance references:[/dim]")
+        console.print(
+            f"[bold]  cloud-audit scan --compliance {cr.framework_id} --format html -o compliance-report.html[/bold]"
+        )
+    console.print()
+
+
+@app.command(name="list-frameworks")
+def list_frameworks_cmd() -> None:
+    """List available compliance frameworks."""
+    from cloud_audit.compliance import list_frameworks
+
+    fws = list_frameworks()
+    if not fws:
+        console.print("[yellow]No compliance frameworks found.[/yellow]")
+        return
+
+    table = Table(title="Available Compliance Frameworks", show_lines=False)
+    table.add_column("ID", style="bold")
+    table.add_column("Name")
+    table.add_column("Version")
+    table.add_column("Controls", justify="right")
+
+    for fw in fws:
+        table.add_row(fw["id"], fw["name"], fw["version"], fw["controls_total"])
+
+    console.print(table)
+    console.print("\n[dim]Usage: cloud-audit scan --compliance <ID>[/dim]")
+
+
+@app.command(name="show-framework")
+def show_framework_cmd(
+    framework_id: Annotated[str, typer.Argument(help="Framework ID (e.g., cis_aws_v3)")],
+) -> None:
+    """Show controls for a compliance framework (no scan needed)."""
+    from cloud_audit.compliance import load_framework
+
+    try:
+        fw = load_framework(framework_id)
+    except FileNotFoundError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(2) from None
+
+    console.print(f"\n[bold]{fw['framework_name']} v{fw.get('version', '')}[/bold]")
+    console.print(f"[dim]{fw.get('source_url', '')}[/dim]\n")
+
+    table = Table(show_lines=False, padding=(0, 1))
+    table.add_column("ID", width=7, style="bold")
+    table.add_column("Level", width=4)
+    table.add_column("Type", width=6)
+    table.add_column("Title", max_width=55)
+    table.add_column("Checks", width=30)
+
+    controls = fw.get("controls", {})
+    for cid, ctrl in sorted(controls.items(), key=lambda x: [int(p) if p.isdigit() else p for p in x[0].split(".")]):
+        checks = ctrl.get("checks", [])
+        checks_str = ", ".join(checks) if checks else "[dim](manual)[/dim]"
+        assessment = "Auto" if checks else "Man."
+        table.add_row(cid, ctrl.get("level", ""), assessment, ctrl.get("title", "")[:55], checks_str)
+
+    console.print(table)
+    console.print(f"\n[dim]Total: {len(controls)} controls[/dim]")
 
 
 @app.command()

@@ -230,7 +230,9 @@ def check_vpc_flow_logs(provider: AWSProvider) -> CheckResult:
             vpcs = ec2.describe_vpcs()["Vpcs"]
 
             for vpc in vpcs:
-                # Skip default VPC - it's a leftover, not user-managed infrastructure
+                # NOTE: CIS 3.7 says "all VPCs" but we skip default VPCs to reduce noise.
+                # Default VPCs without user resources are not a real risk.
+                # If strict CIS compliance is needed, remove this skip.
                 if vpc.get("IsDefault", False):
                     continue
 
@@ -293,7 +295,10 @@ def check_unrestricted_nacl(provider: AWSProvider) -> CheckResult:
             nacls = ec2.describe_network_acls()["NetworkAcls"]
 
             for nacl in nacls:
-                # Skip default NACLs -- they are AWS defaults, not user-managed
+                # NOTE: CIS 5.1 does not exclude default NACLs, but AWS default NACLs
+                # allow all traffic by design. Flagging every default NACL would produce
+                # noise without actionable value. If strict CIS compliance is needed,
+                # remove this skip.
                 if nacl.get("IsDefault", False):
                     continue
 
@@ -315,16 +320,28 @@ def check_unrestricted_nacl(provider: AWSProvider) -> CheckResult:
                     if not is_internet:
                         continue
 
-                    # Protocol "-1" = all traffic; "6" = TCP, "17" = UDP with full port range
+                    # Protocol "-1" = all traffic; "6" = TCP, "17" = UDP
                     port_range = entry.get("PortRange", {})
+                    from_port = port_range.get("From", 0)
+                    to_port = port_range.get("To", 65535)
                     is_all_traffic = protocol == "-1"
-                    is_wide_port_range = (
-                        protocol in ("6", "17") and port_range.get("From", 0) == 0 and port_range.get("To", 0) == 65535
+                    is_wide_port_range = protocol in ("6", "17") and from_port == 0 and to_port == 65535
+                    # CIS 5.1: specifically check admin ports (SSH 22, RDP 3389)
+                    admin_ports = {22, 3389}
+                    exposes_admin_port = protocol in ("6", "17", "-1") and any(
+                        from_port <= p <= to_port for p in admin_ports
                     )
 
-                    if is_all_traffic or is_wide_port_range:
+                    if is_all_traffic or is_wide_port_range or exposes_admin_port:
                         open_cidr = cidr if cidr == "0.0.0.0/0" else ipv6_cidr
-                        proto_desc = "all traffic" if is_all_traffic else ("all TCP" if protocol == "6" else "all UDP")
+                        if is_all_traffic:
+                            proto_desc = "all traffic"
+                        elif is_wide_port_range:
+                            proto_desc = "all TCP" if protocol == "6" else "all UDP"
+                        else:
+                            exposed_admin = [p for p in admin_ports if from_port <= p <= to_port]
+                            port_names = {22: "SSH", 3389: "RDP"}
+                            proto_desc = ", ".join(f"{port_names.get(p, p)} ({p})" for p in exposed_admin)
                         result.findings.append(
                             Finding(
                                 check_id="aws-vpc-004",
@@ -367,6 +384,73 @@ def check_unrestricted_nacl(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_default_sg_restricts_all(provider: AWSProvider) -> CheckResult:
+    """Check if the default security group of every VPC restricts all traffic (CIS 5.4)."""
+    result = CheckResult(check_id="aws-vpc-005", check_name="Default security group restricts all traffic")
+
+    try:
+        for region in provider.regions:
+            ec2 = provider.session.client("ec2", region_name=region)
+            paginator = ec2.get_paginator("describe_security_groups")
+
+            for page in paginator.paginate(Filters=[{"Name": "group-name", "Values": ["default"]}]):
+                for sg in page["SecurityGroups"]:
+                    sg_id = sg["GroupId"]
+                    vpc_id = sg.get("VpcId", "unknown")
+                    result.resources_scanned += 1
+
+                    has_ingress = len(sg.get("IpPermissions", [])) > 0
+                    has_egress = len(sg.get("IpPermissionsEgress", [])) > 0
+
+                    if has_ingress or has_egress:
+                        rule_count = len(sg.get("IpPermissions", [])) + len(sg.get("IpPermissionsEgress", []))
+                        result.findings.append(
+                            Finding(
+                                check_id="aws-vpc-005",
+                                title=f"Default SG in VPC {vpc_id} ({region}) has {rule_count} rule(s)",
+                                severity=Severity.MEDIUM,
+                                category=Category.SECURITY,
+                                resource_type="AWS::EC2::SecurityGroup",
+                                resource_id=sg_id,
+                                region=region,
+                                description=(
+                                    f"The default security group ({sg_id}) in VPC {vpc_id} has "
+                                    f"active inbound/outbound rules. Default security groups should "
+                                    f"restrict all traffic to prevent unintended network access when "
+                                    f"resources are launched without a specific security group."
+                                ),
+                                recommendation="Remove all inbound and outbound rules from the default security group.",
+                                remediation=Remediation(
+                                    cli=(
+                                        f"# List current rules:\n"
+                                        f"aws ec2 describe-security-groups --group-ids {sg_id} --region {region}\n"
+                                        f"# Remove default self-referencing ingress rule:\n"
+                                        f"aws ec2 revoke-security-group-ingress --group-id {sg_id} "
+                                        f"--source-group {sg_id} --protocol all --region {region}\n"
+                                        f"# Remove default egress allow-all rule:\n"
+                                        f"aws ec2 revoke-security-group-egress --group-id {sg_id} "
+                                        f'--ip-permissions \'[{{"IpProtocol":"-1","IpRanges":[{{"CidrIp":"0.0.0.0/0"}}]}}]\' '
+                                        f"--region {region}"
+                                    ),
+                                    terraform=(
+                                        "# Terraform can manage default SG rules:\n"
+                                        f'resource "aws_default_security_group" "default" {{\n'
+                                        f'  vpc_id = "{vpc_id}"\n'
+                                        f"  # Empty ingress/egress blocks = deny all\n"
+                                        f"}}"
+                                    ),
+                                    doc_url="https://docs.aws.amazon.com/vpc/latest/userguide/default-security-group.html",
+                                    effort=Effort.LOW,
+                                ),
+                                compliance_refs=["CIS 5.4"],
+                            )
+                        )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all VPC checks bound to the provider."""
     from cloud_audit.providers.base import make_check
@@ -376,4 +460,5 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
         make_check(check_open_security_groups, provider, check_id="aws-vpc-002", category=Category.SECURITY),
         make_check(check_vpc_flow_logs, provider, check_id="aws-vpc-003", category=Category.SECURITY),
         make_check(check_unrestricted_nacl, provider, check_id="aws-vpc-004", category=Category.SECURITY),
+        make_check(check_default_sg_restricts_all, provider, check_id="aws-vpc-005", category=Category.SECURITY),
     ]
