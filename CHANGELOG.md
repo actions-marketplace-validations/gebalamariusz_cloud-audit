@@ -62,7 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - MCP is now a regular dependency (not optional) - install with `uvx cloud-audit-mcp`
 - Updated pyproject.toml description and keywords for MCP discoverability
-- Updated CLAUDE.md architecture diagram with new modules
 
 ## [1.0.0] - 2026-03-24
 
@@ -229,7 +228,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Backfilled CHANGELOG for v0.3.0 through v0.5.2
 - Updated SECURITY.md supported versions to 0.5.x
 - Documented suppression `expires` semantics (inclusive last day)
-- Fixed CLAUDE.md "immutable by default" claim
 - Added docstring to `compute_summary()`
 - Clarified `.gitignore` `*.md` pattern
 
