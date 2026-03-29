@@ -6,7 +6,12 @@
 <h1 align="center">cloud-audit</h1>
 
 <p align="center">
-  <strong>Open-source AWS security scanner. 80 checks, 20 attack chain rules, CIS AWS v3.0 compliance, breach cost estimation, and an MCP server for AI agents. Every finding includes a copy-paste fix.</strong>
+  <strong>Find AWS attack chains and get exact fixes.</strong>
+</p>
+
+<p align="center">
+  Open-source CLI scanner that correlates findings into exploitable paths<br>
+  and generates copy-paste remediation (AWS CLI + Terraform).
 </p>
 
 <p align="center">
@@ -64,6 +69,16 @@ Findings by severity:  CRITICAL: 3  HIGH: 8  MEDIUM: 12  LOW: 5
 ```
 
 80 checks across 18 AWS services. 20 attack chain rules. CIS AWS v3.0 compliance engine with 62 controls mapped. Every finding includes AWS CLI + Terraform remediation.
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=5uHoqggmTB8">
+    <img src="https://img.youtube.com/vi/5uHoqggmTB8/hqdefault.jpg" alt="cloud-audit demo video" width="500">
+  </a>
+  <br>
+  <sub>Watch the 1-minute demo</sub>
+</p>
+
+If cloud-audit helped you find something you missed, consider giving it a star. It helps others discover the project.
 
 ---
 
@@ -395,16 +410,6 @@ cloud-audit never modifies your infrastructure.
 | `aws-account-001` | Medium | No security alternate contact |
 
 </details>
-
-## Video Demo
-
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=5uHoqggmTB8">
-    <img src="https://img.youtube.com/vi/5uHoqggmTB8/hqdefault.jpg" alt="cloud-audit demo video" width="500">
-  </a>
-  <br>
-  <sub>Watch the 1-minute demo</sub>
-</p>
 
 ## Alternatives
 
