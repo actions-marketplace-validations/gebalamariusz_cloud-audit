@@ -15,6 +15,10 @@
 </p>
 
 <p align="center">
+  Detect exploitable attack paths &nbsp;-&nbsp; Get AWS CLI + Terraform fixes &nbsp;-&nbsp; Run locally, no SaaS required
+</p>
+
+<p align="center">
   <a href="https://pypi.org/project/cloud-audit/"><img src="https://img.shields.io/pypi/v/cloud-audit?style=flat" alt="PyPI version"></a>
   <a href="https://pypi.org/project/cloud-audit/"><img src="https://img.shields.io/pypi/pyversions/cloud-audit?style=flat" alt="Python versions"></a>
   <a href="https://github.com/gebalamariusz/cloud-audit/actions/workflows/ci.yml"><img src="https://github.com/gebalamariusz/cloud-audit/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -68,7 +72,7 @@ cloud-audit demo
 Findings by severity:  CRITICAL: 3  HIGH: 8  MEDIUM: 12  LOW: 5
 ```
 
-80 checks across 18 AWS services. 20 attack chain rules. CIS AWS v3.0 compliance engine with 62 controls mapped. Every finding includes AWS CLI + Terraform remediation.
+80 checks across 18 AWS services. Every finding includes AWS CLI + Terraform remediation.
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=5uHoqggmTB8">
@@ -86,40 +90,40 @@ If cloud-audit helped you find something you missed, consider giving it a star. 
 
 ### Attack Chain Detection
 
-Other scanners give you a flat list of findings. cloud-audit correlates them into attack paths an attacker would actually exploit. 20 rules based on [MITRE ATT&CK Cloud](https://attack.mitre.org/matrices/enterprise/cloud/) and [Datadog pathfinding.cloud](https://github.com/DataDog/pathfinding.cloud).
+Other scanners give you a flat list of findings. cloud-audit correlates them into attack paths an attacker would actually exploit.
 
 ```
   Internet --> Public SG --> EC2 (IMDSv1) --> Admin IAM Creds --> Account Takeover
                aws-vpc-002   aws-ec2-004       Detected: AC-01, AC-02
 ```
 
-<details>
-<summary>All 20 attack chain rules</summary>
+Examples from the 20 built-in rules:
 
-| ID | Name | Severity |
-|---|---|---|
-| AC-01 | Internet-Exposed Admin Instance | CRITICAL |
-| AC-02 | SSRF to Credential Theft | CRITICAL |
-| AC-05 | Public Lambda with Admin Access | CRITICAL |
-| AC-07 | CI/CD to Admin Takeover | CRITICAL |
-| AC-09 | Unmonitored Admin Access | CRITICAL |
-| AC-10 | Completely Blind Admin | CRITICAL |
-| AC-11 | Zero Security Visibility | HIGH |
-| AC-12 | Admin Without MFA | CRITICAL |
-| AC-13 | Wide Open and Unmonitored Network | HIGH |
-| AC-14 | No Network Security Layers | HIGH |
-| AC-17 | Exposed Database Without Audit Trail | CRITICAL |
-| AC-19 | Container Breakout Path | CRITICAL |
-| AC-20 | Unmonitored Container Access | HIGH |
-| AC-21 | Secrets in Plaintext Across Services | HIGH |
-| AC-23 | CI/CD Data Exfiltration | HIGH |
-| AC-24 | CI/CD Lateral Movement | HIGH |
-| AC-25 | Root Access Keys Without Audit Trail | CRITICAL |
-| AC-26 | Unmonitored Admin Escalation Path | CRITICAL |
-| AC-27 | Default Network Access Without Logging | HIGH |
-| AC-28 | External Access Without Analysis | HIGH |
+| Chain | What it catches |
+|---|---|
+| Internet-Exposed Admin Instance | Public SG + admin IAM role + IMDSv1 = account takeover |
+| CI/CD to Admin Takeover | OIDC without sub condition + admin policy = pipeline hijack |
+| SSRF to Credential Theft | Public instance + IMDSv1 + no VPC flow logs = invisible exfiltration |
 
-</details>
+Based on [MITRE ATT&CK Cloud](https://attack.mitre.org/matrices/enterprise/cloud/) and [Datadog pathfinding.cloud](https://github.com/DataDog/pathfinding.cloud). [See all 20 rules in the docs](https://haitmg.pl/cloud-audit/features/attack-chains/).
+
+### Copy-Paste Remediation
+
+Every finding includes AWS CLI commands, Terraform HCL, and documentation links. Export all fixes as a runnable script:
+
+```bash
+cloud-audit scan --export-fixes fixes.sh
+```
+
+### Scan Diff
+
+Compare scans to track drift. Catches ClickOps changes, manual console edits, and regressions that IaC scanning misses.
+
+```bash
+cloud-audit diff yesterday.json today.json
+```
+
+Exit code 0 = no new findings, 1 = regression. See [daily-scan-with-diff.yml](examples/daily-scan-with-diff.yml) for a CI/CD workflow.
 
 ### CIS AWS v3.0 Compliance
 
@@ -141,24 +145,6 @@ claude mcp add cloud-audit -- uvx --from cloud-audit cloud-audit-mcp
 
 6 tools: `scan_aws`, `get_findings`, `get_attack_chains`, `get_remediation`, `get_health_score`, `list_checks`. Free and standalone - no SaaS account needed.
 
-### Copy-Paste Remediation
-
-Every finding includes AWS CLI commands, Terraform HCL, and documentation links. Export all fixes as a runnable script:
-
-```bash
-cloud-audit scan --export-fixes fixes.sh
-```
-
-### Scan Diff
-
-Compare scans to track drift. Catches ClickOps changes, manual console edits, and regressions that IaC scanning misses.
-
-```bash
-cloud-audit diff yesterday.json today.json
-```
-
-Exit code 0 = no new findings, 1 = regression. See [daily-scan-with-diff.yml](examples/daily-scan-with-diff.yml) for a CI/CD workflow.
-
 ---
 
 ## How It Compares
@@ -173,6 +159,8 @@ Exit code 0 = no new findings, 1 = regression. See [daily-scan-with-diff.yml](ex
 | MCP server (AI agents) | Paid ($99/mo) | No | No | **Free, standalone** |
 
 cloud-audit has fewer checks than Prowler but deeper output per finding: remediation code, attack chain context, cost estimates, and compliance evidence. If you need exhaustive compliance coverage across multiple clouds, Prowler is the better choice. If you need a focused scan that shows how findings combine into real attack paths and tells you exactly how to fix each one, cloud-audit is built for that.
+
+<sub>Feature snapshot as of March 2026. Verify against upstream docs for the latest details.</sub>
 
 ---
 
