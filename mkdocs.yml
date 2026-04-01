@@ -30,6 +30,13 @@ theme:
   icon:
     repo: fontawesome/brands/github
 
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/gebalamariusz/cloud-audit
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/cloud-audit/
+
 markdown_extensions:
   - admonition
   - pymdownx.details

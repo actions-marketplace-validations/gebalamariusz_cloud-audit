@@ -57,7 +57,7 @@ cloud-audit-mcp = "cloud_audit.mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/gebalamariusz/cloud-audit"
-Documentation = "https://github.com/gebalamariusz/cloud-audit#readme"
+Documentation = "https://haitmg.pl/cloud-audit/"
 Repository = "https://github.com/gebalamariusz/cloud-audit"
 Issues = "https://github.com/gebalamariusz/cloud-audit/issues"
 Changelog = "https://github.com/gebalamariusz/cloud-audit/blob/main/CHANGELOG.md"

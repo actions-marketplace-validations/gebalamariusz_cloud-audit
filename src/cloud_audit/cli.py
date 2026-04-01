@@ -793,15 +793,15 @@ def demo() -> None:
 
     # Simulate progress bar
     with Progress(
-        TextColumn("[bold]Running 47 checks on AWS..."),
+        TextColumn("[bold]Running 80 checks on AWS..."),
         BarColumn(bar_width=40),
         TextColumn("{task.completed}/{task.total}"),
         TimeElapsedColumn(),
         console=console,
     ) as progress:
-        task = progress.add_task("Scanning", total=47)
-        for _ in range(47):
-            time.sleep(0.08)
+        task = progress.add_task("Scanning", total=80)
+        for _ in range(80):
+            time.sleep(0.04)
             progress.advance(task)
 
     # Health score
