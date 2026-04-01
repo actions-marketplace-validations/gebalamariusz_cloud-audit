@@ -185,6 +185,25 @@ def _findings_by_check(findings: list[Finding]) -> dict[str, list[Finding]]:
     return idx
 
 
+def _region_overlap(
+    by_check: dict[str, list[Finding]],
+    *check_ids: str,
+) -> list[tuple[str, list[Finding]]]:
+    """Find regions where ALL check_ids have findings. Returns (region, [one finding per check_id])."""
+    groups = [by_check.get(cid, []) for cid in check_ids]
+    if not all(groups):
+        return []
+    region_sets = [{f.region for f in g} for g in groups]
+    common = region_sets[0]
+    for rs in region_sets[1:]:
+        common &= rs
+    results: list[tuple[str, list[Finding]]] = []
+    for region in common:
+        matched = [next(f for f in g if f.region == region) for g in groups]
+        results.append((region, matched))
+    return results
+
+
 # ---------------------------------------------------------------------------
 # ATTACK CHAIN RULES
 # ---------------------------------------------------------------------------

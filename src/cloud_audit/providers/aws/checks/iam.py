@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 def check_root_mfa(provider: AWSProvider) -> CheckResult:
     """Check if the root account has MFA enabled."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-001", check_name="Root account MFA")
 
     try:
@@ -57,7 +57,7 @@ def check_root_mfa(provider: AWSProvider) -> CheckResult:
 
 def check_root_access_keys(provider: AWSProvider) -> CheckResult:
     """Check if the root account has access keys (CIS 1.4)."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-008", check_name="Root account access keys")
 
     try:
@@ -110,7 +110,7 @@ def check_root_access_keys(provider: AWSProvider) -> CheckResult:
 
 def check_users_mfa(provider: AWSProvider) -> CheckResult:
     """Check if all IAM users with console access have MFA enabled."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-002", check_name="IAM users MFA")
 
     try:
@@ -169,7 +169,7 @@ def check_users_mfa(provider: AWSProvider) -> CheckResult:
 
 def check_access_keys_rotation(provider: AWSProvider) -> CheckResult:
     """Check if access keys are older than 90 days."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-003", check_name="Access key rotation")
 
     try:
@@ -233,7 +233,7 @@ def check_access_keys_rotation(provider: AWSProvider) -> CheckResult:
 
 def check_unused_access_keys(provider: AWSProvider) -> CheckResult:
     """Check for access keys that haven't been used in 45+ days (CIS 1.12)."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-004", check_name="Unused access keys")
 
     try:
@@ -311,7 +311,7 @@ def check_unused_access_keys(provider: AWSProvider) -> CheckResult:
 
 def check_overly_permissive_policy(provider: AWSProvider) -> CheckResult:
     """Check for IAM policies with overly permissive actions (Action: * on Resource: *)."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-005", check_name="Overly permissive IAM policies")
 
     try:
@@ -390,7 +390,7 @@ def check_overly_permissive_policy(provider: AWSProvider) -> CheckResult:
 
 def check_weak_password_policy(provider: AWSProvider) -> CheckResult:
     """Check if the account password policy meets CIS requirements."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-006", check_name="Password policy strength")
 
     try:
@@ -532,7 +532,7 @@ def check_oidc_trust_policy(provider: AWSProvider) -> CheckResult:
     validate the 'aud' claim but not 'sub' allow ANY repository on the platform to
     assume the role. Google's UNC6426 threat actor exploited this exact pattern.
     """
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-007", check_name="OIDC trust policy without sub condition")
 
     try:
@@ -643,7 +643,7 @@ def check_oidc_trust_policy(provider: AWSProvider) -> CheckResult:
 
 def check_multiple_active_keys(provider: AWSProvider) -> CheckResult:
     """Check if any IAM user has more than one active access key (CIS 1.13)."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-009", check_name="Multiple active access keys")
 
     try:
@@ -699,7 +699,7 @@ def check_multiple_active_keys(provider: AWSProvider) -> CheckResult:
 
 def check_user_direct_policies(provider: AWSProvider) -> CheckResult:
     """Check if IAM users have policies attached directly instead of through groups (CIS 1.15)."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-010", check_name="Direct user policies")
 
     try:
@@ -773,7 +773,7 @@ def check_user_direct_policies(provider: AWSProvider) -> CheckResult:
 
 def check_support_role(provider: AWSProvider) -> CheckResult:
     """Check if a support role with AWSSupportAccess policy exists (CIS 1.17)."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-011", check_name="Support role exists")
 
     try:
@@ -851,7 +851,7 @@ def check_iam_access_analyzer(provider: AWSProvider) -> CheckResult:
         for region in provider.regions:
             result.resources_scanned += 1
             try:
-                aa = provider.session.client("accessanalyzer", region_name=region)
+                aa = provider.client("accessanalyzer", region_name=region)
                 analyzers = aa.list_analyzers(type="ACCOUNT")["analyzers"]
                 active_analyzers = [a for a in analyzers if a.get("status") == "ACTIVE"]
             except Exception as exc:
@@ -904,7 +904,7 @@ def check_iam_access_analyzer(provider: AWSProvider) -> CheckResult:
 
 def check_expired_certificates(provider: AWSProvider) -> CheckResult:
     """Check for expired SSL/TLS certificates in IAM (CIS 1.19)."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-013", check_name="Expired SSL/TLS certificates")
 
     try:
@@ -956,7 +956,7 @@ def check_expired_certificates(provider: AWSProvider) -> CheckResult:
 
 def check_root_hardware_mfa(provider: AWSProvider) -> CheckResult:
     """Check if root account uses hardware MFA (not virtual) (CIS 1.6)."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-015", check_name="Root hardware MFA")
 
     try:
@@ -1015,7 +1015,7 @@ def check_ec2_instance_roles(provider: AWSProvider) -> CheckResult:
 
     try:
         for region in provider.regions:
-            ec2 = provider.session.client("ec2", region_name=region)
+            ec2 = provider.client("ec2", region_name=region)
             paginator = ec2.get_paginator("describe_instances")
 
             for page in paginator.paginate(Filters=[{"Name": "instance-state-name", "Values": ["running"]}]):
@@ -1080,7 +1080,7 @@ def check_ec2_instance_roles(provider: AWSProvider) -> CheckResult:
 
 def check_cloudshell_access(provider: AWSProvider) -> CheckResult:
     """Check if AWSCloudShellFullAccess is attached to any entity (CIS 1.22)."""
-    iam = provider.session.client("iam")
+    iam = provider.client("iam")
     result = CheckResult(check_id="aws-iam-014", check_name="CloudShell full access restricted")
 
     try:
