@@ -147,7 +147,6 @@ def run_scan(
                 for future in as_completed(futures):
                     report.results.append(future.result())
                     progress.advance(task)
-                progress.advance(task)
 
     report.duration_seconds = round(time.monotonic() - start, 2)
 

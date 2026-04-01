@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cloud-audit"
-version = "1.2.1"
+version = "1.2.2"
 description = "Open-source AWS security scanner with CIS AWS v3.0 and SOC 2 Type II compliance, attack chains, breach cost estimation, and MCP server. 80 checks, 20 attack chain rules. Every finding includes CLI + Terraform remediation."
 readme = "README.md"
 license = "MIT"

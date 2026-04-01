@@ -235,6 +235,9 @@ suppressions:
     reason: "Legacy VPC, migration planned for Q3"
     accepted_by: "jane@example.com"
     expires: "2026-09-30"
+  - check_id: "aws-cw-*"
+    reason: "CloudWatch alarms managed by separate team"
+    accepted_by: "ops@example.com"
 ```
 
 </details>

@@ -20,20 +20,21 @@ pip install -e ".[dev]"
 
 ## Code Quality Checks
 
-Before submitting a PR, make sure all checks pass:
+Before submitting a PR, run all checks with one command:
 
 ```bash
-# Lint
-ruff check src/ tests/
+make all    # runs lint + format-check + typecheck + test
+```
 
-# Format
-ruff format --check src/ tests/
+Or individually:
 
-# Type check
-mypy src/
-
-# Tests
-pytest -v
+```bash
+make lint        # ruff check src/ tests/
+make format      # ruff format src/ tests/
+make typecheck   # mypy src/
+make test        # pytest -v
+make test-cov    # pytest with coverage report
+make security    # pip-audit dependency scan
 ```
 
 ## Adding a New AWS Check
@@ -65,7 +66,7 @@ def check_cloudtrail_enabled(provider: AWSProvider) -> CheckResult:
         check_name="CloudTrail enabled",
     )
 
-    client = provider.session.client("cloudtrail")
+    client = provider.client("cloudtrail")  # adaptive retry + client caching
     trails = client.describe_trails()["trailList"]
     result.resources_scanned = len(trails)
 
@@ -74,13 +75,12 @@ def check_cloudtrail_enabled(provider: AWSProvider) -> CheckResult:
     return result
 
 
-def get_checks(provider: AWSProvider) -> list[partial[CheckResult]]:
-    checks = [
-        partial(check_cloudtrail_enabled, provider),
+def get_checks(provider: AWSProvider) -> list[CheckFn]:
+    from cloud_audit.providers.base import make_check
+    from cloud_audit.models import Category
+    return [
+        make_check(check_cloudtrail_enabled, provider, check_id="aws-ct-001", category=Category.SECURITY),
     ]
-    for check in checks:
-        check.category = Category.SECURITY  # type: ignore[attr-defined]
-    return checks
 ```
 
 ### 2. Register the module

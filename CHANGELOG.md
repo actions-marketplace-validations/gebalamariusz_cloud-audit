@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-04-01
+
+### Added
+
+- Parallel check execution via ThreadPoolExecutor for faster scans on large accounts
+- Wildcard pattern support in suppressions (`aws-iam-*`, `arn:aws:*:*:*:role/deploy-*`)
+- Debug logging in attack chain correlation engine for diagnosing collection failures
+- Makefile with `make all` (lint + format + typecheck + test), `make test-cov`, `make security`
+- `provider.client()` method with boto3 adaptive retry (max 5 attempts) and per-service client caching
+- `_region_overlap()` helper for shared region-matching logic in attack chain rules
+- 7 new tests for attack chains AC-25, AC-26, AC-27 and wildcard suppressions (345 total)
+
+### Changed
+
+- Thread-safe module-level caches in S3 and CloudTrail checks (threading.Lock)
+- Cache reset abstracted into `BaseProvider.reset_caches()` (was hardcoded S3-only import)
+- Scanner enforces canonical check_id from make_check metadata (single source of truth)
+- `compute_summary()` optimized to single pass over findings (was 5+ iterations)
+- IAM checks migrated to `provider.client()` for adaptive retry and client caching
+- Demo command updated to show 80 checks (was 47)
+
+### Fixed
+
+- SARIF `artifactLocation.uri` now uses valid relative URI format (`checks/{check_id}`)
+- Progress bar no longer advances past 100% in interactive mode
+- Documentation URL in pyproject.toml points to docs site instead of GitHub README
+
 ## [1.2.1] - 2026-04-01
 
 ### Added
@@ -374,7 +401,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker image support
 - Rich terminal UI with progress bar and color-coded findings
 
-[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/gebalamariusz/cloud-audit/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/gebalamariusz/cloud-audit/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/gebalamariusz/cloud-audit/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/gebalamariusz/cloud-audit/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/gebalamariusz/cloud-audit/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/gebalamariusz/cloud-audit/compare/v0.9.1...v1.0.0
 [0.9.1]: https://github.com/gebalamariusz/cloud-audit/compare/v0.9.0...v0.9.1
