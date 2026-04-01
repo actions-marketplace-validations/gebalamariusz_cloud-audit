@@ -389,3 +389,61 @@ def test_viz_step_edge_labels():
         for step in chain.viz_steps[:-1]:
             assert step.edge_label, f"{chain.chain_id} step '{step.label}' has no edge_label"
         assert chain.viz_steps[-1].edge_label == "", f"{chain.chain_id} last step should have no edge_label"
+
+
+# ---------------------------------------------------------------------------
+# Previously untested simple rules
+# ---------------------------------------------------------------------------
+
+
+def test_root_keys_no_trail():
+    """AC-25: iam-008 + ct-001 - CRITICAL."""
+    findings = [
+        _make_finding("aws-iam-008", resource_id="root"),
+        _make_finding("aws-ct-001", resource_id="cloudtrail"),
+    ]
+    chains = detect_attack_chains(findings)
+    ac25 = [c for c in chains if c.chain_id == "AC-25"]
+    assert len(ac25) == 1
+    assert ac25[0].severity == Severity.CRITICAL
+    assert len(ac25[0].findings) == 2
+
+
+def test_admin_no_mfa_no_alarm():
+    """AC-26: iam-005 + iam-002 + cw-001 - CRITICAL. Supersedes AC-12."""
+    findings = [
+        _make_finding("aws-iam-005", resource_id="arn:aws:iam::123:policy/AdminAccess"),
+        _make_finding("aws-iam-002", resource_id="dev-user"),
+        _make_finding("aws-cw-001", resource_id="root-usage-alarm"),
+    ]
+    chains = detect_attack_chains(findings)
+    ac26 = [c for c in chains if c.chain_id == "AC-26"]
+    assert len(ac26) == 1
+    assert ac26[0].severity == Severity.CRITICAL
+    # AC-12 should be suppressed since AC-26 fires (superset)
+    ac12 = [c for c in chains if c.chain_id == "AC-12"]
+    assert len(ac12) == 0
+
+
+def test_default_sg_no_flow_logs():
+    """AC-27: vpc-005 + vpc-003 in same region - HIGH."""
+    findings = [
+        _make_finding("aws-vpc-005", resource_id="sg-default", region="eu-central-1"),
+        _make_finding("aws-vpc-003", resource_id="vpc-123", region="eu-central-1"),
+    ]
+    chains = detect_attack_chains(findings)
+    ac27 = [c for c in chains if c.chain_id == "AC-27"]
+    assert len(ac27) == 1
+    assert ac27[0].severity == Severity.HIGH
+    assert len(ac27[0].findings) == 2
+
+
+def test_default_sg_no_flow_logs_different_regions():
+    """AC-27 should NOT fire if findings are in different regions."""
+    findings = [
+        _make_finding("aws-vpc-005", resource_id="sg-default", region="eu-central-1"),
+        _make_finding("aws-vpc-003", resource_id="vpc-123", region="us-east-1"),
+    ]
+    chains = detect_attack_chains(findings)
+    ac27 = [c for c in chains if c.chain_id == "AC-27"]
+    assert len(ac27) == 0

@@ -65,6 +65,12 @@ def _execute_check(check_fn: CheckFn) -> CheckResult:
     """Execute a single check, catching exceptions into CheckResult.error."""
     try:
         result: CheckResult = check_fn()
+        # Ensure check_id consistency from make_check metadata
+        canonical_id = getattr(check_fn, "check_id", None)
+        if canonical_id:
+            result.check_id = canonical_id
+            for f in result.findings:
+                f.check_id = canonical_id
         return result
     except Exception as e:
         check_id = _get_check_id(check_fn)
