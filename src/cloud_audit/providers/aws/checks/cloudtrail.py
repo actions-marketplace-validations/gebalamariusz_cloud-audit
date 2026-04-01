@@ -12,21 +12,24 @@ if TYPE_CHECKING:
 
 # Module-level trail cache (reset between scans via _reset_trail_cache)
 _trail_cache: list[Any] | None = None
+_trail_lock = __import__("threading").Lock()
 
 
 def _reset_trail_cache() -> None:
     """Reset the trail cache. Called between scans in tests."""
     global _trail_cache
-    _trail_cache = None
+    with _trail_lock:
+        _trail_cache = None
 
 
 def _list_trails(provider: AWSProvider) -> list[Any]:
-    """Fetch CloudTrail trails once per scan (module-level cache)."""
+    """Fetch CloudTrail trails once per scan (module-level cache, thread-safe)."""
     global _trail_cache
-    if _trail_cache is None:
-        ct = provider.session.client("cloudtrail", region_name=provider.regions[0])
-        _trail_cache = ct.describe_trails(includeShadowTrails=True).get("trailList", [])
-    return _trail_cache
+    with _trail_lock:
+        if _trail_cache is None:
+            ct = provider.session.client("cloudtrail", region_name=provider.regions[0])
+            _trail_cache = ct.describe_trails(includeShadowTrails=True).get("trailList", [])
+        return _trail_cache
 
 
 def check_cloudtrail_enabled(provider: AWSProvider) -> CheckResult:

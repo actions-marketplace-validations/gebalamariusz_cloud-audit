@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import threading
+from typing import TYPE_CHECKING, Any
 
 import boto3
+from botocore.config import Config
 
 from cloud_audit.providers.aws.checks import (
     account,
@@ -30,6 +32,8 @@ from cloud_audit.providers.base import BaseProvider
 
 if TYPE_CHECKING:
     from cloud_audit.providers.base import CheckFn
+
+_BOTO_CONFIG = Config(retries={"mode": "adaptive", "max_attempts": 5})
 
 # Registry of all AWS checks, grouped by service
 _CHECK_MODULES = [
@@ -77,7 +81,9 @@ class AWSProvider(BaseProvider):
         else:
             self._session = base_session
 
-        self._sts = self._session.client("sts")
+        self._sts = self._session.client("sts", config=_BOTO_CONFIG)
+        self._clients: dict[tuple[str, str | None], Any] = {}
+        self._clients_lock = threading.Lock()
 
         if regions and regions == ["all"]:
             ec2 = self._session.client("ec2", region_name=self._session.region_name or "eu-central-1")
@@ -97,6 +103,18 @@ class AWSProvider(BaseProvider):
     @property
     def regions(self) -> list[str]:
         return self._regions
+
+    def client(self, service: str, region_name: str | None = None) -> Any:
+        """Get a boto3 client with adaptive retry, cached per (service, region)."""
+        key = (service, region_name)
+        with self._clients_lock:
+            if key not in self._clients:
+                self._clients[key] = self._session.client(
+                    service_name=service,
+                    region_name=region_name,
+                    config=_BOTO_CONFIG,  # type: ignore[call-overload]
+                )
+            return self._clients[key]
 
     def get_account_id(self) -> str:
         identity = self._sts.get_caller_identity()

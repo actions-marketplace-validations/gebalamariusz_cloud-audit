@@ -43,21 +43,24 @@ def _s3_public_access_remediation(name: str) -> Remediation:
 
 
 _bucket_cache: list[Any] | None = None
+_bucket_lock = __import__("threading").Lock()
 
 
 def _reset_bucket_cache() -> None:
     """Reset the bucket list cache (called between scans and in tests)."""
     global _bucket_cache
-    _bucket_cache = None
+    with _bucket_lock:
+        _bucket_cache = None
 
 
 def _list_buckets(provider: AWSProvider) -> list[Any]:
-    """Fetch S3 bucket list once per scan (module-level cache)."""
+    """Fetch S3 bucket list once per scan (module-level cache, thread-safe)."""
     global _bucket_cache
-    if _bucket_cache is None:
-        s3 = provider.session.client("s3")
-        _bucket_cache = s3.list_buckets()["Buckets"]
-    return _bucket_cache
+    with _bucket_lock:
+        if _bucket_cache is None:
+            s3 = provider.session.client("s3")
+            _bucket_cache = s3.list_buckets()["Buckets"]
+        return _bucket_cache
 
 
 def check_public_buckets(provider: AWSProvider) -> CheckResult:

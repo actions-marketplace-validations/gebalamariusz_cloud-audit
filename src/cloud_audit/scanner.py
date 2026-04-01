@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 from typing import TYPE_CHECKING
 
@@ -123,10 +124,13 @@ def run_scan(
     provider.reset_caches()
 
     start = time.monotonic()
+    max_workers = min(8, len(checks))
 
     if quiet:
-        for check_fn in checks:
-            report.results.append(_execute_check(check_fn))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_execute_check, fn): fn for fn in checks}
+            for future in as_completed(futures):
+                report.results.append(future.result())
     else:
         with Progress(
             SpinnerColumn(),
@@ -138,8 +142,11 @@ def run_scan(
         ) as progress:
             task = progress.add_task("Scanning", total=len(checks))
 
-            for check_fn in checks:
-                report.results.append(_execute_check(check_fn))
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {executor.submit(_execute_check, fn): fn for fn in checks}
+                for future in as_completed(futures):
+                    report.results.append(future.result())
+                    progress.advance(task)
                 progress.advance(task)
 
     report.duration_seconds = round(time.monotonic() - start, 2)
