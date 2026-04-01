@@ -105,6 +105,14 @@ class AWSProvider(BaseProvider):
     def get_provider_name(self) -> str:
         return "aws"
 
+    def reset_caches(self) -> None:
+        """Reset per-scan caches for all AWS check modules."""
+        from cloud_audit.providers.aws.checks.cloudtrail import _reset_trail_cache
+        from cloud_audit.providers.aws.checks.s3 import _reset_bucket_cache
+
+        _reset_bucket_cache()
+        _reset_trail_cache()
+
     def get_checks(self, categories: list[str] | None = None) -> list[CheckFn]:
         checks: list[CheckFn] = []
         for module in _CHECK_MODULES:

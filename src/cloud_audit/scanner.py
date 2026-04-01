@@ -114,9 +114,7 @@ def run_scan(
         console.print(f"\n[bold]Running {len(checks)} checks on {report.provider.upper()}...[/bold]\n")
 
     # Reset per-scan caches
-    from cloud_audit.providers.aws.checks.s3 import _reset_bucket_cache
-
-    _reset_bucket_cache()
+    provider.reset_caches()
 
     start = time.monotonic()
 

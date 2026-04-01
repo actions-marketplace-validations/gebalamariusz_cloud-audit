@@ -77,7 +77,7 @@ def _build_results(report: ScanReport) -> list[dict[str, Any]]:
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": finding.check_id,
+                            "uri": f"checks/{finding.check_id}",
                         },
                         "region": {"startLine": 1},
                     },

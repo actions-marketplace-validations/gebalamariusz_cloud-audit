@@ -154,6 +154,30 @@ def test_suppression_no_expiry_never_expired() -> None:
     assert not s.is_expired(today=date(2099, 12, 31))
 
 
+def test_suppression_matches_check_id_wildcard() -> None:
+    """Wildcard in check_id matches multiple checks."""
+    s = Suppression(check_id="aws-iam-*", reason="Suppress all IAM")
+    assert s.matches("aws-iam-001", "root")
+    assert s.matches("aws-iam-016", "some-role")
+    assert not s.matches("aws-s3-001", "my-bucket")
+
+
+def test_suppression_matches_resource_id_wildcard() -> None:
+    """Wildcard in resource_id matches multiple resources."""
+    s = Suppression(check_id="aws-vpc-002", resource_id="sg-0abc*", reason="Dev SGs")
+    assert s.matches("aws-vpc-002", "sg-0abc123")
+    assert s.matches("aws-vpc-002", "sg-0abc999")
+    assert not s.matches("aws-vpc-002", "sg-0zzz123")
+
+
+def test_suppression_matches_arn_wildcard() -> None:
+    """Wildcard in ARN-style resource_id."""
+    s = Suppression(check_id="aws-iam-005", resource_id="arn:aws:iam::*:role/deploy-*", reason="Deploy roles")
+    assert s.matches("aws-iam-005", "arn:aws:iam::123456789012:role/deploy-prod")
+    assert s.matches("aws-iam-005", "arn:aws:iam::999999999999:role/deploy-staging")
+    assert not s.matches("aws-iam-005", "arn:aws:iam::123456789012:role/admin")
+
+
 def test_load_auto_detects_from_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """load_config(None) finds .cloud-audit.yml in the current directory."""
     _write_yaml(tmp_path, "provider: aws\nmin_severity: high\n")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -36,11 +37,11 @@ class Suppression(BaseModel):
         return (today or date.today()) > self.expires
 
     def matches(self, check_id: str, resource_id: str) -> bool:
-        if self.check_id != check_id:
+        if not fnmatch.fnmatchcase(check_id, self.check_id):
             return False
         if self.resource_id is None:
             return True
-        return self.resource_id == resource_id
+        return fnmatch.fnmatchcase(resource_id, self.resource_id)
 
 
 class CloudAuditConfig(BaseModel):

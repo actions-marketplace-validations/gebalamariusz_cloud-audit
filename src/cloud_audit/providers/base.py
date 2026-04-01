@@ -36,3 +36,6 @@ class BaseProvider(ABC):
     @abstractmethod
     def get_provider_name(self) -> str:
         """Return provider name (e.g. 'aws', 'azure')."""
+
+    def reset_caches(self) -> None:  # noqa: B027
+        """Reset any per-scan caches. Override in subclasses that use module-level caches."""

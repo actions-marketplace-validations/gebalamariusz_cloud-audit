@@ -7,10 +7,13 @@ attack research from MITRE ATT&CK, Datadog pathfinding.cloud, and AWS CIRT.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from cloud_audit.models import AttackChain, Finding, Severity, VizStep
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from cloud_audit.providers.aws.provider import AWSProvider
@@ -131,7 +134,8 @@ def _collect_ec2_rels(provider: AWSProvider, rels: ResourceRelationships) -> Non
                         profile = inst.get("IamInstanceProfile")
                         if profile:
                             rels.ec2_roles[iid] = _role_name_from_arn(profile.get("Arn", ""))
-        except Exception:  # noqa: S112
+        except Exception:
+            logger.debug("Failed to collect EC2 relationships in %s", region, exc_info=True)
             continue
 
 
@@ -145,7 +149,8 @@ def _collect_lambda_rels(provider: AWSProvider, rels: ResourceRelationships) -> 
                 for fn in page.get("Functions", []):
                     name = fn["FunctionName"]
                     rels.lambda_roles[name] = fn.get("Role", "")
-        except Exception:  # noqa: S112
+        except Exception:
+            logger.debug("Failed to collect Lambda relationships in %s", region, exc_info=True)
             continue
 
 
@@ -163,7 +168,8 @@ def _collect_role_policies(
             for page in paginator.paginate(RoleName=role_name):
                 policies.update(p["PolicyArn"] for p in page.get("AttachedPolicies", []))
             rels.role_policies[role_name] = policies
-        except Exception:  # noqa: S112
+        except Exception:
+            logger.debug("Failed to collect policies for role %s", role_name, exc_info=True)
             continue
 
 

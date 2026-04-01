@@ -150,25 +150,24 @@ class ScanReport(BaseModel):
 
     def compute_summary(self) -> None:
         """Aggregate results into summary. Call once after all checks complete."""
-        findings = self.all_findings
-        self.summary.total_findings = len(findings)
         self.summary.resources_scanned = sum(r.resources_scanned for r in self.results)
         self.summary.checks_passed = sum(1 for r in self.results if not r.findings and not r.error)
         self.summary.checks_failed = sum(1 for r in self.results if r.findings)
         self.summary.checks_errored = sum(1 for r in self.results if r.error)
 
-        self.summary.by_severity = {}
-        for sev in Severity:
-            count = sum(1 for f in findings if f.severity == sev)
-            if count:
-                self.summary.by_severity[sev] = count
+        # Single pass over findings for severity, category counts and penalty
+        sev_counts: dict[Severity, int] = {}
+        cat_counts: dict[Category, int] = {}
+        total = 0
+        penalty = 0
+        for result in self.results:
+            for f in result.findings:
+                total += 1
+                sev_counts[f.severity] = sev_counts.get(f.severity, 0) + 1
+                cat_counts[f.category] = cat_counts.get(f.category, 0) + 1
+                penalty += SEVERITY_WEIGHT[f.severity]
 
-        self.summary.by_category = {}
-        for cat in Category:
-            count = sum(1 for f in findings if f.category == cat)
-            if count:
-                self.summary.by_category[cat] = count
-
-        # Score: start at 100, subtract based on severity weights
-        penalty = sum(SEVERITY_WEIGHT[f.severity] for f in findings)
+        self.summary.total_findings = total
+        self.summary.by_severity = sev_counts
+        self.summary.by_category = cat_counts
         self.summary.score = max(0, 100 - penalty)

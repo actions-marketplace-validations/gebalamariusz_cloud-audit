@@ -46,6 +46,9 @@ class _FakeProvider:
     def get_checks(self, categories: list[str] | None = None) -> list[partial[CheckResult]]:
         return list(self._checks)
 
+    def reset_caches(self) -> None:
+        pass
+
     def __init__(self, checks: list[partial[CheckResult]]) -> None:
         self._checks = checks
 
