@@ -7,7 +7,9 @@ cloud-audit maps 78 of 80 checks to 43 SOC 2 Trust Services Criteria (AICPA 2017
 
 ## Coverage Summary
 
-| Category | Criteria | Automated | Manual |
+Automated includes both fully automated and partially automated criteria - partial criteria have some aspects verified by cloud-audit checks and some requiring manual review.
+
+| Category | Criteria | Automated* | Manual |
 |----------|----------|-----------|--------|
 | CC1 - Control Environment | 5 | 1 | 4 |
 | CC2 - Communication and Information | 3 | 1 | 2 |

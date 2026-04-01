@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-04-01
+
+### Added
+
+- **Attack chain visualization** in HTML reports - interactive SVG graphs showing attack paths with node-and-edge diagrams, color-coded by resource type (compute, identity, network, storage), animated edges, and glow effects on entry/impact nodes
+- `VizStep` model with `Literal` type validation for node types
+- 3 new tests for viz_steps validation (structure, types, edge labels)
+- `viz_steps` field on `AttackChain` model (backward compatible, defaults to empty list)
+
+### Changed
+
+- `VizStep.type` constrained to Literal type (internet, compute, identity, network, storage, finding, impact) with Pydantic validation
+- Attack chain cards in HTML report now have header/graph/body layout instead of flat text
+- Sub-labels in visualization truncated to 22 characters to prevent overflow
+- ROADMAP.md merged duplicate v1.3.0 sections into single entry
+- SOC 2 docs clarified Automated column includes partially automated criteria
+
+### Fixed
+
+- Long resource IDs in visualization labels truncated to prevent SVG overflow
+
 ## [1.2.0] - 2026-04-01
 
 ### Added

@@ -435,27 +435,15 @@
   }
 
   /* Attack chains section */
-  .attack-chains-section {
-    margin-bottom: 40px;
-  }
-
-  .attack-chains-subtitle {
-    font-size: 13px;
-    color: var(--text-dim);
-    margin: -12px 0 20px;
-  }
+  .attack-chains-section { margin-bottom: 40px; }
+  .attack-chains-subtitle { font-size: 13px; color: var(--text-dim); margin: -12px 0 20px; }
 
   .attack-chain-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 12px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 14px; margin-bottom: 16px; overflow: hidden;
     transition: border-color 0.2s;
   }
-
   .attack-chain-card:hover { border-color: rgba(239,68,68,0.3); }
-
   .attack-chain-critical { border-left: 4px solid var(--red); }
   .attack-chain-high { border-left: 4px solid #f87171; }
   .attack-chain-medium { border-left: 4px solid var(--orange); }
@@ -463,56 +451,58 @@
   .attack-chain-info { border-left: 4px solid var(--text-dim); }
 
   .attack-chain-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap;
   }
-
-  .attack-chain-name {
-    font-size: 15px;
-    font-weight: 600;
-    flex: 1;
-    min-width: 200px;
-  }
-
+  .attack-chain-name { font-size: 15px; font-weight: 600; flex: 1; min-width: 200px; }
   .attack-chain-id {
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px;
+    color: var(--text-dim); background: rgba(255,255,255,0.04);
+    padding: 2px 8px; border-radius: 4px;
+  }
+  .attack-chain-cost { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--red); }
+
+  /* Attack chain graph area */
+  .chain-graph-area {
+    background: #090b10; padding: 12px; overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+  }
+  .chain-graph-area svg { display: block; margin: 0 auto; }
+
+  /* SVG node styles */
+  .viz-node-circle { stroke-width: 2.5; cursor: default; }
+  .viz-node-label { font-size: 11px; font-weight: 600; fill: var(--text); text-anchor: middle; }
+  .viz-node-sub { font-size: 9.5px; fill: var(--text-dim); text-anchor: middle; }
+  .viz-node-icon { font-size: 18px; text-anchor: middle; dominant-baseline: central; }
+  .viz-edge { fill: none; stroke-width: 2; opacity: 0.5; stroke-dasharray: 6 4; }
+  .viz-edge-animated { animation: vizFlow 1.2s linear infinite; }
+  @keyframes vizFlow { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
+  .viz-edge-label-bg { fill: rgba(255,255,255,0.05); rx: 4; }
+  .viz-edge-label {
+    font-size: 9px; fill: var(--text-dim); text-anchor: middle; dominant-baseline: central;
     font-family: 'SF Mono', 'Fira Code', monospace;
-    font-size: 11px;
-    color: var(--text-dim);
-    background: rgba(255,255,255,0.04);
-    padding: 2px 8px;
-    border-radius: 4px;
   }
+  .viz-ring { fill: none; stroke-width: 1; opacity: 0.25; stroke-dasharray: 3 2; }
 
+  .attack-chain-body { padding: 14px 20px; }
   .attack-chain-narrative {
-    font-size: 14px;
-    font-style: italic;
-    color: var(--text);
-    margin-bottom: 10px;
-    line-height: 1.6;
+    font-size: 13px; color: var(--text); margin-bottom: 10px; line-height: 1.6;
   }
-
   .attack-chain-fix {
-    font-size: 13px;
-    padding: 10px 14px;
-    background: rgba(45,212,191,0.04);
-    border-left: 3px solid var(--teal);
-    border-radius: 0 6px 6px 0;
-    color: var(--text);
-    margin-bottom: 10px;
+    font-size: 13px; padding: 10px 14px;
+    background: rgba(45,212,191,0.04); border-left: 3px solid var(--teal);
+    border-radius: 0 6px 6px 0; color: var(--text); margin-bottom: 10px;
   }
+  .attack-chain-findings { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; }
+  .attack-chain-mitre { font-size: 12px; color: var(--text-dim); }
 
-  .attack-chain-findings {
-    font-size: 12px;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-  }
-
-  .attack-chain-mitre {
-    font-size: 12px;
-    color: var(--text-dim);
+  @media print {
+    .chain-graph-area { background: #fff; border: 1px solid #ddd; }
+    .viz-node-circle { stroke-width: 2; }
+    .viz-node-label { fill: #111; }
+    .viz-node-sub { fill: #666; }
+    .viz-edge { opacity: 0.7; animation: none; stroke-dasharray: none; }
+    .viz-edge-label { fill: #555; }
   }
 
   /* Severity bar */
@@ -620,28 +610,154 @@
         <span class="severity severity-{{ chain.severity.value }}">{{ chain.severity.value }}</span>
         <span class="attack-chain-name">{{ chain.name }}</span>
         <span class="attack-chain-id">{{ chain.chain_id }}</span>
+        {% if chain.cost_estimate and chain.cost_estimate.high_usd > 0 %}
+        <span class="attack-chain-cost">{{ chain.cost_estimate.display }}</span>
+        {% endif %}
       </div>
-      <div class="attack-chain-narrative">{{ chain.attack_narrative }}</div>
-      {% if chain.cost_estimate and chain.cost_estimate.high_usd > 0 %}
-      <div style="margin: 6px 0; font-size: 14px;"><strong style="color: var(--red);">Estimated risk: {{ chain.cost_estimate.display }}</strong> <span style="color: var(--text-dim);">- {{ chain.cost_estimate.rationale }}</span></div>
+      {% if chain.viz_steps %}
+      <div class="chain-graph-area" data-chain-index="{{ loop.index0 }}"></div>
       {% endif %}
-      <div class="attack-chain-fix">Priority fix: {{ chain.priority_fix }}</div>
-      <div class="attack-chain-findings">
-        Based on {{ chain.findings|length }} findings:
-        {% for f in chain.findings %}
-        <span class="compliance-ref">{{ f.check_id }}</span>
-        {% endfor %}
+      <div class="attack-chain-body">
+        <div class="attack-chain-narrative">{{ chain.attack_narrative }}</div>
+        <div class="attack-chain-fix">Priority fix: {{ chain.priority_fix }}</div>
+        <div class="attack-chain-findings">
+          Based on {{ chain.findings|length }} findings:
+          {% for f in chain.findings %}
+          <span class="compliance-ref">{{ f.check_id }}</span>
+          {% endfor %}
+        </div>
+        {% if chain.mitre_refs %}
+        <div class="attack-chain-mitre">
+          {% for ref in chain.mitre_refs %}
+          <span class="compliance-ref">{{ ref }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
       </div>
-      {% if chain.mitre_refs %}
-      <div class="attack-chain-mitre">
-        {% for ref in chain.mitre_refs %}
-        <span class="compliance-ref">{{ ref }}</span>
-        {% endfor %}
-      </div>
-      {% endif %}
     </div>
     {% endfor %}
   </div>
+
+  <script>
+  (function() {
+    var TYPE_COLORS = {
+      internet: "#ef4444", compute: "#3b82f6", identity: "#a855f7",
+      network: "#06b6d4", storage: "#10b981", finding: "#f97316", impact: "#ef4444"
+    };
+    var TYPE_ICONS = {
+      internet: "\uD83C\uDF10", compute: "\uD83D\uDDA5\uFE0F", identity: "\uD83D\uDD11",
+      network: "\uD83D\uDEE1\uFE0F", storage: "\uD83D\uDDC4\uFE0F", finding: "\u26A0\uFE0F", impact: "\uD83D\uDCA5"
+    };
+    var NODE_R = 26, H_GAP = 150, V_CENTER = 90, PAD = 50, SVG_H = 180;
+
+    var chains = [
+      {% for chain in attack_chains %}
+      {% if chain.viz_steps %}
+      { steps: [
+        {% for s in chain.viz_steps %}
+        { label: {{ s.label | tojson }}, sub: {{ s.sub | tojson }}, type: {{ s.type | tojson }}, edge: {{ s.edge_label | tojson }} },
+        {% endfor %}
+      ]},
+      {% else %}
+      null,
+      {% endif %}
+      {% endfor %}
+    ];
+
+    function makeSVG(tag, attrs) {
+      var el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (var k in attrs) el.setAttribute(k, attrs[k]);
+      return el;
+    }
+
+    chains.forEach(function(chain, idx) {
+      if (!chain) return;
+      var area = document.querySelector('[data-chain-index="' + idx + '"]');
+      if (!area) return;
+      var steps = chain.steps;
+      var svgW = PAD + steps.length * H_GAP;
+      var svg = makeSVG("svg", { width: svgW, height: SVG_H, viewBox: "0 0 " + svgW + " " + SVG_H });
+
+      // Defs: glow filters + arrowhead
+      var defs = makeSVG("defs", {});
+      defs.innerHTML = '<filter id="glow-e-' + idx + '" x="-50%" y="-50%" width="200%" height="200%">'
+        + '<feGaussianBlur in="SourceAlpha" stdDeviation="5" result="b"/>'
+        + '<feFlood flood-color="#ef4444" flood-opacity="0.3" result="c"/>'
+        + '<feComposite in="c" in2="b" operator="in" result="g"/>'
+        + '<feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+        + '<marker id="arr-' + idx + '" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="7" markerHeight="6" orient="auto">'
+        + '<path d="M0 0.5 L10 4 L0 7.5Z" fill="#ef4444" opacity="0.5"/></marker>';
+      svg.appendChild(defs);
+
+      // Positions
+      var pos = steps.map(function(_, i) { return { x: PAD + i * H_GAP, y: V_CENTER }; });
+
+      // Edges
+      for (var i = 0; i < steps.length - 1; i++) {
+        var sx = pos[i].x + NODE_R + 4, sy = pos[i].y;
+        var tx = pos[i+1].x - NODE_R - 8, ty = pos[i+1].y;
+        var mx = (sx + tx) / 2;
+        var path = makeSVG("path", {
+          d: "M " + sx + "," + sy + " C " + mx + "," + sy + " " + mx + "," + ty + " " + tx + "," + ty,
+          class: "viz-edge viz-edge-animated",
+          stroke: "#ef4444",
+          "marker-end": "url(#arr-" + idx + ")"
+        });
+        svg.appendChild(path);
+
+        // Edge label
+        if (steps[i].edge) {
+          var lx = mx, ly = sy - 28;
+          var lw = steps[i].edge.length * 6 + 14;
+          svg.appendChild(makeSVG("rect", {
+            x: lx - lw/2, y: ly - 9, width: lw, height: 18, class: "viz-edge-label-bg"
+          }));
+          var lt = makeSVG("text", { x: lx, y: ly, class: "viz-edge-label" });
+          lt.textContent = steps[i].edge;
+          svg.appendChild(lt);
+        }
+      }
+
+      // Nodes
+      steps.forEach(function(step, i) {
+        var cx = pos[i].x, cy = pos[i].y;
+        var color = TYPE_COLORS[step.type] || "#888";
+        var icon = TYPE_ICONS[step.type] || "\u2B24";
+        var g = makeSVG("g", {});
+        var isGlow = step.type === "internet" || step.type === "impact";
+
+        if (isGlow) {
+          g.setAttribute("filter", "url(#glow-e-" + idx + ")");
+          svg.appendChild(makeSVG("circle", {
+            cx: cx, cy: cy, r: NODE_R + 5, class: "viz-ring", stroke: color
+          }));
+        }
+
+        g.appendChild(makeSVG("circle", {
+          cx: cx, cy: cy, r: NODE_R, fill: "#111318", stroke: color, class: "viz-node-circle"
+        }));
+        var iconEl = makeSVG("text", { x: cx, y: cy, class: "viz-node-icon" });
+        iconEl.textContent = icon;
+        g.appendChild(iconEl);
+
+        var labelEl = makeSVG("text", { x: cx, y: cy + NODE_R + 14, class: "viz-node-label" });
+        // Truncate long labels
+        var lbl = step.label.length > 18 ? step.label.substring(0, 16) + ".." : step.label;
+        labelEl.textContent = lbl;
+        g.appendChild(labelEl);
+
+        var subEl = makeSVG("text", { x: cx, y: cy + NODE_R + 26, class: "viz-node-sub" });
+        var subText = step.sub.length > 22 ? step.sub.substring(0, 20) + ".." : step.sub;
+        subEl.textContent = subText;
+        g.appendChild(subEl);
+
+        svg.appendChild(g);
+      });
+
+      area.appendChild(svg);
+    });
+  })();
+  </script>
   {% endif %}
 
   <!-- Severity breakdown -->

@@ -307,3 +307,85 @@ def test_different_regions_no_chain():
     chains = detect_attack_chains(findings)
     ac13 = [c for c in chains if c.chain_id == "AC-13"]
     assert len(ac13) == 0
+
+
+# ---------------------------------------------------------------------------
+# Visualization steps (viz_steps)
+# ---------------------------------------------------------------------------
+
+VALID_VIZ_TYPES = {"internet", "compute", "identity", "network", "storage", "finding", "impact"}
+
+
+def test_all_simple_chains_have_viz_steps():
+    """Every simple chain (no relationships) has viz_steps populated."""
+    findings = [
+        _make_finding("aws-iam-001", resource_id="root"),
+        _make_finding("aws-ct-001", resource_id="cloudtrail"),
+        _make_finding("aws-gd-001", resource_id="guardduty", region="eu-central-1"),
+        _make_finding("aws-cfg-001", resource_id="config", region="eu-central-1"),
+        _make_finding("aws-iam-005", resource_id="AdminPolicy"),
+        _make_finding("aws-iam-002", resource_id="user-no-mfa"),
+        _make_finding("aws-vpc-002", resource_id="sg-open", region="eu-central-1", severity=Severity.CRITICAL),
+        _make_finding("aws-vpc-003", resource_id="vpc-123", region="eu-central-1"),
+        _make_finding("aws-vpc-004", resource_id="acl-123", region="eu-central-1"),
+        _make_finding("aws-iam-008", resource_id="root-keys"),
+        _make_finding("aws-cw-001", resource_id="root-alarm"),
+        _make_finding("aws-ecs-001", resource_id="priv-task", region="eu-central-1"),
+        _make_finding("aws-ecs-003", resource_id="exec-svc", region="eu-central-1"),
+        _make_finding("aws-ecs-002", resource_id="no-log-task", region="eu-central-1"),
+        _make_finding("aws-ssm-002", resource_id="ssm-param", region="eu-central-1"),
+        _make_finding("aws-lambda-003", resource_id="lambda-secrets", region="eu-central-1"),
+        _make_finding("aws-vpc-005", resource_id="default-sg", region="eu-central-1"),
+        _make_finding("aws-iam-007", resource_id="arn:aws:iam::123:role/oidc-role"),
+        _make_finding("aws-iam-012", resource_id="no-analyzer"),
+    ]
+    chains = detect_attack_chains(findings)
+    assert len(chains) > 0
+    for chain in chains:
+        assert len(chain.viz_steps) >= 2, f"{chain.chain_id} has {len(chain.viz_steps)} viz_steps"
+        assert chain.viz_steps[-1].type == "impact", f"{chain.chain_id} last step should be impact"
+        for step in chain.viz_steps:
+            assert step.type in VALID_VIZ_TYPES, f"{chain.chain_id} has invalid type: {step.type}"
+            assert step.label, f"{chain.chain_id} has empty label"
+            assert step.sub, f"{chain.chain_id} has empty sub"
+
+
+def test_relationship_chains_have_viz_steps():
+    """Relationship-based chains (AC-01, AC-02, AC-05, AC-07) have viz_steps."""
+    findings = [
+        _make_finding("aws-vpc-002", resource_id="sg-open", severity=Severity.CRITICAL),
+        _make_finding("aws-ec2-004", resource_id="i-abc123"),
+        _make_finding("aws-lambda-001", resource_id="admin-func"),
+        _make_finding("aws-iam-007", resource_id="arn:aws:iam::123:role/deploy"),
+    ]
+    rels = ResourceRelationships()
+    rels.ec2_sgs = {"i-abc123": ["sg-open"]}
+    rels.ec2_roles = {"i-abc123": "admin-role"}
+    rels.lambda_roles = {"admin-func": "arn:aws:iam::123:role/lambda-admin"}
+    rels.role_policies = {
+        "admin-role": {"arn:aws:iam::aws:policy/AdministratorAccess"},
+        "lambda-admin": {"arn:aws:iam::aws:policy/AdministratorAccess"},
+        "deploy": {"arn:aws:iam::aws:policy/AdministratorAccess"},
+    }
+    chains = detect_attack_chains(findings, relationships=rels)
+    rel_chains = [c for c in chains if c.chain_id in {"AC-01", "AC-02", "AC-05", "AC-07"}]
+    assert len(rel_chains) >= 3
+    for chain in rel_chains:
+        assert len(chain.viz_steps) >= 3, f"{chain.chain_id} has {len(chain.viz_steps)} viz_steps"
+        assert chain.viz_steps[-1].type == "impact"
+        for step in chain.viz_steps:
+            assert step.type in VALID_VIZ_TYPES
+
+
+def test_viz_step_edge_labels():
+    """All non-last steps have edge_label (connection description)."""
+    findings = [
+        _make_finding("aws-iam-001", resource_id="root"),
+        _make_finding("aws-ct-001", resource_id="cloudtrail"),
+    ]
+    chains = detect_attack_chains(findings)
+    assert len(chains) >= 1
+    for chain in chains:
+        for step in chain.viz_steps[:-1]:
+            assert step.edge_label, f"{chain.chain_id} step '{step.label}' has no edge_label"
+        assert chain.viz_steps[-1].edge_label == "", f"{chain.chain_id} last step should have no edge_label"

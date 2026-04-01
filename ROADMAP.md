@@ -1,6 +1,6 @@
 # Roadmap
 
-> Current version: **v1.2.0** (April 2026)
+> Current version: **v1.2.1** (April 2026)
 
 ## Completed
 
@@ -115,18 +115,14 @@
 
 ## What's Next
 
-### v1.3.0 - Multi-Framework Compliance
+### v1.3.0 - Multi-Framework Compliance & Intelligence
 - **BSI C5:2020** compliance mapping (121 criteria -- zero open-source competition)
 - **ISO 27001:2022** compliance mapping (93 Annex A controls)
 - **HIPAA Security Rule** compliance mapping (36 implementation specifications)
 - **NIS2 Directive** compliance mapping (~40 technical measures)
-- Compliance report improvements based on feedback
-
-### v1.3.0 - Automation & Intelligence
-- **Terraform Drift Detection** -- compare scan results against tfstate to find security-relevant drift
 - **Root Cause Grouping** -- "fix 1 setting, close 12 findings" for account-level misconfigurations
 - **Historical Score Tracking** -- persistent score history with trends for Type II audits
-- **More attack chain rules** -- expand based on community feedback and new attack research
+- Compliance report improvements based on feedback
 
 ### v1.4.0 - Enterprise Ready
 - **Multi-account scanning** -- AWS Organizations support, aggregate attack chains across accounts

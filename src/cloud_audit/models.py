@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -86,6 +87,18 @@ class CheckResult(BaseModel):
     error: str | None = None
 
 
+VizNodeType = Literal["internet", "compute", "identity", "network", "storage", "finding", "impact"]
+
+
+class VizStep(BaseModel):
+    """A single step in an attack chain visualization."""
+
+    label: str = Field(description="Resource name or short label")
+    sub: str = Field(description="Resource type or subtitle")
+    type: VizNodeType = Field(description="Node type for visualization styling")
+    edge_label: str = Field(default="", description="Label on the edge FROM this node to the next")
+
+
 class AttackChain(BaseModel):
     """A detected attack chain - multiple findings that together form an exploitable attack path."""
 
@@ -98,6 +111,7 @@ class AttackChain(BaseModel):
     mitre_refs: list[str] = Field(default_factory=list, description="MITRE ATT&CK technique IDs")
     resources: list[str] = Field(default_factory=list, description="Affected resource IDs")
     cost_estimate: CostEstimateData | None = Field(default=None, description="Estimated breach cost for this chain")
+    viz_steps: list[VizStep] = Field(default_factory=list, description="Visualization steps for attack path graph")
 
 
 class ScanSummary(BaseModel):

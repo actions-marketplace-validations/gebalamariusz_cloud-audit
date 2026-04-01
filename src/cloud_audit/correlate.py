@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from cloud_audit.models import AttackChain, Finding, Severity
+from cloud_audit.models import AttackChain, Finding, Severity, VizStep
 
 if TYPE_CHECKING:
     from cloud_audit.providers.aws.provider import AWSProvider
@@ -221,6 +221,15 @@ def _detect_exposed_admin_instance(
                 priority_fix=f"Restrict security group {sg_finding.resource_id} to specific IPs (effort: LOW).",
                 mitre_refs=["T1190", "T1552.005", "T1078.004"],
                 resources=[instance_id, sg_finding.resource_id],
+                viz_steps=[
+                    VizStep(label="Internet", sub="Entry Point", type="internet", edge_label="scans ports"),
+                    VizStep(
+                        label=sg_finding.resource_id, sub="Security Group", type="network", edge_label="allows access"
+                    ),
+                    VizStep(label=instance_id, sub="EC2 Instance", type="compute", edge_label="IMDS creds"),
+                    VizStep(label=role_name, sub="IAM Role (admin)", type="identity", edge_label="full access"),
+                    VizStep(label="Account Takeover", sub="Full AWS Access", type="impact"),
+                ],
             )
         )
     return chains
@@ -260,6 +269,12 @@ def _detect_ssrf_credential_theft(
                 priority_fix=f"Enforce IMDSv2 on {instance_id} (effort: LOW).",
                 mitre_refs=["T1190", "T1552.005"],
                 resources=[instance_id, sg_f.resource_id],
+                viz_steps=[
+                    VizStep(label="Internet", sub="Entry Point", type="internet", edge_label="SSRF attack"),
+                    VizStep(label=sg_f.resource_id, sub="Security Group", type="network", edge_label="allows access"),
+                    VizStep(label=instance_id, sub="EC2 (IMDSv1)", type="compute", edge_label="metadata query"),
+                    VizStep(label="Stolen Credentials", sub="IAM Role Creds", type="impact"),
+                ],
             )
         )
     return chains
@@ -295,6 +310,12 @@ def _detect_public_lambda_admin(
                     priority_fix="Add IAM or Cognito auth to the function URL (effort: MEDIUM).",
                     mitre_refs=["T1190", "T1078.004"],
                     resources=[fn_name],
+                    viz_steps=[
+                        VizStep(label="Internet", sub="No Auth", type="internet", edge_label="invokes function"),
+                        VizStep(label=fn_name, sub="Lambda (public URL)", type="compute", edge_label="executes as"),
+                        VizStep(label=role_name, sub="IAM Role (admin)", type="identity", edge_label="full access"),
+                        VizStep(label="Account Takeover", sub="Admin Privileges", type="impact"),
+                    ],
                 )
             )
     return chains
@@ -329,6 +350,14 @@ def _detect_cicd_admin_takeover(
                     priority_fix="Add 'sub' condition to the trust policy (effort: LOW).",
                     mitre_refs=["T1078.004", "T1550.001"],
                     resources=[f.resource_id],
+                    viz_steps=[
+                        VizStep(
+                            label="Any CI/CD Repo", sub="OIDC Federation", type="internet", edge_label="assumes role"
+                        ),
+                        VizStep(label=role_name, sub="IAM Role", type="identity", edge_label="has policy"),
+                        VizStep(label="AdministratorAccess", sub="IAM Policy", type="identity", edge_label="grants"),
+                        VizStep(label="Full AWS Access", sub="Account Compromise", type="impact"),
+                    ],
                 )
             )
     return chains
@@ -361,6 +390,11 @@ def _detect_unmonitored_admin(
             priority_fix="Enable CloudTrail first (immediate visibility), then add root MFA.",
             mitre_refs=["T1078.004", "T1562.008"],
             resources=["root", "cloudtrail"],
+            viz_steps=[
+                VizStep(label="Root Account", sub="No MFA", type="identity", edge_label="no audit trail"),
+                VizStep(label="CloudTrail", sub="Disabled", type="finding", edge_label="undetected"),
+                VizStep(label="Silent Takeover", sub="Full Admin, No Logs", type="impact"),
+            ],
         )
     )
     return chains
@@ -391,6 +425,12 @@ def _detect_blind_admin(
             priority_fix="Enable CloudTrail (effort: LOW) - detection before prevention.",
             mitre_refs=["T1078.004", "T1562.008", "T1562.001"],
             resources=["root", "cloudtrail", "guardduty"],
+            viz_steps=[
+                VizStep(label="Root Account", sub="No MFA", type="identity", edge_label="no logging"),
+                VizStep(label="CloudTrail", sub="Disabled", type="finding", edge_label="no detection"),
+                VizStep(label="GuardDuty", sub="Disabled", type="finding", edge_label="blind"),
+                VizStep(label="Zero Visibility", sub="Complete Blindness", type="impact"),
+            ],
         )
     )
     return chains
@@ -430,6 +470,12 @@ def _detect_zero_visibility(
                     priority_fix=f"Enable CloudTrail in {r} (effort: LOW).",
                     mitre_refs=["T1562.008", "T1562.001"],
                     resources=["cloudtrail", "guardduty", "config"],
+                    viz_steps=[
+                        VizStep(label="CloudTrail", sub=f"Disabled ({r})", type="finding", edge_label="no logs"),
+                        VizStep(label="GuardDuty", sub=f"Disabled ({r})", type="finding", edge_label="no alerts"),
+                        VizStep(label="AWS Config", sub=f"Disabled ({r})", type="finding", edge_label="no tracking"),
+                        VizStep(label="Zero Visibility", sub="All Detection Off", type="impact"),
+                    ],
                 )
             )
             break  # One chain per account is enough
@@ -461,6 +507,11 @@ def _detect_admin_no_mfa(
             priority_fix=f"Enable MFA for '{no_mfa[0].resource_id}' (effort: LOW).",
             mitre_refs=["T1078.004", "T1110"],
             resources=[admin[0].resource_id, no_mfa[0].resource_id],
+            viz_steps=[
+                VizStep(label=no_mfa[0].resource_id, sub="No MFA", type="identity", edge_label="has access to"),
+                VizStep(label=admin[0].resource_id, sub="Admin Policy", type="identity", edge_label="grants"),
+                VizStep(label="Account Takeover", sub="Password = Full Access", type="impact"),
+            ],
         )
     )
     return chains
@@ -495,6 +546,16 @@ def _detect_open_unmonitored_network(
                     priority_fix=f"Restrict {f.resource_id} to specific ports (effort: LOW).",
                     mitre_refs=["T1190", "T1562.008"],
                     resources=[f.resource_id, flow_f.resource_id],
+                    viz_steps=[
+                        VizStep(label="Internet", sub="Entry Point", type="internet", edge_label="all traffic"),
+                        VizStep(
+                            label=f.resource_id, sub="Security Group (open)", type="network", edge_label="no logging"
+                        ),
+                        VizStep(
+                            label="VPC Flow Logs", sub=f"Disabled ({f.region})", type="finding", edge_label="invisible"
+                        ),
+                        VizStep(label="Unmonitored Access", sub="No Network Logs", type="impact"),
+                    ],
                 )
             )
             break  # One per region is enough
@@ -533,6 +594,17 @@ def _detect_no_network_layers(
                     priority_fix=f"Restrict security group {sg_f.resource_id} (effort: LOW).",
                     mitre_refs=["T1190", "T1562.008"],
                     resources=[f.resource_id, sg_f.resource_id],
+                    viz_steps=[
+                        VizStep(label="Internet", sub="Entry Point", type="internet", edge_label="unrestricted"),
+                        VizStep(label=f.resource_id, sub="NACL (open)", type="network", edge_label="no filtering"),
+                        VizStep(
+                            label=sg_f.resource_id, sub="Security Group (open)", type="network", edge_label="no logging"
+                        ),
+                        VizStep(
+                            label="VPC Flow Logs", sub=f"Disabled ({f.region})", type="finding", edge_label="invisible"
+                        ),
+                        VizStep(label="Layered Failure", sub="All Defenses Down", type="impact"),
+                    ],
                 )
             )
             break
@@ -572,6 +644,13 @@ def _detect_exposed_db_no_trail(
                     priority_fix=f"Disable public access on '{f.resource_id}' (effort: LOW).",
                     mitre_refs=["T1190", "T1530", "T1562.008"],
                     resources=[f.resource_id],
+                    viz_steps=[
+                        VizStep(label="Internet", sub="Entry Point", type="internet", edge_label="public endpoint"),
+                        VizStep(label=f.resource_id, sub="RDS (public)", type="storage", edge_label="reads data"),
+                        VizStep(label=enc_f.resource_id, sub="Unencrypted", type="storage", edge_label="no audit"),
+                        VizStep(label="CloudTrail", sub="Disabled", type="finding", edge_label="undetected"),
+                        VizStep(label="Invisible Breach", sub="Data Exfiltration", type="impact"),
+                    ],
                 )
             )
     return chains
@@ -608,6 +687,13 @@ def _detect_container_breakout(
                     priority_fix="Disable privileged mode on task definitions (effort: MEDIUM).",
                     mitre_refs=["T1611", "T1059"],
                     resources=[f.resource_id, exec_f.resource_id],
+                    viz_steps=[
+                        VizStep(
+                            label="ECS Task", sub=f"Privileged ({f.region})", type="compute", edge_label="exec enabled"
+                        ),
+                        VizStep(label="ECS Exec", sub="Interactive Shell", type="compute", edge_label="breaks out"),
+                        VizStep(label="Host Escape", sub="Container Breakout", type="impact"),
+                    ],
                 )
             )
             break
@@ -642,6 +728,11 @@ def _detect_unmonitored_containers(
                     priority_fix="Enable CloudWatch logging on task definitions (effort: LOW).",
                     mitre_refs=["T1059", "T1562.008"],
                     resources=[f.resource_id, exec_f.resource_id],
+                    viz_steps=[
+                        VizStep(label="ECS Exec", sub=f"Enabled ({f.region})", type="compute", edge_label="no logs"),
+                        VizStep(label="Container Logs", sub="Disabled", type="finding", edge_label="invisible"),
+                        VizStep(label="Ghost Access", sub="Untraced Sessions", type="impact"),
+                    ],
                 )
             )
             break
@@ -677,6 +768,15 @@ def _detect_plaintext_secrets(
                     priority_fix="Migrate SSM parameters to SecureString (effort: LOW).",
                     mitre_refs=["T1552.001"],
                     resources=[f.resource_id, lam_f.resource_id],
+                    viz_steps=[
+                        VizStep(
+                            label="SSM Parameters", sub=f"Plaintext ({f.region})", type="storage", edge_label="exposed"
+                        ),
+                        VizStep(
+                            label="Lambda Env Vars", sub=f"Secrets ({f.region})", type="compute", edge_label="readable"
+                        ),
+                        VizStep(label="Credential Leak", sub="Multi-Service Exposure", type="impact"),
+                    ],
                 )
             )
             break
@@ -713,6 +813,14 @@ def _detect_cicd_data_exfil(
                     priority_fix="Add 'sub' condition to the trust policy (effort: LOW).",
                     mitre_refs=["T1078.004", "T1530"],
                     resources=[f.resource_id],
+                    viz_steps=[
+                        VizStep(
+                            label="Any CI/CD Repo", sub="OIDC (no sub)", type="internet", edge_label="assumes role"
+                        ),
+                        VizStep(label=role_name, sub="IAM Role", type="identity", edge_label="S3 access"),
+                        VizStep(label="S3 Buckets", sub="Read/Write", type="storage", edge_label="exfiltrates"),
+                        VizStep(label="Data Exfiltration", sub="S3 Data Stolen", type="impact"),
+                    ],
                 )
             )
     return chains
@@ -746,6 +854,14 @@ def _detect_cicd_lateral_movement(
                     priority_fix="Add 'sub' condition to the trust policy (effort: LOW).",
                     mitre_refs=["T1078.004", "T1021"],
                     resources=[f.resource_id],
+                    viz_steps=[
+                        VizStep(
+                            label="Any CI/CD Repo", sub="OIDC (no sub)", type="internet", edge_label="assumes role"
+                        ),
+                        VizStep(label=role_name, sub="IAM Role", type="identity", edge_label="compute access"),
+                        VizStep(label="EC2 / ECS", sub="Launch/Access", type="compute", edge_label="moves laterally"),
+                        VizStep(label="Lateral Movement", sub="Compute Compromised", type="impact"),
+                    ],
                 )
             )
     return chains
@@ -779,6 +895,11 @@ def _detect_root_keys_no_trail(
             priority_fix="Delete root access keys immediately (effort: LOW).",
             mitre_refs=["T1078.004", "T1562.008"],
             resources=["root", "cloudtrail"],
+            viz_steps=[
+                VizStep(label="Root Access Keys", sub="Active", type="identity", edge_label="no audit trail"),
+                VizStep(label="CloudTrail", sub="Disabled", type="finding", edge_label="undetected"),
+                VizStep(label="Unrestricted Access", sub="Root + No Logs", type="impact"),
+            ],
         )
     )
     return chains
@@ -810,6 +931,12 @@ def _detect_admin_no_mfa_no_alarm(
             priority_fix=f"Enable MFA for '{no_mfa[0].resource_id}' (effort: LOW).",
             mitre_refs=["T1078.004", "T1110", "T1562.008"],
             resources=[admin[0].resource_id, no_mfa[0].resource_id],
+            viz_steps=[
+                VizStep(label=no_mfa[0].resource_id, sub="No MFA", type="identity", edge_label="escalates to"),
+                VizStep(label=admin[0].resource_id, sub="Admin Policy", type="identity", edge_label="no alarm"),
+                VizStep(label="Root Alarm", sub="Not Configured", type="finding", edge_label="undetected"),
+                VizStep(label="Silent Escalation", sub="Admin Without Alerts", type="impact"),
+            ],
         )
     )
     return chains
@@ -843,6 +970,16 @@ def _detect_default_sg_no_flow_logs(
                     priority_fix=f"Remove rules from default SG {f.resource_id} (effort: LOW).",
                     mitre_refs=["T1190", "T1562.008"],
                     resources=[f.resource_id, flow_f.resource_id],
+                    viz_steps=[
+                        VizStep(
+                            label=f.resource_id,
+                            sub=f"Default SG ({f.region})",
+                            type="network",
+                            edge_label="allows traffic",
+                        ),
+                        VizStep(label="VPC Flow Logs", sub="Disabled", type="finding", edge_label="unmonitored"),
+                        VizStep(label="Shadow Access", sub="Default + No Logs", type="impact"),
+                    ],
                 )
             )
             break
@@ -874,6 +1011,16 @@ def _detect_oidc_no_analyzer(
             priority_fix="Enable IAM Access Analyzer and add 'sub' condition (effort: LOW).",
             mitre_refs=["T1078.004", "T1550.001"],
             resources=[oidc[0].resource_id],
+            viz_steps=[
+                VizStep(
+                    label=_role_name_from_arn(oidc[0].resource_id),
+                    sub="OIDC (no sub)",
+                    type="identity",
+                    edge_label="external access",
+                ),
+                VizStep(label="Access Analyzer", sub="Not Enabled", type="finding", edge_label="not detected"),
+                VizStep(label="Blind External Access", sub="No Analysis", type="impact"),
+            ],
         )
     )
     return chains
