@@ -400,7 +400,10 @@ def scan(
     ] = None,
     compliance: Annotated[
         str | None,
-        typer.Option("--compliance", help="Compliance framework: cis_aws_v3 (more coming soon)"),
+        typer.Option(
+            "--compliance",
+            help="Compliance framework ID (e.g., cis_aws_v3, soc2_type2).",
+        ),
     ] = None,
 ) -> None:
     """Scan cloud infrastructure and generate an audit report."""
@@ -747,7 +750,7 @@ def list_frameworks_cmd() -> None:
 
 @app.command(name="show-framework")
 def show_framework_cmd(
-    framework_id: Annotated[str, typer.Argument(help="Framework ID (e.g., cis_aws_v3)")],
+    framework_id: Annotated[str, typer.Argument(help="Framework ID (e.g., cis_aws_v3, soc2_type2)")],
 ) -> None:
     """Show controls for a compliance framework (no scan needed)."""
     from cloud_audit.compliance import load_framework

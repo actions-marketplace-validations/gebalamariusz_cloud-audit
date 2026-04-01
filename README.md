@@ -33,6 +33,7 @@
   <a href="https://haitmg.pl/cloud-audit/">Documentation</a> -
   <a href="https://haitmg.pl/cloud-audit/getting-started/quick-start/">Quick Start</a> -
   <a href="https://haitmg.pl/cloud-audit/compliance/cis-aws-v3/">CIS AWS v3.0</a> -
+  <a href="https://haitmg.pl/cloud-audit/compliance/soc2-type2/">SOC 2</a> -
   <a href="https://haitmg.pl/cloud-audit/features/attack-chains/">Attack Chains</a> -
   <a href="https://haitmg.pl/cloud-audit/features/mcp-server/">MCP Server</a>
 </p>
@@ -127,9 +128,12 @@ Exit code 0 = no new findings, 1 = regression. See [daily-scan-with-diff.yml](ex
 
 ### CIS AWS v3.0 Compliance
 
-Built-in compliance engine for the CIS Amazon Web Services Foundations Benchmark v3.0.0. 55 of 62 recommendations are automated (7 require manual review). Each control has evidence templates for auditors and per-control remediation guidance.
+Built-in compliance engine with per-control evidence, readiness scoring, and auditor-ready reports.
 
-Planned: SOC 2, ISO 27001, BSI C5, HIPAA, NIS2.
+- **CIS AWS v3.0** - 62 controls, 55 automated (89%)
+- **SOC 2 Type II** - 43 criteria, 24 automated (56%)
+
+Planned: BSI C5, ISO 27001, HIPAA, NIS2.
 
 ### Breach Cost Estimation
 
@@ -156,6 +160,7 @@ claude mcp add cloud-audit -- uvx --from cloud-audit cloud-audit-mcp
 | Remediation per finding | CIS only | No | Links | **100% (CLI + Terraform)** |
 | Breach cost estimation | No | No | No | **Per finding + chain** |
 | CIS v3.0 compliance engine | Yes | No | No | **62 controls with evidence** |
+| SOC 2 Type II compliance | No | No | No | **43 criteria with evidence** |
 | MCP server (AI agents) | Paid ($99/mo) | No | No | **Free, standalone** |
 
 cloud-audit has fewer checks than Prowler but deeper output per finding: remediation code, attack chain context, cost estimates, and compliance evidence. If you need exhaustive compliance coverage across multiple clouds, Prowler is the better choice. If you need a focused scan that shows how findings combine into real attack paths and tells you exactly how to fix each one, cloud-audit is built for that.

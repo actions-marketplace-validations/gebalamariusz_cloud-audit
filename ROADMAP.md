@@ -1,6 +1,6 @@
 # Roadmap
 
-> Current version: **v1.1.0** (March 2026)
+> Current version: **v1.2.0** (April 2026)
 
 ## Completed
 
@@ -104,15 +104,23 @@
 - MkDocs documentation site (25 pages) at haitmg.pl/cloud-audit/
 - 303 tests passing
 
+### v1.2.0 -- SOC 2 Type II Compliance (April 2026)
+- **SOC 2 Type II** compliance mapping -- 43 Trust Services Criteria (AICPA 2017, revised 2022), 24 automated, 19 manual
+- `--compliance soc2_type2` CLI flag with readiness scoring
+- SOC 2 compliance HTML and Markdown reports (auditor-ready)
+- 78 of 80 checks mapped across 12 SOC 2 categories
+- 20 attack chain rules mapped to SOC 2 controls
+- SOC 2 documentation page
+- 335 tests passing
+
 ## What's Next
 
-### v1.2.0 - Multi-Framework Compliance
-- **SOC 2 Type II** compliance mapping (64 Trust Services Criteria)
+### v1.3.0 - Multi-Framework Compliance
 - **BSI C5:2020** compliance mapping (121 criteria -- zero open-source competition)
-- **ISO 27001:2022** compliance mapping (93 Annex A controls, bundled with BSI C5)
+- **ISO 27001:2022** compliance mapping (93 Annex A controls)
 - **HIPAA Security Rule** compliance mapping (36 implementation specifications)
 - **NIS2 Directive** compliance mapping (~40 technical measures)
-- Compliance report improvements based on v1.1.0 feedback
+- Compliance report improvements based on feedback
 
 ### v1.3.0 - Automation & Intelligence
 - **Terraform Drift Detection** -- compare scan results against tfstate to find security-relevant drift

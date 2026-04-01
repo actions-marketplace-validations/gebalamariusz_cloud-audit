@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-04-01
+
+### Added
+
+- **SOC 2 Type II compliance framework** - 43 Trust Services Criteria mapped (AICPA 2017, revised 2022), 24 automated, 19 manual
+- `--compliance soc2_type2` CLI flag - run SOC 2 readiness assessment alongside security scan
+- SOC 2 compliance HTML and Markdown reports with per-control PASS/FAIL, evidence statements, and remediation
+- 78 of 80 checks mapped to SOC 2 criteria across 12 categories (CC1-CC9, A1, C1, PI1)
+- 20 attack chain rules mapped to SOC 2 controls they would violate
+- SOC 2 documentation page in MkDocs site
+- 32 new tests for SOC 2 framework validation
+
+### Changed
+
+- `--compliance` help text now references both `cis_aws_v3` and `soc2_type2`
+- `show-framework` help text updated with SOC 2 example
+- Compliance overview docs updated with SOC 2 as available
+
 ## [1.1.0] - 2026-03-27
 
 ### Added
