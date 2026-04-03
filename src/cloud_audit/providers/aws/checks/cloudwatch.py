@@ -489,6 +489,78 @@ def _make_monitoring_check(check_def: dict[str, Any]) -> Any:
     return _check
 
 
+def check_log_group_kms_encryption(provider: AWSProvider) -> CheckResult:
+    """Check if security-relevant CloudWatch log groups are encrypted with KMS."""
+    result = CheckResult(check_id="aws-cw-016", check_name="CloudWatch log group KMS encryption")
+
+    # Only check log groups with security-relevant names
+    security_keywords = ("cloudtrail", "vpc")
+
+    try:
+        for region in provider.regions:
+            logs = provider.session.client("logs", region_name=region)
+            paginator = logs.get_paginator("describe_log_groups")
+
+            try:
+                for page in paginator.paginate():
+                    for lg in page.get("logGroups", []):
+                        lg_name = lg.get("logGroupName", "")
+                        lg_lower = lg_name.lower()
+
+                        # Only check security-relevant log groups
+                        if not any(kw in lg_lower for kw in security_keywords):
+                            continue
+
+                        result.resources_scanned += 1
+
+                        if not lg.get("kmsKeyId"):
+                            result.findings.append(
+                                Finding(
+                                    check_id="aws-cw-016",
+                                    title=f"Log group '{lg_name}' is not encrypted with KMS",
+                                    severity=Severity.MEDIUM,
+                                    category=Category.SECURITY,
+                                    resource_type="AWS::Logs::LogGroup",
+                                    resource_id=lg_name,
+                                    region=region,
+                                    description=(
+                                        f"CloudWatch log group '{lg_name}' does not use KMS encryption. "
+                                        "Security-relevant log groups (CloudTrail, VPC flow logs) should "
+                                        "be encrypted with a customer-managed KMS key for additional "
+                                        "access control and audit trail."
+                                    ),
+                                    recommendation="Associate a KMS key with the log group to encrypt log data at rest.",
+                                    remediation=Remediation(
+                                        cli=(
+                                            f"aws logs associate-kms-key \\\n"
+                                            f"  --log-group-name '{lg_name}' \\\n"
+                                            f"  --kms-key-id arn:aws:kms:{region}:ACCOUNT_ID:key/KEY_ID \\\n"
+                                            f"  --region {region}"
+                                        ),
+                                        terraform=(
+                                            'resource "aws_cloudwatch_log_group" "this" {\n'
+                                            f'  name              = "{lg_name}"\n'
+                                            "  kms_key_id        = aws_kms_key.logs.arn\n"
+                                            "  retention_in_days = 365\n"
+                                            "}"
+                                        ),
+                                        doc_url="https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html",
+                                        effort=Effort.MEDIUM,
+                                    ),
+                                    compliance_refs=[],
+                                )
+                            )
+            except Exception as exc:
+                error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+                if error_code in ("AccessDeniedException",):
+                    continue
+                raise
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all CloudWatch checks bound to the provider."""
     from cloud_audit.providers.base import make_check
@@ -501,5 +573,9 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
     for check_def in _CIS_MONITORING_CHECKS:
         check_fn = _make_monitoring_check(check_def)
         checks.append(make_check(check_fn, provider, check_id=check_def["check_id"], category=Category.SECURITY))
+
+    checks.append(
+        make_check(check_log_group_kms_encryption, provider, check_id="aws-cw-016", category=Category.SECURITY),
+    )
 
     return checks

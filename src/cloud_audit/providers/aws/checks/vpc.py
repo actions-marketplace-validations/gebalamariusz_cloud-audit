@@ -451,6 +451,93 @@ def check_default_sg_restricts_all(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_vpc_subnet_segmentation(provider: AWSProvider) -> CheckResult:
+    """Check if non-default VPCs have proper public/private subnet segmentation."""
+    result = CheckResult(check_id="aws-vpc-006", check_name="VPC subnet segmentation")
+
+    try:
+        for region in provider.regions:
+            ec2 = provider.session.client("ec2", region_name=region)
+
+            # Get non-default VPCs
+            vpcs = ec2.describe_vpcs(Filters=[{"Name": "is-default", "Values": ["false"]}]).get("Vpcs", [])
+
+            for vpc in vpcs:
+                vpc_id = vpc["VpcId"]
+                name_tag = next(
+                    (t["Value"] for t in vpc.get("Tags", []) if t["Key"] == "Name"),
+                    vpc_id,
+                )
+
+                # Get all subnets for this VPC
+                subnets = ec2.describe_subnets(Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]).get("Subnets", [])
+
+                if not subnets:
+                    continue
+
+                result.resources_scanned += 1
+
+                public_count = 0
+                private_count = 0
+                for subnet in subnets:
+                    if subnet.get("MapPublicIpOnLaunch", False):
+                        public_count += 1
+                    else:
+                        private_count += 1
+
+                # Finding: all subnets are public (no private subnets)
+                if public_count > 0 and private_count == 0:
+                    result.findings.append(
+                        Finding(
+                            check_id="aws-vpc-006",
+                            title=f"VPC '{name_tag}' has only public subnets ({public_count} subnet(s))",
+                            severity=Severity.MEDIUM,
+                            category=Category.SECURITY,
+                            resource_type="AWS::EC2::VPC",
+                            resource_id=vpc_id,
+                            region=region,
+                            description=(
+                                f"VPC {vpc_id} ({name_tag}) in {region} has {public_count} public "
+                                f"subnet(s) but no private subnets. All resources in this VPC receive "
+                                f"public IPs by default, increasing the attack surface. Databases, "
+                                f"application servers, and internal services should run in private subnets."
+                            ),
+                            recommendation="Create private subnets for backend resources and use NAT Gateway for outbound internet access.",
+                            remediation=Remediation(
+                                cli=(
+                                    f"# Create a private subnet:\n"
+                                    f"aws ec2 create-subnet \\\n"
+                                    f"  --vpc-id {vpc_id} \\\n"
+                                    f"  --cidr-block 10.0.128.0/20 \\\n"
+                                    f"  --availability-zone {region}a \\\n"
+                                    f"  --region {region}\n"
+                                    f"# Private subnets do NOT auto-assign public IPs by default"
+                                ),
+                                terraform=(
+                                    "# Add private subnets alongside public ones:\n"
+                                    'resource "aws_subnet" "private" {\n'
+                                    f'  vpc_id                  = "{vpc_id}"\n'
+                                    '  cidr_block              = "10.0.128.0/20"\n'
+                                    f'  availability_zone       = "{region}a"\n'
+                                    "  map_public_ip_on_launch = false\n"
+                                    "\n"
+                                    "  tags = {\n"
+                                    '    Name = "private-subnet"\n'
+                                    "  }\n"
+                                    "}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html",
+                                effort=Effort.MEDIUM,
+                            ),
+                            compliance_refs=[],
+                        )
+                    )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all VPC checks bound to the provider."""
     from cloud_audit.providers.base import make_check
@@ -461,4 +548,5 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
         make_check(check_vpc_flow_logs, provider, check_id="aws-vpc-003", category=Category.SECURITY),
         make_check(check_unrestricted_nacl, provider, check_id="aws-vpc-004", category=Category.SECURITY),
         make_check(check_default_sg_restricts_all, provider, check_id="aws-vpc-005", category=Category.SECURITY),
+        make_check(check_vpc_subnet_segmentation, provider, check_id="aws-vpc-006", category=Category.SECURITY),
     ]

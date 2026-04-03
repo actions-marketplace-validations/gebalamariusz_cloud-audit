@@ -31,7 +31,10 @@
       "level": "",
       "assessment": "Partial",
       "description": "Management establishes, with board oversight, structures, reporting lines, and appropriate authorities and responsibilities in the pursuit of objectives.",
-      "checks": ["aws-iam-005", "aws-iam-010"],
+      "checks": [
+        "aws-iam-005",
+        "aws-iam-010"
+      ],
       "manual_steps": "Review organizational chart, RACI matrices, and role definitions. Automated checks verify that IAM policies enforce separation of duties and that permissions are assigned through groups, not directly to users.",
       "evidence_template": "IAM policies were checked for administrative privilege restrictions and group-based permission assignment. {pass_count}/{total_count} check(s) passed. {findings_summary} Manual review of organizational structures is also required."
     },
@@ -61,9 +64,16 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity obtains or generates and uses relevant, quality information to support the functioning of internal control.",
-      "checks": ["aws-ct-001", "aws-ct-002", "aws-cfg-001", "aws-cfg-002", "aws-account-001"],
+      "checks": [
+        "aws-ct-001",
+        "aws-ct-002",
+        "aws-cfg-001",
+        "aws-cfg-002",
+        "aws-account-001",
+        "aws-ct-008"
+      ],
       "manual_steps": "Verify that CloudTrail and AWS Config provide the quality audit data needed for control decisions, and that security contact is registered for notifications. Manual review of information quality processes is also required.",
-      "evidence_template": "Audit trail and notification infrastructure was verified: CloudTrail multi-region logging and log validation, AWS Config recorder presence and status, security contact registered. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "evidence_template": "Audit trail and notification infrastructure was verified: CloudTrail multi-region logging and log validation, CloudTrail CloudWatch Logs delivery for real-time analysis, AWS Config recorder presence and status, security contact registered. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "CC2.2": {
       "title": "Internally communicates information for internal control",
@@ -101,9 +111,16 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity identifies risks to the achievement of its objectives across the entity and analyzes risks as a basis for determining how the risks should be managed.",
-      "checks": ["aws-gd-001", "aws-gd-002", "aws-sh-001", "aws-iam-012", "aws-iam-011"],
-      "manual_steps": "Automated checks verify that risk identification services (GuardDuty, Security Hub, IAM Access Analyzer) are enabled, findings are addressed, and a support role exists for incident management. Manual review of risk assessment processes and risk register is also required.",
-      "evidence_template": "Automated risk identification services were verified: GuardDuty enabled and findings addressed, Security Hub enabled, IAM Access Analyzer active, support role exists. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "checks": [
+        "aws-gd-001",
+        "aws-gd-002",
+        "aws-sh-001",
+        "aws-iam-012",
+        "aws-iam-011",
+        "aws-inspector-001"
+      ],
+      "manual_steps": "Automated checks verify that risk identification services (GuardDuty, Security Hub, IAM Access Analyzer, Amazon Inspector) are enabled, findings are addressed, and a support role exists for incident management. Manual review of risk assessment processes and risk register is also required.",
+      "evidence_template": "Automated risk identification services were verified: GuardDuty enabled and findings addressed, Security Hub enabled, IAM Access Analyzer active, Amazon Inspector enabled for vulnerability scanning, support role exists. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "CC3.3": {
       "title": "Considers potential for fraud",
@@ -111,7 +128,11 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity considers the potential for fraud in assessing risks to the achievement of objectives.",
-      "checks": ["aws-iam-005", "aws-iam-008", "aws-iam-007"],
+      "checks": [
+        "aws-iam-005",
+        "aws-iam-008",
+        "aws-iam-007"
+      ],
       "manual_steps": "Automated checks verify controls against privileged access abuse: no wildcard admin policies, no root access keys, OIDC trust policies with sub condition. Manual review of fraud risk assessment is also required.",
       "evidence_template": "Privileged access controls were verified: no wildcard admin policies, no root access keys, OIDC trust restrictions in place. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -121,7 +142,12 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity identifies and assesses changes that could significantly impact the system of internal control.",
-      "checks": ["aws-cfg-001", "aws-cfg-002", "aws-cw-005", "aws-cw-009"],
+      "checks": [
+        "aws-cfg-001",
+        "aws-cfg-002",
+        "aws-cw-005",
+        "aws-cw-009"
+      ],
       "manual_steps": "Automated checks verify that change detection services are active: AWS Config records configuration changes, CloudWatch alarms detect CloudTrail and Config modifications. Manual review of change impact assessment processes is also required.",
       "evidence_template": "Change detection infrastructure was verified: AWS Config recorder active, CloudWatch alarms for CloudTrail and Config configuration changes. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -131,7 +157,11 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity selects, develops, and performs ongoing and/or separate evaluations to ascertain whether the components of internal control are present and functioning.",
-      "checks": ["aws-cfg-001", "aws-cfg-002", "aws-sh-001"],
+      "checks": [
+        "aws-cfg-001",
+        "aws-cfg-002",
+        "aws-sh-001"
+      ],
       "manual_steps": "Automated checks verify that continuous evaluation services are enabled: AWS Config continuously evaluates resource compliance, Security Hub aggregates and scores findings. Manual review of evaluation cadence and internal audit processes is also required.",
       "evidence_template": "Continuous evaluation infrastructure was verified: AWS Config recorder active with compliance evaluation, Security Hub enabled for aggregated findings. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -141,7 +171,11 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity evaluates and communicates internal control deficiencies in a timely manner to those parties responsible for taking corrective action.",
-      "checks": ["aws-gd-001", "aws-gd-002", "aws-cw-001"],
+      "checks": [
+        "aws-gd-001",
+        "aws-gd-002",
+        "aws-cw-001"
+      ],
       "manual_steps": "Automated checks verify that deficiency detection and alerting infrastructure is active: GuardDuty detects threats, CloudWatch alarms notify on root account usage. Manual review of escalation procedures and management reporting is also required.",
       "evidence_template": "Deficiency communication infrastructure was verified: GuardDuty enabled and findings addressed, root account usage alarm active. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -161,7 +195,21 @@
       "level": "",
       "assessment": "Automated",
       "description": "The entity selects and develops general control activities over technology to support the achievement of objectives.",
-      "checks": ["aws-iam-001", "aws-iam-002", "aws-iam-006", "aws-kms-001", "aws-kms-002", "aws-s3-001", "aws-s3-002", "aws-ec2-002", "aws-ec2-006", "aws-rds-002", "aws-efs-001", "aws-vpc-002", "aws-vpc-005"],
+      "checks": [
+        "aws-iam-001",
+        "aws-iam-002",
+        "aws-iam-006",
+        "aws-kms-001",
+        "aws-kms-002",
+        "aws-s3-001",
+        "aws-s3-002",
+        "aws-ec2-002",
+        "aws-ec2-006",
+        "aws-rds-002",
+        "aws-efs-001",
+        "aws-vpc-002",
+        "aws-vpc-005"
+      ],
       "manual_steps": "",
       "evidence_template": "Technology controls were verified across IAM (MFA, password policy), encryption (KMS rotation, key policies, RDS, EFS), storage (S3 public access blocks, encryption), compute (EBS encryption), and network (security groups, default SG restrictions). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -171,7 +219,10 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity deploys control activities through policies that establish what is expected and in procedures that put policies into action.",
-      "checks": ["aws-iam-005", "aws-iam-010"],
+      "checks": [
+        "aws-iam-005",
+        "aws-iam-010"
+      ],
       "manual_steps": "Automated checks verify that IAM enforces policy-based controls: no wildcard admin privileges, permissions assigned through groups. Manual review of policy documentation and deployment procedures is also required.",
       "evidence_template": "Policy-based control deployment was verified: IAM policies checked for admin privilege restrictions, group-based permission enforcement. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -181,9 +232,23 @@
       "level": "",
       "assessment": "Automated",
       "description": "The entity implements logical access security software, infrastructure, and architectures over protected information assets to protect them from security events.",
-      "checks": ["aws-iam-001", "aws-iam-002", "aws-iam-006", "aws-iam-015", "aws-kms-001", "aws-kms-002", "aws-s3-001", "aws-s3-002", "aws-ec2-002", "aws-ec2-006", "aws-rds-002", "aws-efs-001"],
+      "checks": [
+        "aws-iam-001",
+        "aws-iam-002",
+        "aws-iam-006",
+        "aws-iam-015",
+        "aws-iam-017",
+        "aws-kms-001",
+        "aws-kms-002",
+        "aws-s3-001",
+        "aws-s3-002",
+        "aws-ec2-002",
+        "aws-ec2-006",
+        "aws-rds-002",
+        "aws-efs-001"
+      ],
       "manual_steps": "",
-      "evidence_template": "Logical access security was verified: MFA enforcement (root and IAM users), password policy strength, KMS key rotation and policies, S3 public access blocks and encryption, EBS/RDS/EFS encryption at rest. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "evidence_template": "Logical access security was verified: MFA enforcement (root and IAM users), password policy strength, IAM role session duration limits, KMS key rotation and policies, S3 public access blocks and encryption, EBS/RDS/EFS encryption at rest. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "CC6.2": {
       "title": "Registers and authorizes users, removes access when no longer needed",
@@ -191,7 +256,12 @@
       "level": "",
       "assessment": "Automated",
       "description": "Prior to issuing system credentials and granting system access, the entity registers and authorizes new users. User system credentials are removed when user access is no longer authorized.",
-      "checks": ["aws-iam-003", "aws-iam-004", "aws-iam-009", "aws-iam-013"],
+      "checks": [
+        "aws-iam-003",
+        "aws-iam-004",
+        "aws-iam-009",
+        "aws-iam-013"
+      ],
       "manual_steps": "",
       "evidence_template": "User lifecycle management was verified: access key rotation within 90 days, unused credentials disabled after 45 days, single active access key per user, expired SSL/TLS certificates removed. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -201,9 +271,18 @@
       "level": "",
       "assessment": "Automated",
       "description": "The entity authorizes, modifies, or removes access to data, software, functions, and other protected information assets based on roles, responsibilities, or system design, applying least privilege and segregation of duties.",
-      "checks": ["aws-iam-005", "aws-iam-007", "aws-iam-008", "aws-iam-010", "aws-iam-014", "aws-iam-016", "aws-ecs-003"],
+      "checks": [
+        "aws-iam-005",
+        "aws-iam-007",
+        "aws-iam-008",
+        "aws-iam-010",
+        "aws-iam-014",
+        "aws-iam-016",
+        "aws-iam-017",
+        "aws-ecs-003"
+      ],
       "manual_steps": "",
-      "evidence_template": "Least privilege and segregation of duties were verified: no wildcard admin policies, OIDC trust with sub condition, no root access keys, group-based permissions, CloudShell access restricted, EC2 instances use IAM roles instead of long-lived access keys, ECS Exec restricted. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "evidence_template": "Least privilege and segregation of duties were verified: no wildcard admin policies, OIDC trust with sub condition, no root access keys, group-based permissions, CloudShell access restricted, IAM role session duration limits checked, EC2 instances use IAM roles instead of long-lived access keys, ECS Exec restricted. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "CC6.4": {
       "title": "Restricts physical access to facilities",
@@ -231,9 +310,23 @@
       "level": "",
       "assessment": "Automated",
       "description": "The entity implements logical access security measures to protect against threats from sources outside its system boundaries.",
-      "checks": ["aws-vpc-002", "aws-vpc-004", "aws-vpc-005", "aws-vpc-001", "aws-vpc-003", "aws-rds-001", "aws-ec2-001", "aws-ec2-004", "aws-lambda-001", "aws-ct-003", "aws-s3-001"],
+      "checks": [
+        "aws-vpc-002",
+        "aws-vpc-004",
+        "aws-vpc-005",
+        "aws-vpc-001",
+        "aws-vpc-003",
+        "aws-vpc-006",
+        "aws-rds-001",
+        "aws-ec2-001",
+        "aws-ec2-004",
+        "aws-lambda-001",
+        "aws-ct-003",
+        "aws-s3-001",
+        "aws-waf-001"
+      ],
       "manual_steps": "",
-      "evidence_template": "Boundary protection was verified: security groups restrict admin ports, NACLs block unrestricted access, default SGs restrict all traffic, default VPC not in use, VPC flow logs enabled, no public RDS/AMIs/Lambda URLs, CloudTrail S3 bucket not public, S3 public access blocked. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "evidence_template": "Boundary protection was verified: security groups restrict admin ports, NACLs block unrestricted access, default SGs restrict all traffic, default VPC not in use, VPC flow logs enabled, VPC subnet isolation (public/private separation) verified, WAFv2 WebACL exists for web application protection, no public RDS/AMIs/Lambda URLs, CloudTrail S3 bucket not public, S3 public access blocked. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "CC6.7": {
       "title": "Protects information during transmission, movement, and removal",
@@ -241,9 +334,23 @@
       "level": "",
       "assessment": "Automated",
       "description": "The entity restricts the transmission, movement, and removal of information to authorized internal and external users and processes, and protects it during transmission, movement, or removal.",
-      "checks": ["aws-s3-006", "aws-s3-007", "aws-s3-002", "aws-rds-002", "aws-ec2-002", "aws-ec2-006", "aws-efs-001", "aws-kms-001", "aws-ct-005", "aws-ssm-002", "aws-lambda-003", "aws-sm-001"],
+      "checks": [
+        "aws-s3-006",
+        "aws-s3-007",
+        "aws-s3-002",
+        "aws-rds-002",
+        "aws-ec2-002",
+        "aws-ec2-006",
+        "aws-efs-001",
+        "aws-kms-001",
+        "aws-ct-005",
+        "aws-cw-016",
+        "aws-ssm-002",
+        "aws-lambda-003",
+        "aws-sm-001"
+      ],
       "manual_steps": "",
-      "evidence_template": "Data protection in transit and at rest was verified: S3 HTTPS enforcement, S3 MFA Delete, storage encryption (S3 KMS, EBS, RDS, EFS), KMS key rotation, CloudTrail log encryption, SSM SecureString parameters, no secrets in Lambda env vars, Secrets Manager rotation. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "evidence_template": "Data protection in transit and at rest was verified: S3 HTTPS enforcement, S3 MFA Delete, storage encryption (S3 KMS, EBS, RDS, EFS), KMS key rotation, CloudTrail log encryption, CloudWatch log group KMS encryption, SSM SecureString parameters, no secrets in Lambda env vars, Secrets Manager rotation. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "CC6.8": {
       "title": "Prevents or detects unauthorized or malicious software",
@@ -251,7 +358,12 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity implements controls to prevent or detect and act upon the introduction of unauthorized or malicious software.",
-      "checks": ["aws-gd-001", "aws-gd-002", "aws-lambda-002", "aws-ecs-001"],
+      "checks": [
+        "aws-gd-001",
+        "aws-gd-002",
+        "aws-lambda-002",
+        "aws-ecs-001"
+      ],
       "manual_steps": "Automated checks verify threat detection (GuardDuty), deprecated runtime detection (Lambda), and container privilege restrictions (ECS). Manual review of endpoint protection, application whitelisting, and malware scanning policies may also be required.",
       "evidence_template": "Unauthorized software controls were verified: GuardDuty threat detection enabled and findings addressed, Lambda deprecated runtimes detected, ECS containers checked for privileged mode. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -261,9 +373,17 @@
       "level": "",
       "assessment": "Automated",
       "description": "The entity uses detection and monitoring procedures to identify changes to configurations that result in the introduction of new vulnerabilities, and susceptibilities to newly discovered vulnerabilities.",
-      "checks": ["aws-sh-001", "aws-cfg-001", "aws-cfg-002", "aws-iam-012", "aws-ssm-001"],
+      "checks": [
+        "aws-sh-001",
+        "aws-cfg-001",
+        "aws-cfg-002",
+        "aws-iam-012",
+        "aws-ssm-001",
+        "aws-ssm-003",
+        "aws-inspector-001"
+      ],
       "manual_steps": "",
-      "evidence_template": "Vulnerability detection and change monitoring was verified: Security Hub enabled, AWS Config recorder active with change tracking, IAM Access Analyzer enabled for external access analysis, EC2 instances managed by SSM for patching. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "evidence_template": "Vulnerability detection and change monitoring was verified: Security Hub enabled, AWS Config recorder active with change tracking, IAM Access Analyzer enabled for external access analysis, EC2 instances managed by SSM for patching, EC2 patch compliance via SSM verified, Amazon Inspector enabled for vulnerability scanning. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "CC7.2": {
       "title": "Monitors for anomalies indicative of malicious acts or errors",
@@ -271,9 +391,31 @@
       "level": "",
       "assessment": "Automated",
       "description": "The entity monitors system components and the operation of those components for anomalies that are indicative of malicious acts, natural disasters, and errors affecting the entity's ability to meet its objectives.",
-      "checks": ["aws-gd-001", "aws-gd-002", "aws-vpc-003", "aws-cw-001", "aws-cw-002", "aws-cw-003", "aws-cw-004", "aws-cw-005", "aws-cw-006", "aws-cw-007", "aws-cw-008", "aws-cw-009", "aws-cw-010", "aws-cw-011", "aws-cw-012", "aws-cw-013", "aws-cw-014", "aws-cw-015", "aws-ecs-002"],
+      "checks": [
+        "aws-gd-001",
+        "aws-gd-002",
+        "aws-vpc-003",
+        "aws-cw-001",
+        "aws-cw-002",
+        "aws-cw-003",
+        "aws-cw-004",
+        "aws-cw-005",
+        "aws-cw-006",
+        "aws-cw-007",
+        "aws-cw-008",
+        "aws-cw-009",
+        "aws-cw-010",
+        "aws-cw-011",
+        "aws-cw-012",
+        "aws-cw-013",
+        "aws-cw-014",
+        "aws-cw-015",
+        "aws-cw-016",
+        "aws-ecs-002",
+        "aws-ct-008"
+      ],
       "manual_steps": "",
-      "evidence_template": "Anomaly monitoring was verified: GuardDuty threat detection enabled, VPC flow logs active, ECS task logging, CloudWatch metric filters and alarms for root usage, unauthorized API calls, MFA-less sign-in, IAM/CloudTrail/Config/S3/SG/NACL/gateway/route/VPC/Organizations changes, auth failures, CMK disable/deletion. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "evidence_template": "Anomaly monitoring was verified: GuardDuty threat detection enabled, VPC flow logs active, ECS task logging, CloudWatch log group KMS encryption, CloudTrail CloudWatch Logs delivery for real-time monitoring, CloudWatch metric filters and alarms for root usage, unauthorized API calls, MFA-less sign-in, IAM/CloudTrail/Config/S3/SG/NACL/gateway/route/VPC/Organizations changes, auth failures, CMK disable/deletion. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "CC7.3": {
       "title": "Evaluates security events for potential incidents",
@@ -281,7 +423,16 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity evaluates security events to determine whether they could or have resulted in a failure of the entity to meet its objectives and, if so, takes actions to prevent or address such failures.",
-      "checks": ["aws-ct-001", "aws-ct-002", "aws-ct-004", "aws-ct-005", "aws-ct-006", "aws-ct-007", "aws-gd-002", "aws-s3-005"],
+      "checks": [
+        "aws-ct-001",
+        "aws-ct-002",
+        "aws-ct-004",
+        "aws-ct-005",
+        "aws-ct-006",
+        "aws-ct-007",
+        "aws-gd-002",
+        "aws-s3-005"
+      ],
       "manual_steps": "Automated checks verify that audit trail infrastructure supports event evaluation: CloudTrail multi-region logging with validation, S3 bucket logging, KMS encryption, object-level logging, S3 access logging, GuardDuty findings addressed. Manual review of event triage and escalation procedures is also required.",
       "evidence_template": "Security event evaluation infrastructure was verified: CloudTrail enabled with log validation, S3 bucket access logging, KMS encryption, object-level write/read logging, S3 access logging enabled, GuardDuty findings addressed. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -311,9 +462,20 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity authorizes, designs, develops or acquires, configures, documents, tests, approves, and implements changes to infrastructure, data, software, and procedures to meet its objectives.",
-      "checks": ["aws-cfg-001", "aws-cfg-002", "aws-cw-005", "aws-cw-009", "aws-cw-010", "aws-cw-011", "aws-cw-012", "aws-cw-013", "aws-cw-014"],
-      "manual_steps": "Automated checks verify change detection: AWS Config tracks configuration changes, CloudWatch alarms detect unauthorized modifications to CloudTrail, Config, security groups, NACLs, gateways, routes, and VPCs. Manual review of change management procedures, approval workflows, and testing requirements is also required.",
-      "evidence_template": "Change detection infrastructure was verified: AWS Config recorder active, CloudWatch alarms for CloudTrail/Config/security group/NACL/gateway/route table/VPC changes. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "checks": [
+        "aws-cfg-001",
+        "aws-cfg-002",
+        "aws-cw-005",
+        "aws-cw-009",
+        "aws-cw-010",
+        "aws-cw-011",
+        "aws-cw-012",
+        "aws-cw-013",
+        "aws-cw-014",
+        "aws-ssm-003"
+      ],
+      "manual_steps": "Automated checks verify change detection: AWS Config tracks configuration changes, CloudWatch alarms detect unauthorized modifications to CloudTrail, Config, security groups, NACLs, gateways, routes, and VPCs, SSM patch compliance tracks system-level changes. Manual review of change management procedures, approval workflows, and testing requirements is also required.",
+      "evidence_template": "Change detection infrastructure was verified: AWS Config recorder active, CloudWatch alarms for CloudTrail/Config/security group/NACL/gateway/route table/VPC changes, SSM patch compliance for managed instances. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "CC9.1": {
       "title": "Identifies and mitigates risks from business disruptions",
@@ -321,7 +483,12 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity identifies, selects, and develops risk mitigation activities for risks arising from potential business disruptions.",
-      "checks": ["aws-rds-003", "aws-s3-003", "aws-rds-004", "aws-ec2-005"],
+      "checks": [
+        "aws-rds-003",
+        "aws-s3-003",
+        "aws-rds-004",
+        "aws-ec2-005"
+      ],
       "manual_steps": "Automated checks verify availability controls: RDS Multi-AZ, S3 versioning, RDS auto minor upgrade, EC2 termination protection. Manual review of business continuity plan, risk mitigation strategies, and disaster recovery procedures is also required.",
       "evidence_template": "Business disruption risk mitigation was verified: RDS Multi-AZ failover, S3 versioning for data protection, RDS auto minor upgrade for patch currency, EC2 termination protection. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -351,9 +518,15 @@
       "level": "",
       "assessment": "Automated",
       "description": "The entity authorizes, designs, develops or acquires, implements, operates, approves, maintains, and monitors environmental protections, software, data backup processes, and recovery infrastructure to meet its objectives.",
-      "checks": ["aws-rds-003", "aws-s3-003", "aws-s3-004", "aws-ec2-005"],
+      "checks": [
+        "aws-rds-003",
+        "aws-s3-003",
+        "aws-s3-004",
+        "aws-ec2-005",
+        "aws-backup-001"
+      ],
       "manual_steps": "",
-      "evidence_template": "Backup and recovery infrastructure was verified: RDS Multi-AZ failover, S3 versioning, S3 lifecycle policies, EC2 termination protection. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "evidence_template": "Backup and recovery infrastructure was verified: RDS Multi-AZ failover, S3 versioning, S3 lifecycle policies, EC2 termination protection, AWS Backup vault with backup plan. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "A1.3": {
       "title": "Tests recovery plan procedures",
@@ -371,7 +544,17 @@
       "level": "",
       "assessment": "Automated",
       "description": "The entity identifies and maintains confidential information to meet the entity's objectives related to confidentiality.",
-      "checks": ["aws-s3-001", "aws-s3-002", "aws-rds-002", "aws-ec2-002", "aws-ec2-006", "aws-efs-001", "aws-kms-001", "aws-kms-002", "aws-sm-001"],
+      "checks": [
+        "aws-s3-001",
+        "aws-s3-002",
+        "aws-rds-002",
+        "aws-ec2-002",
+        "aws-ec2-006",
+        "aws-efs-001",
+        "aws-kms-001",
+        "aws-kms-002",
+        "aws-sm-001"
+      ],
       "manual_steps": "",
       "evidence_template": "Confidentiality controls were verified: S3 public access blocked and encryption enabled, RDS/EBS/EFS encryption at rest, KMS key rotation and policies, Secrets Manager rotation. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -381,7 +564,10 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity disposes of confidential information to meet the entity's objectives related to confidentiality.",
-      "checks": ["aws-s3-004", "aws-sm-002"],
+      "checks": [
+        "aws-s3-004",
+        "aws-sm-002"
+      ],
       "manual_steps": "Automated checks verify data lifecycle controls: S3 lifecycle policies for automated expiration, unused secrets detection. Manual review of data disposal procedures and records is also required.",
       "evidence_template": "Data disposal controls were verified: S3 lifecycle policies for data expiration, unused secrets identified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -431,31 +617,116 @@
       "level": "",
       "assessment": "Partial",
       "description": "The entity implements policies and procedures to store inputs, items in processing, and outputs completely, accurately, and timely in accordance with system specifications.",
-      "checks": ["aws-s3-003", "aws-rds-002", "aws-ec2-002", "aws-kms-001"],
+      "checks": [
+        "aws-s3-003",
+        "aws-rds-002",
+        "aws-ec2-002",
+        "aws-kms-001"
+      ],
       "manual_steps": "Automated checks verify storage integrity controls: S3 versioning protects against accidental deletion/overwrite, RDS and EBS encryption protect data at rest, KMS key rotation ensures encryption key currency. Manual review of data retention policies and storage procedures is also required.",
       "evidence_template": "Data storage integrity controls were verified: S3 versioning enabled, RDS encryption at rest, EBS encryption at rest, KMS key rotation for encryption key currency. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     }
   },
   "attack_chain_mappings": {
-    "AC-01": ["CC6.3", "CC6.6"],
-    "AC-02": ["CC6.6", "CC6.7"],
-    "AC-05": ["CC6.3", "CC6.6"],
-    "AC-07": ["CC6.3", "CC6.6"],
-    "AC-09": ["CC6.1", "CC7.3"],
-    "AC-10": ["CC6.1", "CC7.2"],
-    "AC-11": ["CC7.1", "CC7.2", "CC7.3"],
-    "AC-12": ["CC6.1", "CC6.3"],
-    "AC-13": ["CC6.6", "CC7.2"],
-    "AC-14": ["CC6.6", "CC7.2"],
-    "AC-17": ["CC6.6", "CC6.7", "CC7.3"],
-    "AC-19": ["CC6.8"],
-    "AC-20": ["CC6.3", "CC7.2"],
-    "AC-21": ["CC6.7"],
-    "AC-23": ["CC6.3", "CC6.6"],
-    "AC-24": ["CC6.3", "CC6.6"],
-    "AC-25": ["CC6.1", "CC7.3"],
-    "AC-26": ["CC6.1", "CC6.3", "CC7.2"],
-    "AC-27": ["CC6.6", "CC7.2"],
-    "AC-28": ["CC6.3", "CC7.1"]
+    "AC-01": [
+      "CC6.3",
+      "CC6.6"
+    ],
+    "AC-02": [
+      "CC6.6",
+      "CC6.7"
+    ],
+    "AC-05": [
+      "CC6.3",
+      "CC6.6"
+    ],
+    "AC-07": [
+      "CC6.3",
+      "CC6.6"
+    ],
+    "AC-09": [
+      "CC6.1",
+      "CC7.3"
+    ],
+    "AC-10": [
+      "CC6.1",
+      "CC7.2"
+    ],
+    "AC-11": [
+      "CC7.1",
+      "CC7.2",
+      "CC7.3"
+    ],
+    "AC-12": [
+      "CC6.1",
+      "CC6.3"
+    ],
+    "AC-13": [
+      "CC6.6",
+      "CC7.2"
+    ],
+    "AC-14": [
+      "CC6.6",
+      "CC7.2"
+    ],
+    "AC-17": [
+      "CC6.6",
+      "CC6.7",
+      "CC7.3"
+    ],
+    "AC-19": [
+      "CC6.8"
+    ],
+    "AC-20": [
+      "CC6.3",
+      "CC7.2"
+    ],
+    "AC-21": [
+      "CC6.7"
+    ],
+    "AC-23": [
+      "CC6.3",
+      "CC6.6"
+    ],
+    "AC-24": [
+      "CC6.3",
+      "CC6.6"
+    ],
+    "AC-25": [
+      "CC6.1",
+      "CC7.3"
+    ],
+    "AC-26": [
+      "CC6.1",
+      "CC6.3",
+      "CC7.2"
+    ],
+    "AC-27": [
+      "CC6.6",
+      "CC7.2"
+    ],
+    "AC-28": [
+      "CC6.3",
+      "CC7.1"
+    ],
+    "AC-29": [
+      "CC6.6",
+      "CC7.1"
+    ],
+    "AC-30": [
+      "CC3.2",
+      "CC7.1"
+    ],
+    "AC-31": [
+      "CC6.6",
+      "CC7.2"
+    ],
+    "AC-32": [
+      "CC2.1",
+      "CC7.2"
+    ],
+    "AC-33": [
+      "CC6.6"
+    ]
   }
 }

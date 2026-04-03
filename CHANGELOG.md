@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-04-03
+
+### Added
+
+- **BSI C5:2020 compliance framework** - 134 Cloud Computing Compliance Criteria mapped (20 automated, 37 partial, 77 manual), covering all 17 BSI domains (OIS, SP, HR, AM, PS, OPS, IDM, CRY, COM, PI, DEV, SIM, BCM, COS, INQ, PSS, LOG)
+- **ISO/IEC 27001:2022 compliance framework** - 93 Annex A controls mapped (16 automated, 31 partial, 46 manual), covering Organizational (A.5), People (A.6), Physical (A.7), and Technological (A.8) controls
+- **HIPAA Security Rule compliance framework** - 47 implementation specifications mapped (15 automated, 14 partial, 18 manual) across Administrative (§164.308), Physical (§164.310), and Technical (§164.312) safeguards
+- **NIS2 Directive compliance framework** - 43 technical measures mapped (11 automated, 22 partial, 10 manual) covering Article 21(2)(a)-(j) minimum measures, Article 23 incident reporting, and Article 20 governance
+- `--compliance bsi_c5_2020` CLI flag - BSI C5:2020 readiness assessment
+- `--compliance iso27001_2022` CLI flag - ISO 27001:2022 Annex A readiness assessment
+- `--compliance hipaa_security` CLI flag - HIPAA Security Rule readiness assessment
+- `--compliance nis2_directive` CLI flag - NIS2 Directive readiness assessment
+- All 20 attack chain rules mapped to controls in each new framework
+- **8 new security checks** (80 -> 88 total):
+  - `aws-backup-001` - AWS Backup vault with backup plan (Backup)
+  - `aws-inspector-001` - Amazon Inspector v2 enabled (Inspector)
+  - `aws-waf-001` - WAFv2 WebACL exists (WAF)
+  - `aws-cw-016` - CloudWatch log group KMS encryption (CloudWatch)
+  - `aws-ssm-003` - EC2 patch compliance via SSM (SSM)
+  - `aws-vpc-006` - VPC subnet isolation (VPC)
+  - `aws-iam-017` - IAM role max session duration (IAM)
+  - `aws-ct-008` - CloudTrail delivers to CloudWatch Logs (CloudTrail)
+- **5 new attack chain rules** (20 -> 25 total):
+  - AC-29: Unpatched Instance Exposed to Internet (CRITICAL)
+  - AC-30: Unpatched Instances Without Vulnerability Scanning (HIGH)
+  - AC-31: Internet-Exposed Without WAF or Flow Logs (HIGH)
+  - AC-32: CloudTrail Blind Spot — Alarms Non-Functional (HIGH)
+  - AC-33: All-Public VPC Without Network Segmentation (HIGH)
+- 3 new service modules: AWS Backup, Amazon Inspector, AWS WAF
+- 67 new tests for framework validation (412 total)
+
+### Changed
+
+- Check count: 80 -> 88 across 21 AWS services (was 18)
+- Attack chain count: 20 -> 25 rules
+- `list-frameworks` now shows 6 frameworks (was 2)
+- CLI help text updated with all 6 framework IDs
+- pyproject.toml description updated to reflect 6 compliance frameworks
+- 21 CIS controls corrected from Manual to Partial (had automated checks but wrong assessment type)
+
 ## [1.2.2] - 2026-04-01
 
 ### Added
@@ -401,7 +441,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker image support
 - Rich terminal UI with progress bar and color-coded findings
 
-[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v1.2.2...HEAD
+[Unreleased]: https://github.com/gebalamariusz/cloud-audit/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/gebalamariusz/cloud-audit/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/gebalamariusz/cloud-audit/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/gebalamariusz/cloud-audit/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/gebalamariusz/cloud-audit/compare/v1.1.0...v1.2.0

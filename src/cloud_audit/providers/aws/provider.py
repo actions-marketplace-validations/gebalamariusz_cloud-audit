@@ -10,6 +10,7 @@ from botocore.config import Config
 
 from cloud_audit.providers.aws.checks import (
     account,
+    backup,
     cloudtrail,
     cloudwatch,
     config_,
@@ -19,6 +20,7 @@ from cloud_audit.providers.aws.checks import (
     eip,
     guardduty,
     iam,
+    inspector,
     kms,
     lambda_,
     rds,
@@ -27,6 +29,7 @@ from cloud_audit.providers.aws.checks import (
     securityhub,
     ssm,
     vpc,
+    waf,
 )
 from cloud_audit.providers.base import BaseProvider
 
@@ -55,6 +58,9 @@ _CHECK_MODULES = [
     ssm,
     secrets,
     securityhub,
+    backup,
+    inspector,
+    waf,
 ]
 
 

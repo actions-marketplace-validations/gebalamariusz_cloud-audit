@@ -1,0 +1,1296 @@
+{
+  "framework_id": "iso27001_2022",
+  "framework_name": "ISO/IEC 27001:2022 - Annex A Controls",
+  "version": "2022",
+  "source_url": "https://www.iso.org/standard/27001",
+  "disclaimer": "This report assists with ISO/IEC 27001:2022 Annex A compliance readiness assessment. It does not constitute ISO certification or replace a formal certification audit by an accredited body. This tool automates assessment of technical infrastructure controls; organizational, people, and physical controls require separate evaluation.",
+  "controls": {
+    "A.5.1": {
+      "title": "Policies for information security",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "A set of policies for information security shall be defined, approved by management, published, communicated to and acknowledged by relevant personnel and relevant interested parties, and reviewed at planned intervals or if significant changes occur.",
+      "checks": [],
+      "manual_steps": "Review the information security policy set: existence, management approval, distribution records, acknowledgement logs, and review schedule. Verify policies are reviewed at least annually or after significant changes.",
+      "evidence_template": "A.5.1 requires manual assessment. Review information security policy documentation, approval records, and distribution/acknowledgement logs."
+    },
+    "A.5.2": {
+      "title": "Information security roles and responsibilities",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Information security roles and responsibilities shall be defined and allocated. In AWS, this maps to ensuring IAM permissions are assigned through structured groups/roles rather than directly to individual users.",
+      "checks": [
+        "aws-iam-005",
+        "aws-iam-010"
+      ],
+      "manual_steps": "Automated checks verify that no users have wildcard admin policies and that permissions are assigned through groups, not directly to users. Manual review of organizational security role definitions, RACI matrices, and job descriptions is also required.",
+      "evidence_template": "IAM role structure was verified: no wildcard admin policies, group-based permission assignment enforced. {pass_count}/{total_count} check(s) passed. {findings_summary} Manual review of security role definitions is also required."
+    },
+    "A.5.3": {
+      "title": "Segregation of duties",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Conflicting duties and conflicting areas of responsibility shall be segregated. In AWS, this includes preventing single users from holding both administrative and operational privileges without oversight.",
+      "checks": [
+        "aws-iam-005",
+        "aws-iam-010"
+      ],
+      "manual_steps": "Automated checks verify no wildcard admin policies exist and permissions are group-based. Manual review of duty segregation matrix, role incompatibility rules, and compensating controls for any exceptions is also required.",
+      "evidence_template": "Segregation of duties controls were verified: no wildcard admin policies allowing unrestricted access, permissions assigned through groups. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.4": {
+      "title": "Management responsibilities",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Management shall require all personnel to apply information security in accordance with the established information security policy and topic-specific policies of the organization.",
+      "checks": [],
+      "manual_steps": "Review management directives, security awareness training records, policy compliance monitoring evidence, and disciplinary process documentation.",
+      "evidence_template": "A.5.4 requires manual assessment. Review management directives for information security policy compliance and awareness training records."
+    },
+    "A.5.5": {
+      "title": "Contact with authorities",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "The organization shall establish and maintain contact with relevant authorities. AWS security contact registration ensures AWS can reach the organization for security matters.",
+      "checks": [
+        "aws-account-001"
+      ],
+      "manual_steps": "Automated check verifies a security contact is registered with AWS. Manual review of contact lists for relevant authorities (regulators, law enforcement, CERTs) is also required.",
+      "evidence_template": "AWS security contact registration was verified. {pass_count}/{total_count} check(s) passed. {findings_summary} Manual review of broader authority contact lists is also required."
+    },
+    "A.5.6": {
+      "title": "Contact with special interest groups",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "The organization shall establish and maintain contact with special interest groups or other specialist security forums and professional associations.",
+      "checks": [],
+      "manual_steps": "Review memberships in security forums, ISAC participation, threat intelligence sharing agreements, and professional association memberships.",
+      "evidence_template": "A.5.6 requires manual assessment. Review memberships in security forums, ISACs, and professional associations."
+    },
+    "A.5.7": {
+      "title": "Threat intelligence",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Information relating to information security threats shall be collected and analysed to produce threat intelligence. AWS GuardDuty and Security Hub provide automated threat detection and intelligence.",
+      "checks": [
+        "aws-gd-001",
+        "aws-gd-002",
+        "aws-sh-001"
+      ],
+      "manual_steps": "Automated checks verify that GuardDuty threat detection is enabled and findings are addressed, and Security Hub is active for aggregated threat intelligence. Manual review of threat intelligence processes, sources, and analysis procedures is also required.",
+      "evidence_template": "Threat intelligence services were verified: GuardDuty enabled and findings addressed, Security Hub active for aggregated intelligence. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.8": {
+      "title": "Information security in project management",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Information security shall be integrated into project management regardless of the type of project.",
+      "checks": [],
+      "manual_steps": "Review project management methodology for security integration, security gate reviews, risk assessment templates used in projects, and evidence of security requirements in project charters.",
+      "evidence_template": "A.5.8 requires manual assessment. Review project management methodology for security integration and security gate reviews."
+    },
+    "A.5.9": {
+      "title": "Inventory of information and other associated assets",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "An inventory of information and other associated assets, including owners, shall be identified and maintained. AWS Config provides automated resource inventory and tracking.",
+      "checks": [
+        "aws-cfg-001",
+        "aws-cfg-002"
+      ],
+      "manual_steps": "Automated checks verify AWS Config is enabled and actively recording resource inventory. Manual review of the complete asset inventory, ownership assignments, and classification is also required.",
+      "evidence_template": "AWS Config resource inventory was verified: Config service enabled and recorder active for automated asset discovery. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.10": {
+      "title": "Acceptable use of information and other associated assets",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Rules for the acceptable use of information and other associated assets shall be identified, documented, and implemented.",
+      "checks": [],
+      "manual_steps": "Review acceptable use policy, user acknowledgement records, and enforcement mechanisms. Verify the policy covers cloud resources, data handling, and access to production systems.",
+      "evidence_template": "A.5.10 requires manual assessment. Review acceptable use policy documentation and user acknowledgement records."
+    },
+    "A.5.11": {
+      "title": "Return of assets",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Personnel and other interested parties as appropriate shall return all the organization's assets in their possession upon change or termination of their employment, contract, or agreement.",
+      "checks": [],
+      "manual_steps": "Review offboarding checklists, asset return procedures, and evidence of asset return confirmation for recent departures. Verify cloud access credentials are revoked during offboarding.",
+      "evidence_template": "A.5.11 requires manual assessment. Review offboarding checklists and asset return procedures."
+    },
+    "A.5.12": {
+      "title": "Classification of information",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Information shall be classified according to the information security needs of the organization based on confidentiality, integrity, availability, and relevant interested party requirements.",
+      "checks": [],
+      "manual_steps": "Review information classification scheme, data classification policy, and evidence of classification applied to key data stores (S3 buckets, databases, file shares).",
+      "evidence_template": "A.5.12 requires manual assessment. Review information classification scheme and evidence of applied classifications."
+    },
+    "A.5.13": {
+      "title": "Labelling of information",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "An appropriate set of procedures for information labelling shall be developed and implemented in accordance with the information classification scheme adopted by the organization.",
+      "checks": [],
+      "manual_steps": "Review information labelling procedures, tagging conventions for cloud resources, and evidence of consistent labelling across data stores and documents.",
+      "evidence_template": "A.5.13 requires manual assessment. Review information labelling procedures and resource tagging conventions."
+    },
+    "A.5.14": {
+      "title": "Information transfer",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Information transfer rules, procedures, or agreements shall be in place for all types of transfer facilities. S3 bucket policies enforcing HTTPS ensure secure transfer of data.",
+      "checks": [
+        "aws-s3-006"
+      ],
+      "manual_steps": "Automated check verifies S3 bucket policies deny HTTP (unencrypted) transfers. Manual review of information transfer policies, encryption-in-transit requirements, and data transfer agreements is also required.",
+      "evidence_template": "S3 transfer security was verified: bucket policies deny unencrypted HTTP access. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.15": {
+      "title": "Access control",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Rules to control physical and logical access to information and other associated assets shall be established and implemented based on business and information security requirements.",
+      "checks": [
+        "aws-iam-005",
+        "aws-iam-010",
+        "aws-iam-012",
+        "aws-vpc-002",
+        "aws-vpc-004",
+        "aws-vpc-005"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Access control rules were verified: no wildcard admin policies, group-based permissions, IAM Access Analyzer enabled, security groups restrict open access, NACLs reviewed, default security group rules locked down. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.16": {
+      "title": "Identity management",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "The full life cycle of identities shall be managed. This includes provisioning, review of unused credentials, and timely deprovisioning of access keys and certificates.",
+      "checks": [
+        "aws-iam-003",
+        "aws-iam-004",
+        "aws-iam-009",
+        "aws-iam-013"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Identity lifecycle management was verified: access key rotation within 90 days, unused keys identified after 45 days, no users with multiple active access keys, expired certificates detected. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.17": {
+      "title": "Authentication information",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Allocation and management of authentication information shall be controlled by a management process, including advising personnel on appropriate handling of authentication information.",
+      "checks": [
+        "aws-iam-001",
+        "aws-iam-002",
+        "aws-iam-006",
+        "aws-iam-015",
+        "aws-iam-008",
+        "aws-sm-001"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Authentication controls were verified: root MFA enabled, user MFA enforced, password policy compliant, hardware MFA for root, no root access keys, Secrets Manager rotation enabled. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.18": {
+      "title": "Access rights",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Access rights to information and other associated assets shall be provisioned, reviewed, modified, and removed in accordance with the organization's topic-specific policy on and rules for access control.",
+      "checks": [
+        "aws-iam-005",
+        "aws-iam-010",
+        "aws-iam-004",
+        "aws-iam-012"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Access rights management was verified: no wildcard admin policies, group-based permissions, unused access keys identified, IAM Access Analyzer active for external access review. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.19": {
+      "title": "Information security in supplier relationships",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Processes and procedures shall be defined and implemented to manage the information security risks associated with the use of supplier's products or services.",
+      "checks": [],
+      "manual_steps": "Review supplier security assessment procedures, contractual security requirements, and evidence of supplier risk assessments. Verify third-party access to AWS is governed by OIDC trust policies or cross-account roles with appropriate conditions.",
+      "evidence_template": "A.5.19 requires manual assessment. Review supplier security assessment procedures, contracts, and third-party access governance."
+    },
+    "A.5.20": {
+      "title": "Addressing information security within supplier agreements",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Relevant information security requirements shall be established and agreed with each supplier based on the type of supplier relationship.",
+      "checks": [],
+      "manual_steps": "Review supplier agreements for information security clauses, data processing agreements, right-to-audit provisions, and incident notification requirements.",
+      "evidence_template": "A.5.20 requires manual assessment. Review supplier agreements for security clauses, DPAs, and incident notification requirements."
+    },
+    "A.5.21": {
+      "title": "Managing information security in the ICT supply chain",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Processes and procedures shall be defined and implemented to manage the information security risks associated with the ICT products and services supply chain.",
+      "checks": [],
+      "manual_steps": "Review ICT supply chain security procedures, software composition analysis processes, and vendor security assessment records for cloud service providers and third-party dependencies.",
+      "evidence_template": "A.5.21 requires manual assessment. Review ICT supply chain security procedures and vendor assessment records."
+    },
+    "A.5.22": {
+      "title": "Monitoring, review and change management of supplier services",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "The organization shall regularly monitor, review, evaluate, and manage change in supplier information security practices and service delivery.",
+      "checks": [],
+      "manual_steps": "Review supplier performance monitoring records, periodic security reviews, change notification procedures, and evidence of supplier service level monitoring.",
+      "evidence_template": "A.5.22 requires manual assessment. Review supplier monitoring records, periodic reviews, and change management procedures."
+    },
+    "A.5.23": {
+      "title": "Information security for use of cloud services",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Processes for acquisition, use, management, and exit from cloud services shall be established in accordance with the organization's information security requirements. AWS security posture monitoring is a key component.",
+      "checks": [
+        "aws-ct-001",
+        "aws-cfg-001",
+        "aws-cfg-002",
+        "aws-sh-001",
+        "aws-gd-001",
+        "aws-account-001"
+      ],
+      "manual_steps": "Automated checks verify foundational cloud security services are enabled: CloudTrail for audit logging, AWS Config for resource tracking, Security Hub for posture management, GuardDuty for threat detection, security contact registered. Manual review of cloud service management procedures, exit strategy, and data portability plan is also required.",
+      "evidence_template": "Cloud service security controls were verified: CloudTrail enabled, AWS Config active, Security Hub enabled, GuardDuty active, security contact registered. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.24": {
+      "title": "Information security incident management planning and preparation",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "The organization shall plan and prepare for managing information security incidents by defining, establishing, and communicating information security incident management processes, roles, and responsibilities.",
+      "checks": [
+        "aws-iam-011",
+        "aws-gd-001",
+        "aws-sh-001"
+      ],
+      "manual_steps": "Automated checks verify incident management prerequisites: AWS support role for incident escalation, GuardDuty for threat detection, Security Hub for finding aggregation. Manual review of incident response plan, roles, communication procedures, and tabletop exercise records is also required.",
+      "evidence_template": "Incident management infrastructure was verified: support role exists for escalation, GuardDuty active for detection, Security Hub enabled for finding aggregation. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.25": {
+      "title": "Assessment and decision on information security events",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "The organization shall assess information security events and decide if they are to be categorized as information security incidents.",
+      "checks": [
+        "aws-gd-002"
+      ],
+      "manual_steps": "Automated check verifies GuardDuty findings are triaged (no unresolved high/critical findings). Manual review of event categorization criteria, triage procedures, and incident classification records is also required.",
+      "evidence_template": "Security event assessment was verified: GuardDuty findings triaged with no unresolved high/critical alerts. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.26": {
+      "title": "Response to information security incidents",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Information security incidents shall be responded to in accordance with the documented procedures.",
+      "checks": [],
+      "manual_steps": "Review incident response procedures, evidence of incident response execution, escalation records, and post-incident communication. Verify response procedures are tested periodically.",
+      "evidence_template": "A.5.26 requires manual assessment. Review incident response procedures, execution evidence, and escalation records."
+    },
+    "A.5.27": {
+      "title": "Learning from information security incidents",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Knowledge gained from information security incidents shall be used to strengthen and improve the information security controls.",
+      "checks": [],
+      "manual_steps": "Review post-incident reviews (postmortems), lessons learned documentation, and evidence that findings were incorporated into control improvements and risk assessments.",
+      "evidence_template": "A.5.27 requires manual assessment. Review post-incident reviews, lessons learned, and evidence of control improvements."
+    },
+    "A.5.28": {
+      "title": "Collection of evidence",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "The organization shall establish and implement procedures for the identification, collection, acquisition, and preservation of evidence related to information security events. CloudTrail log integrity validation supports forensic evidence preservation.",
+      "checks": [
+        "aws-ct-001",
+        "aws-ct-002",
+        "aws-ct-005"
+      ],
+      "manual_steps": "Automated checks verify evidence collection infrastructure: CloudTrail enabled for audit trail, log file validation enabled for tamper detection, KMS encryption for log confidentiality. Manual review of evidence handling procedures, chain-of-custody documentation, and forensic readiness plan is also required.",
+      "evidence_template": "Evidence collection infrastructure was verified: CloudTrail enabled, log file validation active for integrity verification, KMS encryption for log confidentiality. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.29": {
+      "title": "Information security during disruption",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "The organization shall plan how to maintain information security at an appropriate level during disruption. Multi-AZ deployments and backup mechanisms support security continuity.",
+      "checks": [
+        "aws-rds-003",
+        "aws-s3-003",
+        "aws-ec2-005"
+      ],
+      "manual_steps": "Automated checks verify continuity controls: RDS Multi-AZ for database failover, S3 versioning for data recovery, EC2 termination protection. Manual review of business continuity plans, security-specific continuity procedures, and BCP testing records is also required.",
+      "evidence_template": "Security continuity controls were verified: RDS Multi-AZ failover, S3 versioning for recovery, EC2 termination protection. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.30": {
+      "title": "ICT readiness for business continuity",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "ICT readiness shall be planned, implemented, maintained, and tested based on business continuity objectives and ICT continuity requirements.",
+      "checks": [
+        "aws-rds-003",
+        "aws-s3-003",
+        "aws-s3-004"
+      ],
+      "manual_steps": "Automated checks verify ICT continuity infrastructure: RDS Multi-AZ for database availability, S3 versioning for object recovery, S3 lifecycle policies for data management. Manual review of ICT continuity plans, RTO/RPO definitions, and DR testing records is also required.",
+      "evidence_template": "ICT continuity infrastructure was verified: RDS Multi-AZ, S3 versioning, S3 lifecycle policies. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.31": {
+      "title": "Legal, statutory, regulatory and contractual requirements",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Legal, statutory, regulatory, and contractual requirements relevant to information security and the organization's approach to meet these requirements shall be identified, documented, and kept up to date.",
+      "checks": [],
+      "manual_steps": "Review register of applicable legal, regulatory, and contractual requirements. Verify compliance obligations are mapped to controls and reviewed periodically for changes.",
+      "evidence_template": "A.5.31 requires manual assessment. Review the register of legal, regulatory, and contractual requirements and compliance mapping."
+    },
+    "A.5.32": {
+      "title": "Intellectual property rights",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "The organization shall implement appropriate procedures to protect intellectual property rights.",
+      "checks": [],
+      "manual_steps": "Review IP protection procedures, software license management, source code protection controls, and employee IP agreements.",
+      "evidence_template": "A.5.32 requires manual assessment. Review intellectual property protection procedures and license management."
+    },
+    "A.5.33": {
+      "title": "Protection of records",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Records shall be protected from loss, destruction, falsification, unauthorized access, and unauthorized release. CloudTrail with integrity validation and encryption protects audit records.",
+      "checks": [
+        "aws-ct-001",
+        "aws-ct-002",
+        "aws-ct-003",
+        "aws-ct-005",
+        "aws-s3-007"
+      ],
+      "manual_steps": "Automated checks verify record protection: CloudTrail enabled, log validation for tamper detection, CloudTrail S3 bucket not public, KMS encryption for confidentiality, MFA Delete on S3 for deletion protection. Manual review of record retention policy, classification of records, and access restrictions is also required.",
+      "evidence_template": "Record protection controls were verified: CloudTrail active, log validation enabled, S3 bucket access restricted, KMS encryption, MFA Delete. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.34": {
+      "title": "Privacy and protection of personal information",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "The organization shall identify and meet the requirements regarding the preservation of privacy and protection of personal information as required in applicable laws, regulations, and contractual requirements.",
+      "checks": [],
+      "manual_steps": "Review privacy policy, data protection impact assessments, data processing records, consent management procedures, and data subject rights processes.",
+      "evidence_template": "A.5.34 requires manual assessment. Review privacy policies, DPIAs, data processing records, and consent management."
+    },
+    "A.5.35": {
+      "title": "Independent review of information security",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "The organization's approach to managing information security and its implementation, including people, processes, and technologies, shall be reviewed independently at planned intervals or when significant changes occur.",
+      "checks": [],
+      "manual_steps": "Review independent audit reports, penetration test results, third-party assessment reports, and evidence of management response to review findings.",
+      "evidence_template": "A.5.35 requires manual assessment. Review independent audit reports, penetration test results, and management responses."
+    },
+    "A.5.36": {
+      "title": "Compliance with policies, rules and standards for information security",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Compliance with the organization's information security policy, topic-specific policies, rules, and standards shall be regularly reviewed. Automated security posture tools assist with continuous compliance monitoring.",
+      "checks": [
+        "aws-cfg-001",
+        "aws-cfg-002",
+        "aws-sh-001"
+      ],
+      "manual_steps": "Automated checks verify compliance monitoring infrastructure: AWS Config for configuration compliance, Security Hub for posture assessment. Manual review of compliance review schedule, self-assessment records, and corrective action tracking is also required.",
+      "evidence_template": "Compliance monitoring infrastructure was verified: AWS Config enabled and recording, Security Hub active. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.5.37": {
+      "title": "Documented operating procedures",
+      "section": "A.5 - Organizational Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Operating procedures for information processing facilities shall be documented and made available to personnel who need them.",
+      "checks": [],
+      "manual_steps": "Review documented operating procedures for cloud infrastructure, change management procedures, incident handling runbooks, and backup/restore procedures. Verify procedures are accessible to relevant personnel.",
+      "evidence_template": "A.5.37 requires manual assessment. Review documented operating procedures and verify accessibility to relevant personnel."
+    },
+    "A.6.1": {
+      "title": "Screening",
+      "section": "A.6 - People Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Background verification checks on all candidates to become personnel shall be carried out prior to joining the organization and on an ongoing basis, taking into account applicable laws, regulations, and ethics.",
+      "checks": [],
+      "manual_steps": "Review background check policy, screening procedures, evidence of pre-employment checks for recent hires, and ongoing screening schedule where applicable.",
+      "evidence_template": "A.6.1 requires manual assessment. Review background check policy and evidence of pre-employment screening."
+    },
+    "A.6.2": {
+      "title": "Terms and conditions of employment",
+      "section": "A.6 - People Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "The employment contractual agreements shall state the personnel's and the organization's responsibilities for information security.",
+      "checks": [],
+      "manual_steps": "Review employment contracts for information security clauses, confidentiality agreements, acceptable use acknowledgements, and post-termination obligations.",
+      "evidence_template": "A.6.2 requires manual assessment. Review employment contracts for information security clauses and confidentiality agreements."
+    },
+    "A.6.3": {
+      "title": "Information security awareness, education and training",
+      "section": "A.6 - People Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Personnel of the organization and relevant interested parties shall receive appropriate information security awareness, education, and training, and regular updates of the organization's information security policy, topic-specific policies and procedures.",
+      "checks": [],
+      "manual_steps": "Review security awareness training program, training completion records, phishing simulation results, and evidence of ongoing security education for all personnel.",
+      "evidence_template": "A.6.3 requires manual assessment. Review security awareness training program, completion records, and phishing simulation results."
+    },
+    "A.6.4": {
+      "title": "Disciplinary process",
+      "section": "A.6 - People Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "A disciplinary process shall be formalized and communicated to take actions against personnel and other relevant interested parties who have committed an information security policy violation.",
+      "checks": [],
+      "manual_steps": "Review disciplinary policy for security violations, communication records, and evidence of proportionate enforcement.",
+      "evidence_template": "A.6.4 requires manual assessment. Review disciplinary process documentation and communication records."
+    },
+    "A.6.5": {
+      "title": "Responsibilities after termination or change of employment",
+      "section": "A.6 - People Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Information security responsibilities and duties that remain valid after termination or change of employment shall be defined, enforced, and communicated to relevant personnel and other interested parties. Timely revocation of unused access keys supports offboarding.",
+      "checks": [
+        "aws-iam-004"
+      ],
+      "manual_steps": "Automated check identifies unused access keys (>45 days) indicating potential incomplete offboarding. Manual review of offboarding procedures, access revocation checklists, and post-termination obligation documentation is also required.",
+      "evidence_template": "Access key lifecycle was verified: unused keys older than 45 days identified for potential offboarding gaps. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.6.6": {
+      "title": "Confidentiality or non-disclosure agreements",
+      "section": "A.6 - People Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Confidentiality or non-disclosure agreements reflecting the organization's needs for the protection of information shall be identified, documented, regularly reviewed, and signed by personnel and other relevant interested parties.",
+      "checks": [],
+      "manual_steps": "Review NDA templates, signed NDA records, review schedule, and coverage of contractors and third-party personnel.",
+      "evidence_template": "A.6.6 requires manual assessment. Review NDA templates, signed records, and review schedule."
+    },
+    "A.6.7": {
+      "title": "Remote working",
+      "section": "A.6 - People Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Security measures shall be implemented when personnel are working remotely to protect information accessed, processed, or stored outside the organization's premises.",
+      "checks": [],
+      "manual_steps": "Review remote working security policy, VPN requirements, endpoint protection standards, and secure access controls for remote connections to cloud resources.",
+      "evidence_template": "A.6.7 requires manual assessment. Review remote working security policy, VPN requirements, and endpoint protection standards."
+    },
+    "A.6.8": {
+      "title": "Information security event reporting",
+      "section": "A.6 - People Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "The organization shall provide a mechanism for personnel to report observed or suspected information security events through appropriate channels in a timely manner.",
+      "checks": [],
+      "manual_steps": "Review security event reporting procedures, reporting channels, escalation paths, and evidence of reported events being acknowledged and tracked.",
+      "evidence_template": "A.6.8 requires manual assessment. Review security event reporting procedures and reporting channel documentation."
+    },
+    "A.7.1": {
+      "title": "Physical security perimeters",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Security perimeters shall be defined and used to protect areas that contain information and other associated assets.",
+      "checks": [],
+      "manual_steps": "Review physical security perimeter definitions, access control systems, and boundary protection measures. Note: AWS manages physical data center security under the shared responsibility model.",
+      "evidence_template": "A.7.1 requires manual assessment. Physical data center security is managed by AWS under the shared responsibility model. Review on-premises physical perimeter controls."
+    },
+    "A.7.2": {
+      "title": "Physical entry",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Secure areas shall be protected by appropriate entry controls and access points.",
+      "checks": [],
+      "manual_steps": "Review physical entry controls, access badge systems, visitor management procedures, and access logs. Note: AWS data center physical entry is managed by AWS.",
+      "evidence_template": "A.7.2 requires manual assessment. Review physical entry controls for offices and on-premises areas."
+    },
+    "A.7.3": {
+      "title": "Securing offices, rooms and facilities",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Physical security for offices, rooms, and facilities shall be designed and implemented.",
+      "checks": [],
+      "manual_steps": "Review physical security measures for offices, server rooms, and facilities housing information processing equipment.",
+      "evidence_template": "A.7.3 requires manual assessment. Review physical security measures for offices and facilities."
+    },
+    "A.7.4": {
+      "title": "Physical security monitoring",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Premises shall be continuously monitored for unauthorized physical access.",
+      "checks": [],
+      "manual_steps": "Review CCTV/surveillance systems, intrusion detection systems, guard schedules, and monitoring procedures for physical access.",
+      "evidence_template": "A.7.4 requires manual assessment. Review physical monitoring systems (CCTV, intrusion detection, guard schedules)."
+    },
+    "A.7.5": {
+      "title": "Protecting against physical and environmental threats",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Protection against physical and environmental threats, such as natural disasters, and other intentional or unintentional physical threats to infrastructure, shall be designed and implemented.",
+      "checks": [],
+      "manual_steps": "Review environmental protection measures (fire suppression, flood protection, temperature control, power conditioning). AWS manages data center environmental controls under shared responsibility.",
+      "evidence_template": "A.7.5 requires manual assessment. Review environmental protection measures for offices and on-premises facilities."
+    },
+    "A.7.6": {
+      "title": "Working in secure areas",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Security measures for working in secure areas shall be designed and implemented.",
+      "checks": [],
+      "manual_steps": "Review secure area working procedures, personnel supervision requirements, and restrictions on electronic devices in secure areas.",
+      "evidence_template": "A.7.6 requires manual assessment. Review secure area working procedures and supervision requirements."
+    },
+    "A.7.7": {
+      "title": "Clear desk and clear screen",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Clear desk rules for papers and removable storage media and clear screen rules for information processing facilities shall be defined and appropriately enforced.",
+      "checks": [],
+      "manual_steps": "Review clear desk/clear screen policy, automated screen lock settings, enforcement evidence from physical audits.",
+      "evidence_template": "A.7.7 requires manual assessment. Review clear desk and clear screen policy and enforcement evidence."
+    },
+    "A.7.8": {
+      "title": "Equipment siting and protection",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Equipment shall be sited securely and protected.",
+      "checks": [],
+      "manual_steps": "Review equipment placement guidelines, cable management, and physical protection for servers and network equipment in on-premises areas.",
+      "evidence_template": "A.7.8 requires manual assessment. Review equipment siting and physical protection measures."
+    },
+    "A.7.9": {
+      "title": "Security of assets off-premises",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Off-site assets shall be protected.",
+      "checks": [],
+      "manual_steps": "Review off-premises asset protection policy, encryption requirements for mobile devices, and tracking procedures for equipment taken outside organizational premises.",
+      "evidence_template": "A.7.9 requires manual assessment. Review off-premises asset protection policy and mobile device encryption requirements."
+    },
+    "A.7.10": {
+      "title": "Storage media",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Storage media shall be managed through their life cycle of acquisition, use, transportation, and disposal in accordance with the organization's classification scheme and handling requirements. Encryption of cloud storage volumes protects data at rest.",
+      "checks": [
+        "aws-ec2-002",
+        "aws-ec2-006",
+        "aws-rds-002",
+        "aws-efs-001"
+      ],
+      "manual_steps": "Automated checks verify encryption of cloud storage media: EBS volumes encrypted, default EBS encryption enabled, RDS encryption at rest, EFS encryption at rest. Manual review of physical media handling, transportation, and disposal procedures is also required.",
+      "evidence_template": "Cloud storage media encryption was verified: EBS volume encryption, default EBS encryption, RDS encryption at rest, EFS encryption at rest. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.7.11": {
+      "title": "Supporting utilities",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Information processing facilities shall be protected from power failures and other disruptions caused by failures in supporting utilities.",
+      "checks": [],
+      "manual_steps": "Review UPS systems, backup power generators, redundant connectivity, and environmental monitoring. AWS manages utility infrastructure for data centers under shared responsibility.",
+      "evidence_template": "A.7.11 requires manual assessment. AWS manages supporting utilities for data centers. Review on-premises utility protection measures."
+    },
+    "A.7.12": {
+      "title": "Cabling security",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Cables carrying power, data, or supporting information services shall be protected from interception, interference, or damage.",
+      "checks": [],
+      "manual_steps": "Review cabling security measures, cable management documentation, and protection against interception for on-premises network cabling.",
+      "evidence_template": "A.7.12 requires manual assessment. Review cabling security measures and cable management documentation."
+    },
+    "A.7.13": {
+      "title": "Equipment maintenance",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Equipment shall be maintained correctly to ensure availability, integrity, and confidentiality of information. In cloud environments, automated patching of managed services and instances addresses this requirement.",
+      "checks": [
+        "aws-rds-004",
+        "aws-lambda-002"
+      ],
+      "manual_steps": "Automated checks verify automated maintenance: RDS auto minor version upgrade, Lambda runtime currency (not deprecated). Manual review of on-premises equipment maintenance schedules and service records is also required.",
+      "evidence_template": "Cloud resource maintenance was verified: RDS auto minor version upgrade enabled, Lambda runtimes not deprecated. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.7.14": {
+      "title": "Secure disposal or re-use of equipment",
+      "section": "A.7 - Physical Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Items of equipment containing storage media shall be verified to ensure that any sensitive data and licensed software has been removed or securely overwritten prior to disposal or re-use.",
+      "checks": [],
+      "manual_steps": "Review secure disposal procedures, data wiping standards, and disposal certificates. AWS manages secure disposal of data center equipment under shared responsibility. Review procedures for decommissioning cloud resources and data deletion.",
+      "evidence_template": "A.7.14 requires manual assessment. Review secure disposal procedures and data wiping standards. AWS manages physical equipment disposal."
+    },
+    "A.8.1": {
+      "title": "User endpoint devices",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Information stored on, processed by, or accessible via user endpoint devices shall be protected. EC2 instance metadata protection and managed instance controls relate to endpoint security in cloud.",
+      "checks": [
+        "aws-ec2-004",
+        "aws-ssm-001"
+      ],
+      "manual_steps": "Automated checks verify cloud endpoint protections: IMDSv2 enforcement prevents SSRF-based credential theft from EC2 instances, SSM management ensures instances are centrally managed. Manual review of endpoint device security policy, MDM configuration, and endpoint protection software is also required.",
+      "evidence_template": "Cloud endpoint protections were verified: IMDSv2 enforcement on EC2 instances, SSM management status. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.2": {
+      "title": "Privileged access rights",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "The allocation and use of privileged access rights shall be restricted and managed. This includes root account protection, admin policy restrictions, and CloudShell access control.",
+      "checks": [
+        "aws-iam-001",
+        "aws-iam-005",
+        "aws-iam-008",
+        "aws-iam-014",
+        "aws-iam-015",
+        "aws-ecs-001"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Privileged access controls were verified: root MFA enabled, no wildcard admin policies, no root access keys, CloudShell access reviewed, root hardware MFA, ECS containers not running privileged. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.3": {
+      "title": "Information access restriction",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Access to information and other associated assets shall be restricted in accordance with the established topic-specific policy on access control.",
+      "checks": [
+        "aws-s3-001",
+        "aws-rds-001",
+        "aws-lambda-001",
+        "aws-ec2-001",
+        "aws-iam-010",
+        "aws-iam-012"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Information access restrictions were verified: no public S3 buckets, no public RDS instances, no public Lambda function URLs, no public AMIs, group-based IAM permissions, Access Analyzer for external access review. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.4": {
+      "title": "Access to source code",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Read and write access to source code, development tools, and software libraries shall be managed appropriately. Lambda environment variable secrets and ECS Exec access relate to protecting application code and runtime.",
+      "checks": [
+        "aws-lambda-003",
+        "aws-ecs-003"
+      ],
+      "manual_steps": "Automated checks verify runtime security: no secrets exposed in Lambda environment variables, ECS Exec access reviewed. Manual review of source code repository access controls, branch protection rules, and code review processes is also required.",
+      "evidence_template": "Application code and runtime security was verified: Lambda environment variables checked for exposed secrets, ECS Exec access reviewed. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.5": {
+      "title": "Secure authentication",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Secure authentication technologies and procedures shall be established and implemented based on information access restrictions and the topic-specific policy on access control.",
+      "checks": [
+        "aws-iam-001",
+        "aws-iam-002",
+        "aws-iam-006",
+        "aws-iam-007",
+        "aws-iam-015",
+        "aws-iam-017"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Secure authentication was verified: root MFA, user MFA enforcement, password policy strength, OIDC trust with sub condition, root hardware MFA, IAM role session duration limits. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.6": {
+      "title": "Capacity management",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "The use of resources shall be monitored and adjusted in line with current and expected capacity requirements. Cost optimization and resource lifecycle management assist with capacity governance.",
+      "checks": [
+        "aws-ec2-003",
+        "aws-eip-001",
+        "aws-s3-004"
+      ],
+      "manual_steps": "Automated checks verify capacity management: stopped EC2 instances identified (wasted capacity), unattached EIPs detected, S3 lifecycle policies for storage management. Manual review of capacity planning processes, resource utilization monitoring, and scaling policies is also required.",
+      "evidence_template": "Capacity management was verified: stopped EC2 instances detected, unattached EIPs identified, S3 lifecycle policies reviewed. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.7": {
+      "title": "Protection against malware",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Protection against malware shall be implemented and supported by appropriate user awareness. GuardDuty provides cloud-native malware and threat detection.",
+      "checks": [
+        "aws-gd-001",
+        "aws-gd-002"
+      ],
+      "manual_steps": "Automated checks verify GuardDuty is enabled for threat and malware detection and findings are addressed. Manual review of endpoint anti-malware solutions, malware awareness training, and application allowlisting is also required.",
+      "evidence_template": "Cloud malware protection was verified: GuardDuty enabled for threat detection, unresolved findings checked. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.8": {
+      "title": "Management of technical vulnerabilities",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Information about technical vulnerabilities of information systems in use shall be obtained, the organization's exposure to such vulnerabilities shall be evaluated, and appropriate measures shall be taken.",
+      "checks": [
+        "aws-lambda-002",
+        "aws-rds-004",
+        "aws-gd-002",
+        "aws-iam-012",
+        "aws-sh-001",
+        "aws-inspector-001",
+        "aws-ssm-003"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Vulnerability management was verified: Lambda runtime currency, RDS auto patching, GuardDuty findings addressed, IAM Access Analyzer active, Security Hub enabled for vulnerability aggregation, Amazon Inspector enabled for continuous vulnerability scanning, EC2 patch compliance via SSM verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.9": {
+      "title": "Configuration management",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Configurations, including security configurations, of hardware, software, services, and networks shall be established, documented, implemented, monitored, and reviewed.",
+      "checks": [
+        "aws-cfg-001",
+        "aws-cfg-002",
+        "aws-vpc-005",
+        "aws-ec2-006",
+        "aws-iam-006"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Configuration management was verified: AWS Config enabled and recording, default security group rules locked down, default EBS encryption enabled, IAM password policy configured. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.10": {
+      "title": "Information deletion",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Information stored in information systems, devices, or in any other storage media shall be deleted when no longer required.",
+      "checks": [
+        "aws-s3-004",
+        "aws-sm-002"
+      ],
+      "manual_steps": "Automated checks verify deletion controls: S3 lifecycle policies for automated data expiration, unused secrets identified for cleanup. Manual review of data retention schedules, deletion procedures, and deletion verification is also required.",
+      "evidence_template": "Information deletion controls were verified: S3 lifecycle policies for data expiration, unused secrets detected. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.11": {
+      "title": "Data masking",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Data masking shall be used in accordance with the organization's topic-specific policy on access control and other related topic-specific policies, and business requirements, taking applicable legislation into consideration.",
+      "checks": [],
+      "manual_steps": "Review data masking policies, implementation of masking in non-production environments, and controls preventing exposure of sensitive data in logs, error messages, and test data.",
+      "evidence_template": "A.8.11 requires manual assessment. Review data masking policies and implementation in non-production environments."
+    },
+    "A.8.12": {
+      "title": "Data leakage prevention",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Data leakage prevention measures shall be applied to systems, networks, and any other devices that process, store, or transmit sensitive information.",
+      "checks": [
+        "aws-s3-001",
+        "aws-s3-005",
+        "aws-s3-006",
+        "aws-rds-001",
+        "aws-lambda-001",
+        "aws-ec2-001",
+        "aws-lambda-003"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Data leakage prevention was verified: no public S3 buckets, S3 access logging enabled, S3 HTTPS enforced, no public RDS instances, no public Lambda URLs, no public AMIs, no secrets in Lambda environment variables. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.13": {
+      "title": "Information backup",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Backup copies of information, software, and systems shall be maintained and regularly tested in accordance with the agreed topic-specific policy on backup.",
+      "checks": [
+        "aws-s3-003",
+        "aws-s3-007",
+        "aws-rds-003",
+        "aws-backup-001"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Backup controls were verified: S3 versioning for object recovery, S3 MFA Delete for backup protection, RDS Multi-AZ for database redundancy, AWS Backup vault with backup plan for centralized backup management. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.14": {
+      "title": "Redundancy of information processing facilities",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Information processing facilities shall be implemented with redundancy sufficient to meet availability requirements.",
+      "checks": [
+        "aws-rds-003"
+      ],
+      "manual_steps": "Automated check verifies RDS Multi-AZ for database redundancy. Manual review of application-level redundancy, load balancing configuration, and multi-region deployment strategy is also required.",
+      "evidence_template": "Processing facility redundancy was verified: RDS Multi-AZ deployment. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.15": {
+      "title": "Logging",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Logs that record activities, exceptions, faults, and other relevant events shall be produced, stored, protected, and analysed.",
+      "checks": [
+        "aws-ct-001",
+        "aws-ct-002",
+        "aws-ct-003",
+        "aws-ct-004",
+        "aws-ct-005",
+        "aws-ct-006",
+        "aws-ct-007",
+        "aws-ct-008",
+        "aws-cw-016",
+        "aws-s3-005",
+        "aws-vpc-003",
+        "aws-ecs-002"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Logging was verified: CloudTrail enabled with log validation, S3 bucket secured, access logging active, KMS encryption, object-level write and read logging, CloudTrail delivers to CloudWatch Logs, CloudWatch log group KMS encryption, S3 bucket access logging, VPC flow logs, ECS task logging. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.16": {
+      "title": "Monitoring activities",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Networks, systems, and applications shall be monitored for anomalous behaviour, and appropriate actions taken to evaluate potential information security incidents.",
+      "checks": [
+        "aws-cw-001",
+        "aws-cw-002",
+        "aws-cw-003",
+        "aws-cw-004",
+        "aws-cw-005",
+        "aws-cw-006",
+        "aws-cw-007",
+        "aws-cw-008",
+        "aws-cw-009",
+        "aws-cw-010",
+        "aws-cw-011",
+        "aws-cw-012",
+        "aws-cw-013",
+        "aws-cw-014",
+        "aws-cw-015",
+        "aws-gd-001"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Monitoring was verified: CloudWatch alarms for root usage, unauthorized API calls, console sign-in without MFA, IAM changes, CloudTrail changes, auth failures, CMK deletion, S3 policy changes, Config changes, security group changes, NACL changes, gateway changes, route table changes, VPC changes, Organizations changes, and GuardDuty threat detection. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.17": {
+      "title": "Clock synchronization",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "The clocks of information processing systems used by the organization shall be synchronized to approved time sources.",
+      "checks": [],
+      "manual_steps": "AWS services use synchronized time sources by default. Verify EC2 instances use the Amazon Time Sync Service or NTP configured to approved time sources. Review NTP configuration for any on-premises systems.",
+      "evidence_template": "A.8.17 requires manual assessment. AWS services use Amazon Time Sync Service. Verify EC2 instance NTP configuration."
+    },
+    "A.8.18": {
+      "title": "Use of privileged utility programs",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "The use of utility programs that might be capable of overriding system and application controls shall be restricted and tightly controlled. CloudShell and ECS Exec provide privileged utility access in AWS.",
+      "checks": [
+        "aws-iam-014",
+        "aws-ecs-003"
+      ],
+      "manual_steps": "Automated checks verify privileged utility controls: CloudShell full access reviewed, ECS Exec access reviewed. Manual review of privileged utility usage policies, access restrictions, and usage logging is also required.",
+      "evidence_template": "Privileged utility access was verified: CloudShell access reviewed, ECS Exec access reviewed. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.19": {
+      "title": "Installation of software on operational systems",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Procedures and measures shall be implemented to securely manage software installation on operational systems. SSM management and EC2 instance role controls support software deployment governance.",
+      "checks": [
+        "aws-ssm-001",
+        "aws-iam-016"
+      ],
+      "manual_steps": "Automated checks verify software management controls: EC2 instances managed through SSM for centralized patching and software deployment, EC2 instances use IAM roles (not embedded credentials). Manual review of software installation policies and change control procedures is also required.",
+      "evidence_template": "Software installation governance was verified: EC2 instances managed through SSM, instance roles assigned. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.20": {
+      "title": "Networks security",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Networks and network devices shall be secured, managed, and controlled to protect information in systems and applications.",
+      "checks": [
+        "aws-vpc-001",
+        "aws-vpc-002",
+        "aws-vpc-003",
+        "aws-vpc-004",
+        "aws-vpc-005"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Network security was verified: default VPC usage reviewed, open security groups identified, VPC flow logs enabled, unrestricted NACLs reviewed, default security group rules locked down. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.21": {
+      "title": "Security of network services",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Security mechanisms, service levels, and service requirements of network services shall be identified, implemented, and monitored.",
+      "checks": [
+        "aws-vpc-002",
+        "aws-vpc-003"
+      ],
+      "manual_steps": "Automated checks verify network service security: security groups restrict open access, VPC flow logs enabled for network traffic monitoring. Manual review of network service agreements, monitoring configurations, and service level definitions is also required.",
+      "evidence_template": "Network service security was verified: security groups reviewed for open access, VPC flow logs enabled. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.22": {
+      "title": "Segregation of networks",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Groups of information services, users, and information systems shall be segregated in the organization's networks.",
+      "checks": [
+        "aws-vpc-001",
+        "aws-vpc-002",
+        "aws-vpc-004",
+        "aws-vpc-005",
+        "aws-vpc-006"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Network segregation was verified: default VPC usage reviewed (non-segmented), security groups restrict cross-group access, NACLs enforced, default security group locked down, VPC subnet isolation (public/private separation) verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.23": {
+      "title": "Web filtering",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Access to external websites shall be managed to reduce exposure to malicious content. WAFv2 WebACLs provide web application layer filtering capabilities in AWS.",
+      "checks": [
+        "aws-waf-001"
+      ],
+      "manual_steps": "Automated check verifies that a WAFv2 WebACL exists for web application filtering. Manual review of web filtering policies, proxy/gateway configurations, URL categorization settings, and evidence of filtering enforcement for user endpoints and cloud workloads is also required.",
+      "evidence_template": "Web filtering infrastructure verified: WAFv2 WebACL exists for web application layer protection. {pass_count}/{total_count} check(s) passed. {findings_summary} Manual review of web filtering policies and proxy/gateway configurations is also required."
+    },
+    "A.8.24": {
+      "title": "Use of cryptography",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Automated",
+      "description": "Rules for the effective use of cryptography, including cryptographic key management, shall be defined and implemented.",
+      "checks": [
+        "aws-s3-002",
+        "aws-ec2-002",
+        "aws-ec2-006",
+        "aws-rds-002",
+        "aws-efs-001",
+        "aws-kms-001",
+        "aws-kms-002",
+        "aws-ct-005",
+        "aws-s3-006"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Cryptography controls were verified: S3 encryption, EBS encryption, default EBS encryption, RDS encryption at rest, EFS encryption, KMS key rotation, KMS key policies, CloudTrail KMS encryption, S3 HTTPS enforcement. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.25": {
+      "title": "Secure development life cycle",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Rules for the secure development of software and systems shall be established and applied.",
+      "checks": [],
+      "manual_steps": "Review secure development lifecycle (SDLC) documentation, security requirements in development standards, secure coding guidelines, and evidence of security activities in each development phase.",
+      "evidence_template": "A.8.25 requires manual assessment. Review SDLC documentation, secure coding guidelines, and security requirements."
+    },
+    "A.8.26": {
+      "title": "Application security requirements",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Information security requirements shall be identified, specified, and approved when developing or acquiring applications. Runtime security configurations in cloud services partially address this.",
+      "checks": [
+        "aws-lambda-003",
+        "aws-ecs-001",
+        "aws-ssm-002"
+      ],
+      "manual_steps": "Automated checks verify application security configurations: no secrets in Lambda environment variables, ECS containers not running privileged, SSM parameters not stored insecurely. Manual review of application security requirements, security architecture reviews, and threat modeling is also required.",
+      "evidence_template": "Application security configurations were verified: Lambda secrets check, ECS privilege restrictions, SSM parameter security. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.27": {
+      "title": "Secure system architecture and engineering principles",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Principles for engineering secure systems shall be established, documented, maintained, and applied to any information system development activity.",
+      "checks": [
+        "aws-vpc-001",
+        "aws-ec2-004",
+        "aws-iam-016",
+        "aws-ecs-001"
+      ],
+      "manual_steps": "Automated checks verify secure architecture principles: no default VPC usage (use purpose-built VPCs), IMDSv2 enforcement (defense-in-depth), EC2 instance roles (not embedded credentials), no privileged containers. Manual review of security architecture standards and engineering principles documentation is also required.",
+      "evidence_template": "Secure architecture principles were verified: purpose-built VPCs, IMDSv2 enforcement, instance roles, non-privileged containers. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.28": {
+      "title": "Secure coding",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Secure coding principles shall be applied to software development. Runtime checks for secrets exposure and deprecated runtimes address a subset of secure coding concerns.",
+      "checks": [
+        "aws-lambda-003",
+        "aws-lambda-002"
+      ],
+      "manual_steps": "Automated checks verify coding security: no secrets exposed in Lambda environment variables, Lambda runtimes are current (not deprecated/unsupported). Manual review of secure coding standards, code review processes, static analysis tools, and dependency scanning is also required.",
+      "evidence_template": "Secure coding practices were verified: Lambda environment variables checked for secrets, Lambda runtime currency verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.29": {
+      "title": "Security testing in development and acceptance",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Security testing processes shall be defined and implemented in the development life cycle.",
+      "checks": [],
+      "manual_steps": "Review security testing procedures, penetration testing reports, DAST/SAST tool configurations, and evidence of security testing in CI/CD pipelines and acceptance criteria.",
+      "evidence_template": "A.8.29 requires manual assessment. Review security testing procedures, penetration testing reports, and CI/CD security testing."
+    },
+    "A.8.30": {
+      "title": "Outsourced development",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "The organization shall direct, monitor, and review the activities related to outsourced system development.",
+      "checks": [],
+      "manual_steps": "Review outsourced development agreements, security requirements in contracts, code review procedures for outsourced code, and evidence of security oversight for third-party developers.",
+      "evidence_template": "A.8.30 requires manual assessment. Review outsourced development agreements and security oversight procedures."
+    },
+    "A.8.31": {
+      "title": "Separation of development, test and production environments",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Development, testing, and production environments shall be separated and secured. AWS account separation and VPC isolation support environment segregation.",
+      "checks": [
+        "aws-vpc-001",
+        "aws-iam-007"
+      ],
+      "manual_steps": "Automated checks verify environment separation indicators: default VPC usage (indicates non-segmented environments), OIDC trust without sub condition (risk of cross-environment access). Manual review of environment separation strategy, account structure, and access controls between environments is also required.",
+      "evidence_template": "Environment separation was verified: default VPC usage reviewed, OIDC trust conditions checked for cross-environment restrictions. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.32": {
+      "title": "Change management",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Partial",
+      "description": "Changes to information processing facilities and information systems shall be subject to change management procedures. CloudTrail and AWS Config provide change audit trails.",
+      "checks": [
+        "aws-ct-001",
+        "aws-ct-006",
+        "aws-cfg-001",
+        "aws-cfg-002"
+      ],
+      "manual_steps": "Automated checks verify change tracking infrastructure: CloudTrail enabled for API change logging, object-level write logging for data changes, AWS Config for configuration change tracking. Manual review of change management procedures, CAB process, and change approval records is also required.",
+      "evidence_template": "Change management infrastructure was verified: CloudTrail for API audit trail, object-level write logging, AWS Config for configuration tracking. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "A.8.33": {
+      "title": "Test information",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Test information shall be appropriately selected, protected, and managed.",
+      "checks": [],
+      "manual_steps": "Review test data management procedures, data anonymization/masking for test environments, and controls preventing production data from being used in test environments without appropriate protection.",
+      "evidence_template": "A.8.33 requires manual assessment. Review test data management procedures and data anonymization controls."
+    },
+    "A.8.34": {
+      "title": "Protection of information systems during audit testing",
+      "section": "A.8 - Technological Controls",
+      "level": "",
+      "assessment": "Manual",
+      "description": "Audit tests and other assurance activities involving assessment of operational systems shall be planned and agreed between the tester and appropriate management.",
+      "checks": [],
+      "manual_steps": "Review audit testing procedures, rules of engagement for penetration testing, impact assessment for audit activities, and controls to minimize disruption to operational systems during testing.",
+      "evidence_template": "A.8.34 requires manual assessment. Review audit testing procedures and rules of engagement for security assessments."
+    }
+  },
+  "attack_chain_mappings": {
+    "AC-01": [
+      "A.8.2",
+      "A.8.3",
+      "A.8.20",
+      "A.8.22"
+    ],
+    "AC-02": [
+      "A.8.1",
+      "A.8.3",
+      "A.8.20"
+    ],
+    "AC-05": [
+      "A.8.2",
+      "A.8.5",
+      "A.8.31"
+    ],
+    "AC-07": [
+      "A.8.5",
+      "A.8.2",
+      "A.8.31"
+    ],
+    "AC-09": [
+      "A.5.17",
+      "A.8.2",
+      "A.8.5"
+    ],
+    "AC-10": [
+      "A.8.15",
+      "A.5.33",
+      "A.5.28"
+    ],
+    "AC-11": [
+      "A.8.2",
+      "A.5.3",
+      "A.5.18"
+    ],
+    "AC-12": [
+      "A.8.16",
+      "A.8.15",
+      "A.8.20"
+    ],
+    "AC-13": [
+      "A.8.3",
+      "A.8.12",
+      "A.5.14"
+    ],
+    "AC-14": [
+      "A.5.16",
+      "A.8.2",
+      "A.5.18"
+    ],
+    "AC-17": [
+      "A.8.2",
+      "A.8.27",
+      "A.8.26"
+    ],
+    "AC-19": [
+      "A.8.24",
+      "A.8.4",
+      "A.8.28"
+    ],
+    "AC-20": [
+      "A.8.20",
+      "A.8.22",
+      "A.8.27"
+    ],
+    "AC-21": [
+      "A.8.3",
+      "A.8.12",
+      "A.8.26"
+    ],
+    "AC-23": [
+      "A.8.24",
+      "A.7.10",
+      "A.8.3"
+    ],
+    "AC-24": [
+      "A.5.33",
+      "A.5.28",
+      "A.8.15"
+    ],
+    "AC-25": [
+      "A.5.17",
+      "A.8.2",
+      "A.8.15"
+    ],
+    "AC-26": [
+      "A.8.2",
+      "A.8.16",
+      "A.5.3"
+    ],
+    "AC-27": [
+      "A.8.20",
+      "A.8.22",
+      "A.8.15"
+    ],
+    "AC-28": [
+      "A.5.18",
+      "A.8.3",
+      "A.8.8"
+    ],
+    "AC-29": [
+      "A.8.8",
+      "A.8.20"
+    ],
+    "AC-30": [
+      "A.8.8"
+    ],
+    "AC-31": [
+      "A.8.20",
+      "A.8.23"
+    ],
+    "AC-32": [
+      "A.8.15",
+      "A.8.16"
+    ],
+    "AC-33": [
+      "A.8.22",
+      "A.8.20"
+    ]
+  }
+}

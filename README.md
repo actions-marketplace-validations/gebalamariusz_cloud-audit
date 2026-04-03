@@ -74,7 +74,7 @@ cloud-audit demo
 Findings by severity:  CRITICAL: 3  HIGH: 8  MEDIUM: 12  LOW: 5
 ```
 
-80 checks across 18 AWS services. Every finding includes AWS CLI + Terraform remediation.
+88 checks across 21 AWS services. Every finding includes AWS CLI + Terraform remediation.
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=5uHoqggmTB8">
@@ -99,15 +99,17 @@ Other scanners give you a flat list of findings. cloud-audit correlates them int
                aws-vpc-002   aws-ec2-004       Detected: AC-01, AC-02
 ```
 
-Examples from the 20 built-in rules:
+Examples from the 25 built-in rules:
 
 | Chain | What it catches |
 |---|---|
 | Internet-Exposed Admin Instance | Public SG + admin IAM role + IMDSv1 = account takeover |
 | CI/CD to Admin Takeover | OIDC without sub condition + admin policy = pipeline hijack |
 | SSRF to Credential Theft | Public instance + IMDSv1 + no VPC flow logs = invisible exfiltration |
+| Unpatched Instance Exposed to Internet | Open SG + missing patches (SSM) = known CVE exploitation |
+| CloudTrail Blind Spot | CloudTrail not delivering to CloudWatch = all 15 CIS alarms non-functional |
 
-Based on [MITRE ATT&CK Cloud](https://attack.mitre.org/matrices/enterprise/cloud/) and [Datadog pathfinding.cloud](https://github.com/DataDog/pathfinding.cloud). [See all 20 rules in the docs](https://haitmg.pl/cloud-audit/features/attack-chains/).
+Based on [MITRE ATT&CK Cloud](https://attack.mitre.org/matrices/enterprise/cloud/) and [Datadog pathfinding.cloud](https://github.com/DataDog/pathfinding.cloud). [See all 25 rules in the docs](https://haitmg.pl/cloud-audit/features/attack-chains/).
 
 ### Copy-Paste Remediation
 
@@ -133,8 +135,10 @@ Built-in compliance engine with per-control evidence, readiness scoring, and aud
 
 - **CIS AWS v3.0** - 62 controls, 55 automated (89%)
 - **SOC 2 Type II** - 43 criteria, 24 automated (56%)
-
-Planned: BSI C5, ISO 27001, HIPAA, NIS2.
+- **BSI C5:2020** - 134 criteria, 57 automated/partial
+- **ISO 27001:2022** - 93 Annex A controls, 47 automated/partial
+- **HIPAA Security Rule** - 47 specs, 29 automated/partial
+- **NIS2 Directive** - 43 measures, 33 automated/partial
 
 ### Breach Cost Estimation
 
@@ -156,15 +160,16 @@ claude mcp add cloud-audit -- uvx --from cloud-audit cloud-audit-mcp
 
 | Feature | Prowler | Trivy | Checkov | cloud-audit |
 |---------|---------|-------|---------|-------------|
-| Checks | 576 | 517 | 2500+ | **80** |
-| Attack chain detection | No | No | No | **20 rules** |
+| Checks | 576 | 517 | 2500+ | **88** |
+| Attack chain detection | No | No | No | **25 rules** |
 | Remediation per finding | CIS only | No | Links | **100% (CLI + Terraform)** |
 | Breach cost estimation | No | No | No | **Per finding + chain** |
 | CIS v3.0 compliance engine | Yes | No | No | **62 controls with evidence** |
 | SOC 2 Type II compliance | No | No | No | **43 criteria with evidence** |
+| Total compliance frameworks | CIS only | — | — | **6 (CIS, SOC 2, BSI C5, ISO 27001, HIPAA, NIS2)** |
 | MCP server (AI agents) | Paid ($99/mo) | No | No | **Free, standalone** |
 
-cloud-audit has fewer checks than Prowler but deeper output per finding: remediation code, attack chain context, cost estimates, and compliance evidence. If you need exhaustive compliance coverage across multiple clouds, Prowler is the better choice. If you need a focused scan that shows how findings combine into real attack paths and tells you exactly how to fix each one, cloud-audit is built for that.
+cloud-audit has fewer checks than Prowler but covers 6 compliance frameworks and deeper output per finding: remediation code, attack chain context, cost estimates, and compliance evidence. If you need exhaustive compliance coverage across multiple clouds, Prowler is the better choice. If you need a focused scan that shows how findings combine into real attack paths and tells you exactly how to fix each one, cloud-audit is built for that.
 
 <sub>Feature snapshot as of March 2026. Verify against upstream docs for the latest details.</sub>
 
@@ -281,12 +286,12 @@ cloud-audit never modifies your infrastructure.
 
 ## What It Checks
 
-80 checks across IAM, S3, EC2, VPC, RDS, EIP, EFS, CloudTrail, GuardDuty, KMS, CloudWatch, Lambda, ECS, SSM, Secrets Manager, AWS Config, Security Hub, and Account.
+88 checks across IAM, S3, EC2, VPC, RDS, EIP, EFS, CloudTrail, GuardDuty, KMS, CloudWatch, Lambda, ECS, SSM, Secrets Manager, AWS Config, Security Hub, Account, AWS Backup, Amazon Inspector, and AWS WAF.
 
 <details>
-<summary>Full check list (80 checks)</summary>
+<summary>Full check list (88 checks)</summary>
 
-### IAM (16 checks)
+### IAM (17 checks)
 
 | ID | Severity | Description |
 |----|----------|-------------|
@@ -306,6 +311,7 @@ cloud-audit never modifies your infrastructure.
 | `aws-iam-014` | Medium | AWSCloudShellFullAccess attached |
 | `aws-iam-015` | Medium | Root uses virtual MFA (not hardware) |
 | `aws-iam-016` | Medium | EC2 instance without IAM role |
+| `aws-iam-017` | Medium | IAM role max session duration exceeds 1 hour |
 
 ### S3 (7 checks)
 
@@ -330,7 +336,7 @@ cloud-audit never modifies your infrastructure.
 | `aws-ec2-005` | Low | EC2 instance without termination protection |
 | `aws-ec2-006` | Medium | EBS default encryption disabled |
 
-### VPC (5 checks)
+### VPC (6 checks)
 
 | ID | Severity | Description |
 |----|----------|-------------|
@@ -339,6 +345,7 @@ cloud-audit never modifies your infrastructure.
 | `aws-vpc-003` | Medium | VPC without flow logs |
 | `aws-vpc-004` | Medium | NACL allows internet access to admin ports |
 | `aws-vpc-005` | Medium | Default security group has active rules |
+| `aws-vpc-006` | Medium | VPC without private subnets (no network segmentation) |
 
 ### RDS (4 checks)
 
@@ -349,7 +356,7 @@ cloud-audit never modifies your infrastructure.
 | `aws-rds-003` | Medium | Single-AZ RDS instance |
 | `aws-rds-004` | Low | RDS auto minor version upgrade disabled |
 
-### CloudTrail (7 checks)
+### CloudTrail (8 checks)
 
 | ID | Severity | Description |
 |----|----------|-------------|
@@ -360,8 +367,9 @@ cloud-audit never modifies your infrastructure.
 | `aws-ct-005` | Medium | CloudTrail not encrypted with KMS |
 | `aws-ct-006` | Medium | S3 object-level write events not logged |
 | `aws-ct-007` | Medium | S3 object-level read events not logged |
+| `aws-ct-008` | Medium | CloudTrail not integrated with CloudWatch Logs |
 
-### CloudWatch (15 checks)
+### CloudWatch (16 checks)
 
 | ID | Severity | Description |
 |----|----------|-------------|
@@ -380,8 +388,9 @@ cloud-audit never modifies your infrastructure.
 | `aws-cw-013` | Medium | No alarm for route table changes |
 | `aws-cw-014` | Medium | No alarm for VPC changes |
 | `aws-cw-015` | Medium | No alarm for Organizations changes |
+| `aws-cw-016` | Medium | CloudWatch log group not encrypted with KMS |
 
-### Other Services (20 checks)
+### Other Services (24 checks)
 
 | ID | Severity | Description |
 |----|----------|-------------|
@@ -399,12 +408,16 @@ cloud-audit never modifies your infrastructure.
 | `aws-ecs-003` | Medium | ECS service with Execute Command enabled |
 | `aws-ssm-001` | Medium | EC2 instance not managed by SSM |
 | `aws-ssm-002` | High | SSM parameter stored as plain String |
+| `aws-ssm-003` | Medium | EC2 instance not patch compliant (SSM) |
 | `aws-sm-001` | Medium | Secret without rotation |
 | `aws-sm-002` | Low | Secret unused for 90+ days |
 | `aws-eip-001` | Low | Unattached Elastic IP |
 | `aws-efs-001` | Medium | EFS file system not encrypted |
 | `aws-sh-001` | Medium | Security Hub not enabled |
 | `aws-account-001` | Medium | No security alternate contact |
+| `aws-backup-001` | Medium | No AWS Backup vault or backup plan |
+| `aws-inspector-001` | Medium | Amazon Inspector v2 not enabled |
+| `aws-waf-001` | Medium | No WAFv2 WebACL in region |
 
 </details>
 
@@ -421,7 +434,7 @@ cloud-audit has grown beyond what a single README can cover. The full documentat
 
 - **[Getting Started](https://haitmg.pl/cloud-audit/getting-started/installation/)** - installation, quick start, demo mode
 - **[Compliance](https://haitmg.pl/cloud-audit/compliance/overview/)** - CIS AWS v3.0 with all 62 controls, planned SOC 2, BSI C5, HIPAA, NIS2
-- **[Attack Chains](https://haitmg.pl/cloud-audit/features/attack-chains/)** - all 20 rules with MITRE ATT&CK references
+- **[Attack Chains](https://haitmg.pl/cloud-audit/features/attack-chains/)** - all 25 rules with MITRE ATT&CK references
 - **[MCP Server](https://haitmg.pl/cloud-audit/features/mcp-server/)** - full setup guide for Claude Code, Cursor, VS Code
 - **[Configuration](https://haitmg.pl/cloud-audit/configuration/config-file/)** - config file, env vars, suppressions
 - **[CI/CD](https://haitmg.pl/cloud-audit/ci-cd/github-actions/)** - GitHub Actions, SARIF, pre-commit hooks
@@ -432,9 +445,10 @@ This README covers the essentials. For compliance framework details, advanced co
 
 ## What's Next
 
-- SOC 2, BSI C5, HIPAA, NIS2 compliance frameworks
+- Root cause grouping ("fix 1 setting, close 12 findings")
+- Historical score tracking for Type II audits
+- Multi-account scanning (AWS Organizations)
 - Terraform drift detection
-- Root cause grouping
 
 Past releases: [CHANGELOG.md](CHANGELOG.md)
 

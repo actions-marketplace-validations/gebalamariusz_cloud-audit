@@ -197,7 +197,7 @@ class TestAttackChainMappings:
     def test_all_chains_mapped(self, soc2_framework: dict) -> None:
         """All 20 attack chains have SOC 2 mappings."""
         chains = soc2_framework.get("attack_chain_mappings", {})
-        assert len(chains) == 20
+        assert len(chains) == 25
 
     def test_chain_ids_valid(self, soc2_framework: dict) -> None:
         """All chain IDs follow AC-NN format."""

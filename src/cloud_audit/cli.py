@@ -402,7 +402,7 @@ def scan(
         str | None,
         typer.Option(
             "--compliance",
-            help="Compliance framework ID (e.g., cis_aws_v3, soc2_type2).",
+            help="Compliance framework ID. Use list-frameworks to see all options.",
         ),
     ] = None,
 ) -> None:
@@ -750,7 +750,7 @@ def list_frameworks_cmd() -> None:
 
 @app.command(name="show-framework")
 def show_framework_cmd(
-    framework_id: Annotated[str, typer.Argument(help="Framework ID (e.g., cis_aws_v3, soc2_type2)")],
+    framework_id: Annotated[str, typer.Argument(help="Framework ID. Use list-frameworks to see all options.")],
 ) -> None:
     """Show controls for a compliance framework (no scan needed)."""
     from cloud_audit.compliance import load_framework

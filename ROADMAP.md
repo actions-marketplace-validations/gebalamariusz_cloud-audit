@@ -1,6 +1,6 @@
 # Roadmap
 
-> Current version: **v1.2.1** (April 2026)
+> Current version: **v1.3.0** (April 2026)
 
 ## Completed
 
@@ -113,18 +113,20 @@
 - SOC 2 documentation page
 - 335 tests passing
 
+### v1.3.0 - Multi-Framework Compliance (April 2026)
+- **BSI C5:2020** compliance framework -- 134 criteria across 17 domains, 20 automated, 37 partial
+- **ISO/IEC 27001:2022** compliance framework -- 93 Annex A controls, 16 automated, 31 partial
+- **HIPAA Security Rule** compliance framework -- 47 implementation specifications (Required + Addressable), 15 automated, 14 partial
+- **NIS2 Directive** compliance framework -- 43 measures covering Article 21(2)(a)-(j), Article 23, Article 20, 11 automated, 22 partial
+- All 20 attack chain rules mapped to each new framework
+- 67 new tests (412 total)
+- 6 compliance frameworks total (was 2)
+
 ## What's Next
 
-### v1.3.0 - Multi-Framework Compliance & Intelligence
-- **BSI C5:2020** compliance mapping (121 criteria -- zero open-source competition)
-- **ISO 27001:2022** compliance mapping (93 Annex A controls)
-- **HIPAA Security Rule** compliance mapping (36 implementation specifications)
-- **NIS2 Directive** compliance mapping (~40 technical measures)
+### v1.4.0 - Intelligence & Enterprise Ready
 - **Root Cause Grouping** -- "fix 1 setting, close 12 findings" for account-level misconfigurations
 - **Historical Score Tracking** -- persistent score history with trends for Type II audits
-- Compliance report improvements based on feedback
-
-### v1.4.0 - Enterprise Ready
 - **Multi-account scanning** -- AWS Organizations support, aggregate attack chains across accounts
 - **Triage command** -- generate suppression YAML from scan results
 - **Performance benchmarks** on accounts of various sizes

@@ -19,9 +19,11 @@
       "title": "Ensure security contact information is registered",
       "section": "1 - Identity and Access Management",
       "level": "L1",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "AWS provides customers with the option to register a security-specific point of contact. The alternate security contact will receive security-related notifications.",
-      "checks": ["aws-account-001"],
+      "checks": [
+        "aws-account-001"
+      ],
       "manual_steps": "Verify the security contact email is monitored and reaches the appropriate security team.",
       "evidence_template": "Security contact registration was checked via AWS Account API. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -41,7 +43,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "The root account has unrestricted access to all AWS resources. Access keys provide programmatic access. Root access keys should be deleted to prevent their use.",
-      "checks": ["aws-iam-008"],
+      "checks": [
+        "aws-iam-008"
+      ],
       "manual_steps": "",
       "evidence_template": "Root account access key existence was verified via IAM GetAccountSummary (AccountAccessKeysPresent). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -51,7 +55,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "The root account is the most privileged user in an AWS account. MFA adds an extra layer of protection on top of a username and password.",
-      "checks": ["aws-iam-001"],
+      "checks": [
+        "aws-iam-001"
+      ],
       "manual_steps": "",
       "evidence_template": "Root MFA status was verified via IAM GetAccountSummary (AccountMFAEnabled). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -59,9 +65,11 @@
       "title": "Ensure hardware MFA is enabled for the 'root' user account",
       "section": "1 - Identity and Access Management",
       "level": "L2",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "Hardware MFA devices provide a higher level of protection than virtual MFA because they cannot be intercepted by phishing or malware on the authenticating device.",
-      "checks": ["aws-iam-015"],
+      "checks": [
+        "aws-iam-015"
+      ],
       "manual_steps": "Verify the MFA device serial number does not contain 'mfa/root-account-mfa-device' (which indicates virtual MFA).",
       "evidence_template": "Root MFA device type was verified via IAM ListVirtualMFADevices. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -81,7 +89,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "Password policies enforce complexity requirements. A minimum length of 14 characters significantly increases brute force resistance.",
-      "checks": ["aws-iam-006"],
+      "checks": [
+        "aws-iam-006"
+      ],
       "manual_steps": "",
       "evidence_template": "IAM password policy was verified via GetAccountPasswordPolicy. MinimumPasswordLength checked against >= 14. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -91,7 +101,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "Password reuse prevention set to 24 or greater ensures users cannot cycle back to recently used passwords.",
-      "checks": ["aws-iam-006"],
+      "checks": [
+        "aws-iam-006"
+      ],
       "manual_steps": "",
       "evidence_template": "IAM password policy PasswordReusePrevention checked against >= 24. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -101,7 +113,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "All IAM users with console access should have MFA enabled to protect against credential theft.",
-      "checks": ["aws-iam-002"],
+      "checks": [
+        "aws-iam-002"
+      ],
       "manual_steps": "",
       "evidence_template": "MFA status was verified for all IAM users with console passwords via GetLoginProfile and ListMFADevices. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -121,7 +135,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "Credentials (passwords and access keys) unused for 45+ days should be disabled to reduce the attack surface.",
-      "checks": ["aws-iam-004"],
+      "checks": [
+        "aws-iam-004"
+      ],
       "manual_steps": "",
       "evidence_template": "Access key last-used dates were verified via GetAccessKeyLastUsed. Threshold: 45 days. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -131,7 +147,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "Each IAM user should have at most one active access key to simplify key management and reduce the window of exposure.",
-      "checks": ["aws-iam-009"],
+      "checks": [
+        "aws-iam-009"
+      ],
       "manual_steps": "",
       "evidence_template": "Active access key count was verified per IAM user via ListAccessKeys. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -141,7 +159,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "Regular key rotation limits the window of exposure if a key is compromised.",
-      "checks": ["aws-iam-003"],
+      "checks": [
+        "aws-iam-003"
+      ],
       "manual_steps": "",
       "evidence_template": "Access key creation dates were verified via IAM Credential Report. Threshold: 90 days. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -151,7 +171,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "IAM users should inherit permissions from groups, not have policies attached directly. This enables centralized permission management.",
-      "checks": ["aws-iam-010"],
+      "checks": [
+        "aws-iam-010"
+      ],
       "manual_steps": "",
       "evidence_template": "Direct policy attachments were checked per IAM user via ListUserPolicies and ListAttachedUserPolicies. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -161,7 +183,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "IAM policies with Action:* and Resource:* grant unrestricted access. These should not be attached to any IAM entity.",
-      "checks": ["aws-iam-005"],
+      "checks": [
+        "aws-iam-005"
+      ],
       "manual_steps": "",
       "evidence_template": "IAM policies were scanned for Action:*/Resource:* statements via GetPolicyVersion. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -171,7 +195,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "The AWSSupportAccess managed policy should be attached to at least one IAM role to enable incident management through AWS Support.",
-      "checks": ["aws-iam-011"],
+      "checks": [
+        "aws-iam-011"
+      ],
       "manual_steps": "",
       "evidence_template": "AWSSupportAccess policy attachment was verified via ListEntitiesForPolicy. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -181,7 +207,9 @@
       "level": "L2",
       "assessment": "Automated",
       "description": "EC2 instances should use IAM instance profiles (roles) instead of long-lived access keys for AWS API access.",
-      "checks": ["aws-iam-016"],
+      "checks": [
+        "aws-iam-016"
+      ],
       "manual_steps": "",
       "evidence_template": "Running EC2 instances were checked for IAM instance profile attachment via DescribeInstances. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -191,7 +219,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "Expired certificates in IAM should be removed to prevent accidental use and reduce the credential surface.",
-      "checks": ["aws-iam-013"],
+      "checks": [
+        "aws-iam-013"
+      ],
       "manual_steps": "",
       "evidence_template": "SSL/TLS certificates in IAM were checked for expiration via ListServerCertificates. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -201,7 +231,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "IAM Access Analyzer identifies resources shared with external entities. It should be enabled in all regions to detect unintended public or cross-account access.",
-      "checks": ["aws-iam-012"],
+      "checks": [
+        "aws-iam-012"
+      ],
       "manual_steps": "",
       "evidence_template": "IAM Access Analyzer status was verified per region via ListAnalyzers. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -219,9 +251,11 @@
       "title": "Ensure access to AWSCloudShellFullAccess is restricted",
       "section": "1 - Identity and Access Management",
       "level": "L1",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "AWSCloudShellFullAccess allows file upload/download in CloudShell which could be used for data exfiltration. Restrict to a custom policy.",
-      "checks": ["aws-iam-014"],
+      "checks": [
+        "aws-iam-014"
+      ],
       "manual_steps": "Verify no IAM entities have AWSCloudShellFullAccess. If CloudShell is needed, use a restricted custom policy.",
       "evidence_template": "AWSCloudShellFullAccess policy attachment was verified via ListEntitiesForPolicy. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -231,7 +265,9 @@
       "level": "L2",
       "assessment": "Automated",
       "description": "S3 bucket policies should include an explicit Deny for requests where aws:SecureTransport is false, enforcing HTTPS-only access.",
-      "checks": ["aws-s3-006"],
+      "checks": [
+        "aws-s3-006"
+      ],
       "manual_steps": "",
       "evidence_template": "S3 bucket policies were analyzed for aws:SecureTransport deny statements via GetBucketPolicy. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -239,9 +275,11 @@
       "title": "Ensure MFA Delete is enabled on S3 buckets",
       "section": "2 - Storage",
       "level": "L2",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "MFA Delete requires additional authentication before permanently deleting S3 objects or changing versioning state.",
-      "checks": ["aws-s3-007"],
+      "checks": [
+        "aws-s3-007"
+      ],
       "manual_steps": "MFA Delete can only be enabled by the root account. Verify via GetBucketVersioning.",
       "evidence_template": "S3 bucket MFA Delete status was checked via GetBucketVersioning. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -261,7 +299,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "All four S3 Block Public Access settings should be enabled to prevent unintended public access to bucket contents.",
-      "checks": ["aws-s3-001"],
+      "checks": [
+        "aws-s3-001"
+      ],
       "manual_steps": "",
       "evidence_template": "S3 Block Public Access settings were verified via GetPublicAccessBlock (account and bucket level). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -271,7 +311,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "EBS default encryption ensures all new EBS volumes are encrypted automatically without requiring per-volume configuration.",
-      "checks": ["aws-ec2-006"],
+      "checks": [
+        "aws-ec2-006"
+      ],
       "manual_steps": "",
       "evidence_template": "EBS default encryption status was verified per region via GetEbsEncryptionByDefault. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -281,7 +323,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "RDS instances should have encryption at rest enabled to protect stored data.",
-      "checks": ["aws-rds-002"],
+      "checks": [
+        "aws-rds-002"
+      ],
       "manual_steps": "",
       "evidence_template": "RDS instance encryption status was verified via DescribeDBInstances (StorageEncrypted). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -291,7 +335,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "Auto minor version upgrade ensures RDS instances receive security patches automatically.",
-      "checks": ["aws-rds-004"],
+      "checks": [
+        "aws-rds-004"
+      ],
       "manual_steps": "",
       "evidence_template": "RDS auto minor version upgrade was verified via DescribeDBInstances (AutoMinorVersionUpgrade). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -301,7 +347,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "RDS instances should not be publicly accessible from the internet.",
-      "checks": ["aws-rds-001"],
+      "checks": [
+        "aws-rds-001"
+      ],
       "manual_steps": "",
       "evidence_template": "RDS public accessibility was verified via DescribeDBInstances (PubliclyAccessible). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -311,7 +359,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "EFS file systems should be encrypted at rest. Encryption can only be enabled at creation time.",
-      "checks": ["aws-efs-001"],
+      "checks": [
+        "aws-efs-001"
+      ],
       "manual_steps": "For unencrypted EFS: create a new encrypted file system, migrate data, then delete the old one.",
       "evidence_template": "EFS encryption status was verified via DescribeFileSystems (Encrypted). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -321,7 +371,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "CloudTrail should be enabled with multi-region logging to capture API activity across all AWS regions.",
-      "checks": ["aws-ct-001"],
+      "checks": [
+        "aws-ct-001"
+      ],
       "manual_steps": "",
       "evidence_template": "Multi-region CloudTrail trail existence was verified via DescribeTrails. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -331,7 +383,9 @@
       "level": "L2",
       "assessment": "Automated",
       "description": "Log file validation creates digitally signed digest files for log integrity verification.",
-      "checks": ["aws-ct-002"],
+      "checks": [
+        "aws-ct-002"
+      ],
       "manual_steps": "",
       "evidence_template": "CloudTrail log file validation was verified via DescribeTrails (LogFileValidationEnabled). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -341,7 +395,10 @@
       "level": "L2",
       "assessment": "Automated",
       "description": "AWS Config records resource configurations and changes. It should be enabled in all regions for complete visibility.",
-      "checks": ["aws-cfg-001", "aws-cfg-002"],
+      "checks": [
+        "aws-cfg-001",
+        "aws-cfg-002"
+      ],
       "manual_steps": "",
       "evidence_template": "AWS Config recorder status was verified via DescribeConfigurationRecorders and DescribeConfigurationRecorderStatus. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -350,20 +407,26 @@
       "section": "3 - Logging",
       "level": "L1",
       "assessment": "Automated",
-      "description": "Server access logging on the CloudTrail S3 bucket enables tracking of access requests to audit log files.",
-      "checks": ["aws-ct-004"],
+      "description": "Server access logging on the CloudTrail S3 bucket enables tracking of access requests to audit log files. CloudTrail should also deliver logs to CloudWatch Logs for real-time analysis.",
+      "checks": [
+        "aws-ct-004",
+        "aws-ct-008"
+      ],
       "manual_steps": "",
-      "evidence_template": "CloudTrail S3 bucket access logging was verified via GetBucketLogging. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "evidence_template": "CloudTrail S3 bucket access logging and CloudWatch Logs integration were verified via GetBucketLogging and trail CloudWatchLogsLogGroupArn. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "3.5": {
       "title": "Ensure CloudTrail logs are encrypted at rest using KMS CMKs",
       "section": "3 - Logging",
       "level": "L2",
       "assessment": "Automated",
-      "description": "CloudTrail logs should be encrypted with a customer-managed KMS key for additional control over log encryption.",
-      "checks": ["aws-ct-005"],
+      "description": "CloudTrail logs should be encrypted with a customer-managed KMS key for additional control over log encryption. CloudWatch log groups receiving CloudTrail logs should also use KMS encryption.",
+      "checks": [
+        "aws-ct-005",
+        "aws-cw-016"
+      ],
       "manual_steps": "",
-      "evidence_template": "CloudTrail KMS encryption was verified via DescribeTrails (KmsKeyId). {pass_count}/{total_count} check(s) passed. {findings_summary}"
+      "evidence_template": "CloudTrail KMS encryption and CloudWatch log group KMS encryption were verified via DescribeTrails (KmsKeyId) and DescribeLogGroups (kmsKeyId). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
     "3.6": {
       "title": "Ensure rotation for customer-created symmetric CMKs is enabled",
@@ -371,7 +434,9 @@
       "level": "L2",
       "assessment": "Automated",
       "description": "KMS key rotation ensures that encryption keys are automatically rotated annually.",
-      "checks": ["aws-kms-001"],
+      "checks": [
+        "aws-kms-001"
+      ],
       "manual_steps": "",
       "evidence_template": "KMS key rotation was verified via GetKeyRotationStatus for customer-managed symmetric CMKs. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -381,7 +446,9 @@
       "level": "L2",
       "assessment": "Automated",
       "description": "VPC Flow Logs capture network traffic metadata for security analysis and incident response.",
-      "checks": ["aws-vpc-003"],
+      "checks": [
+        "aws-vpc-003"
+      ],
       "manual_steps": "",
       "evidence_template": "VPC flow log status was verified via DescribeFlowLogs for all VPCs. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -389,9 +456,11 @@
       "title": "Ensure that Object-level logging for write events is enabled for S3 bucket",
       "section": "3 - Logging",
       "level": "L2",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "S3 object-level write event logging in CloudTrail enables tracking of data modifications (PutObject, DeleteObject).",
-      "checks": ["aws-ct-006"],
+      "checks": [
+        "aws-ct-006"
+      ],
       "manual_steps": "",
       "evidence_template": "S3 object-level write event logging was verified via GetEventSelectors on multi-region trails. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -399,9 +468,11 @@
       "title": "Ensure that Object-level logging for read events is enabled for S3 bucket",
       "section": "3 - Logging",
       "level": "L2",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "S3 object-level read event logging in CloudTrail enables tracking of data access (GetObject).",
-      "checks": ["aws-ct-007"],
+      "checks": [
+        "aws-ct-007"
+      ],
       "manual_steps": "",
       "evidence_template": "S3 object-level read event logging was verified via GetEventSelectors on multi-region trails. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -409,9 +480,11 @@
       "title": "Ensure unauthorized API calls are monitored",
       "section": "4 - Monitoring",
       "level": "L2",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect unauthorized API calls (AccessDenied, UnauthorizedAccess errors).",
-      "checks": ["aws-cw-002"],
+      "checks": [
+        "aws-cw-002"
+      ],
       "manual_steps": "Verify the metric filter pattern matches unauthorized access error codes and the alarm has an SNS topic configured.",
       "evidence_template": "CloudWatch metric filter for unauthorized API calls was verified on CloudTrail log group. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -419,9 +492,11 @@
       "title": "Ensure management console sign-in without MFA is monitored",
       "section": "4 - Monitoring",
       "level": "L1",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect console logins without MFA.",
-      "checks": ["aws-cw-003"],
+      "checks": [
+        "aws-cw-003"
+      ],
       "manual_steps": "Verify the metric filter pattern checks for ConsoleLogin events where MFAUsed != Yes.",
       "evidence_template": "CloudWatch metric filter for console sign-in without MFA was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -429,9 +504,11 @@
       "title": "Ensure usage of 'root' account is monitored",
       "section": "4 - Monitoring",
       "level": "L1",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect any usage of the root account.",
-      "checks": ["aws-cw-001"],
+      "checks": [
+        "aws-cw-001"
+      ],
       "manual_steps": "Verify the metric filter pattern matches root user identity type and the alarm sends to an active SNS topic.",
       "evidence_template": "CloudWatch metric filter for root account usage was verified on CloudTrail log group. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -439,9 +516,11 @@
       "title": "Ensure IAM policy changes are monitored",
       "section": "4 - Monitoring",
       "level": "L1",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect IAM policy changes (CreatePolicy, DeletePolicy, AttachRolePolicy, etc.).",
-      "checks": ["aws-cw-004"],
+      "checks": [
+        "aws-cw-004"
+      ],
       "manual_steps": "Verify metric filter pattern covers all IAM policy change API calls.",
       "evidence_template": "CloudWatch metric filter for IAM policy changes was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -449,9 +528,11 @@
       "title": "Ensure CloudTrail configuration changes are monitored",
       "section": "4 - Monitoring",
       "level": "L1",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect CloudTrail configuration changes.",
-      "checks": ["aws-cw-005"],
+      "checks": [
+        "aws-cw-005"
+      ],
       "manual_steps": "Verify metric filter pattern covers CreateTrail, UpdateTrail, DeleteTrail, StartLogging, StopLogging.",
       "evidence_template": "CloudWatch metric filter for CloudTrail configuration changes was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -459,9 +540,11 @@
       "title": "Ensure AWS Management Console authentication failures are monitored",
       "section": "4 - Monitoring",
       "level": "L2",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect console authentication failures.",
-      "checks": ["aws-cw-006"],
+      "checks": [
+        "aws-cw-006"
+      ],
       "manual_steps": "Verify metric filter pattern matches ConsoleLogin events with Failed authentication.",
       "evidence_template": "CloudWatch metric filter for console auth failures was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -469,9 +552,11 @@
       "title": "Ensure disabling or scheduled deletion of customer-created CMKs is monitored",
       "section": "4 - Monitoring",
       "level": "L2",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect KMS key disabling or scheduled deletion.",
-      "checks": ["aws-cw-007"],
+      "checks": [
+        "aws-cw-007"
+      ],
       "manual_steps": "Verify metric filter pattern covers DisableKey and ScheduleKeyDeletion from kms.amazonaws.com.",
       "evidence_template": "CloudWatch metric filter for CMK disable/deletion was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -479,9 +564,11 @@
       "title": "Ensure S3 bucket policy changes are monitored",
       "section": "4 - Monitoring",
       "level": "L1",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect S3 bucket policy changes.",
-      "checks": ["aws-cw-008"],
+      "checks": [
+        "aws-cw-008"
+      ],
       "manual_steps": "Verify metric filter pattern covers PutBucketAcl, PutBucketPolicy, PutBucketCors, PutBucketLifecycle, PutBucketReplication, DeleteBucketPolicy, DeleteBucketCors, DeleteBucketLifecycle, DeleteBucketReplication.",
       "evidence_template": "CloudWatch metric filter for S3 bucket policy changes was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -489,9 +576,11 @@
       "title": "Ensure AWS Config configuration changes are monitored",
       "section": "4 - Monitoring",
       "level": "L2",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect AWS Config service configuration changes.",
-      "checks": ["aws-cw-009"],
+      "checks": [
+        "aws-cw-009"
+      ],
       "manual_steps": "Verify metric filter pattern covers StopConfigurationRecorder, DeleteDeliveryChannel, PutDeliveryChannel, PutConfigurationRecorder.",
       "evidence_template": "CloudWatch metric filter for Config changes was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -499,9 +588,11 @@
       "title": "Ensure security group changes are monitored",
       "section": "4 - Monitoring",
       "level": "L2",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect security group changes.",
-      "checks": ["aws-cw-010"],
+      "checks": [
+        "aws-cw-010"
+      ],
       "manual_steps": "Verify metric filter pattern covers AuthorizeSecurityGroupIngress/Egress, RevokeSecurityGroupIngress/Egress, CreateSecurityGroup, DeleteSecurityGroup.",
       "evidence_template": "CloudWatch metric filter for security group changes was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -509,9 +600,11 @@
       "title": "Ensure Network Access Control Lists (NACL) changes are monitored",
       "section": "4 - Monitoring",
       "level": "L2",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect Network ACL changes.",
-      "checks": ["aws-cw-011"],
+      "checks": [
+        "aws-cw-011"
+      ],
       "manual_steps": "Verify metric filter pattern covers CreateNetworkAcl, CreateNetworkAclEntry, DeleteNetworkAcl, DeleteNetworkAclEntry, ReplaceNetworkAclEntry, ReplaceNetworkAclAssociation.",
       "evidence_template": "CloudWatch metric filter for NACL changes was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -519,9 +612,11 @@
       "title": "Ensure changes to network gateways are monitored",
       "section": "4 - Monitoring",
       "level": "L1",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect network gateway changes.",
-      "checks": ["aws-cw-012"],
+      "checks": [
+        "aws-cw-012"
+      ],
       "manual_steps": "Verify metric filter pattern covers CreateCustomerGateway, DeleteCustomerGateway, AttachInternetGateway, CreateInternetGateway, DeleteInternetGateway, DetachInternetGateway.",
       "evidence_template": "CloudWatch metric filter for network gateway changes was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -529,9 +624,11 @@
       "title": "Ensure route table changes are monitored",
       "section": "4 - Monitoring",
       "level": "L1",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect route table changes.",
-      "checks": ["aws-cw-013"],
+      "checks": [
+        "aws-cw-013"
+      ],
       "manual_steps": "Verify metric filter pattern covers CreateRoute, CreateRouteTable, ReplaceRoute, ReplaceRouteTableAssociation, DeleteRouteTable, DeleteRoute, DisassociateRouteTable.",
       "evidence_template": "CloudWatch metric filter for route table changes was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -539,9 +636,11 @@
       "title": "Ensure VPC changes are monitored",
       "section": "4 - Monitoring",
       "level": "L1",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect VPC changes.",
-      "checks": ["aws-cw-014"],
+      "checks": [
+        "aws-cw-014"
+      ],
       "manual_steps": "Verify metric filter pattern covers CreateVpc, DeleteVpc, ModifyVpcAttribute, AcceptVpcPeeringConnection, CreateVpcPeeringConnection, DeleteVpcPeeringConnection, RejectVpcPeeringConnection, AttachClassicLinkVpc, DetachClassicLinkVpc, DisableVpcClassicLink, EnableVpcClassicLink.",
       "evidence_template": "CloudWatch metric filter for VPC changes was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -549,9 +648,11 @@
       "title": "Ensure AWS Organizations changes are monitored",
       "section": "4 - Monitoring",
       "level": "L1",
-      "assessment": "Manual",
+      "assessment": "Partial",
       "description": "A CloudWatch metric filter and alarm should detect AWS Organizations changes in the master account.",
-      "checks": ["aws-cw-015"],
+      "checks": [
+        "aws-cw-015"
+      ],
       "manual_steps": "Verify metric filter pattern covers organizations.amazonaws.com events and alarm is in the master/management account.",
       "evidence_template": "CloudWatch metric filter for Organizations changes was verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -561,7 +662,9 @@
       "level": "L2",
       "assessment": "Automated",
       "description": "AWS Security Hub provides a comprehensive view of security findings from multiple AWS services and partner tools.",
-      "checks": ["aws-sh-001"],
+      "checks": [
+        "aws-sh-001"
+      ],
       "manual_steps": "",
       "evidence_template": "Security Hub status was verified via DescribeHub. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -571,7 +674,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "Network ACLs should not allow unrestricted inbound access to SSH (22) or RDP (3389) ports from the internet.",
-      "checks": ["aws-vpc-004"],
+      "checks": [
+        "aws-vpc-004"
+      ],
       "manual_steps": "",
       "evidence_template": "Network ACLs were scanned for inbound rules allowing 0.0.0.0/0 or ::/0 to ports 22/3389. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -581,7 +686,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "Security groups should not allow unrestricted inbound access from 0.0.0.0/0 to SSH (22) or RDP (3389).",
-      "checks": ["aws-vpc-002"],
+      "checks": [
+        "aws-vpc-002"
+      ],
       "manual_steps": "",
       "evidence_template": "Security groups were scanned for IPv4 0.0.0.0/0 ingress to admin ports (22, 3389). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -591,7 +698,9 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "Security groups should not allow unrestricted inbound access from IPv6 ::/0 to SSH (22) or RDP (3389).",
-      "checks": ["aws-vpc-002"],
+      "checks": [
+        "aws-vpc-002"
+      ],
       "manual_steps": "",
       "evidence_template": "Security groups were scanned for IPv6 ::/0 ingress to admin ports (22, 3389). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -601,7 +710,9 @@
       "level": "L2",
       "assessment": "Automated",
       "description": "The default security group should have no inbound or outbound rules to prevent resources launched without a specific SG from having network access.",
-      "checks": ["aws-vpc-005"],
+      "checks": [
+        "aws-vpc-005"
+      ],
       "manual_steps": "",
       "evidence_template": "Default security groups were checked for active ingress/egress rules via DescribeSecurityGroups. {pass_count}/{total_count} check(s) passed. {findings_summary}"
     },
@@ -621,31 +732,96 @@
       "level": "L1",
       "assessment": "Automated",
       "description": "EC2 Instance Metadata Service v2 (IMDSv2) uses session-based tokens and mitigates SSRF-based credential theft attacks.",
-      "checks": ["aws-ec2-004"],
+      "checks": [
+        "aws-ec2-004"
+      ],
       "manual_steps": "",
       "evidence_template": "EC2 instance metadata service version was verified via DescribeInstances (MetadataOptions.HttpTokens). {pass_count}/{total_count} check(s) passed. {findings_summary}"
     }
   },
   "attack_chain_mappings": {
-    "AC-01": ["5.2", "5.3", "1.18"],
-    "AC-02": ["5.2", "5.3", "5.6"],
-    "AC-05": ["1.16"],
-    "AC-07": ["1.16"],
-    "AC-09": ["1.5", "3.1"],
-    "AC-10": ["1.5", "3.1", "4.3"],
-    "AC-11": ["3.1", "3.3", "4.16"],
-    "AC-12": ["1.10", "1.16"],
-    "AC-13": ["5.2", "3.7"],
-    "AC-14": ["5.1", "5.2", "3.7"],
-    "AC-17": ["2.3.1", "2.3.3", "3.1"],
-    "AC-19": ["5.4"],
-    "AC-20": ["5.4"],
-    "AC-21": ["2.1.1"],
-    "AC-23": ["1.16"],
-    "AC-24": ["1.16"],
-    "AC-25": ["1.4", "3.1"],
-    "AC-26": ["1.16", "1.10", "4.3"],
-    "AC-27": ["5.4", "3.7"],
-    "AC-28": ["1.20"]
+    "AC-01": [
+      "5.2",
+      "5.3",
+      "1.18"
+    ],
+    "AC-02": [
+      "5.2",
+      "5.3",
+      "5.6"
+    ],
+    "AC-05": [
+      "1.16"
+    ],
+    "AC-07": [
+      "1.16"
+    ],
+    "AC-09": [
+      "1.5",
+      "3.1"
+    ],
+    "AC-10": [
+      "1.5",
+      "3.1",
+      "4.3"
+    ],
+    "AC-11": [
+      "3.1",
+      "3.3",
+      "4.16"
+    ],
+    "AC-12": [
+      "1.10",
+      "1.16"
+    ],
+    "AC-13": [
+      "5.2",
+      "3.7"
+    ],
+    "AC-14": [
+      "5.1",
+      "5.2",
+      "3.7"
+    ],
+    "AC-17": [
+      "2.3.1",
+      "2.3.3",
+      "3.1"
+    ],
+    "AC-19": [
+      "5.4"
+    ],
+    "AC-20": [
+      "5.4"
+    ],
+    "AC-21": [
+      "2.1.1"
+    ],
+    "AC-23": [
+      "1.16"
+    ],
+    "AC-24": [
+      "1.16"
+    ],
+    "AC-25": [
+      "1.4",
+      "3.1"
+    ],
+    "AC-26": [
+      "1.16",
+      "1.10",
+      "4.3"
+    ],
+    "AC-27": [
+      "5.4",
+      "3.7"
+    ],
+    "AC-28": [
+      "1.20"
+    ],
+    "AC-32": [
+      "3.4",
+      "4.3"
+    ]
   }
 }

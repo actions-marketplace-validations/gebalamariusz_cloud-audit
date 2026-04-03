@@ -1051,6 +1051,204 @@ def _detect_oidc_no_analyzer(
     return chains
 
 
+# --- Tier 7: New-check chains (v1.3.0) ---
+
+
+def _detect_unpatched_exposed_instance(
+    by_check: dict[str, list[Finding]],
+    rels: ResourceRelationships,
+) -> list[AttackChain]:
+    """AC-29: Unpatched EC2 instance reachable from the internet."""
+    chains: list[AttackChain] = []
+    sg_findings = by_check.get("aws-vpc-002", [])
+    patch_findings = by_check.get("aws-ssm-003", [])
+    if not sg_findings or not patch_findings or not rels.ec2_sgs:
+        return chains
+
+    open_sgs = {f.resource_id for f in sg_findings}
+    patch_instances = {f.resource_id: f for f in patch_findings}
+
+    for instance_id, patch_f in patch_instances.items():
+        instance_sgs = set(rels.ec2_sgs.get(instance_id, []))
+        exposed_sgs = instance_sgs & open_sgs
+        if not exposed_sgs:
+            continue
+        sg_f = next(f for f in sg_findings if f.resource_id in exposed_sgs)
+        chains.append(
+            AttackChain(
+                chain_id="AC-29",
+                name="Unpatched Instance Exposed to Internet",
+                severity=Severity.CRITICAL,
+                findings=[sg_f, patch_f],
+                attack_narrative=(
+                    f"Instance {instance_id} has known unpatched vulnerabilities and is "
+                    f"internet-reachable via open security group {sg_f.resource_id}. "
+                    f"An attacker can exploit published CVEs for remote code execution."
+                ),
+                priority_fix=f"Restrict security group {sg_f.resource_id} to specific IPs (effort: LOW).",
+                mitre_refs=["T1190", "T1203"],
+                resources=[instance_id, sg_f.resource_id],
+                viz_steps=[
+                    VizStep(label="Internet", sub="Entry Point", type="internet", edge_label="scans ports"),
+                    VizStep(label=sg_f.resource_id, sub="Security Group", type="network", edge_label="allows access"),
+                    VizStep(label=instance_id, sub="Unpatched EC2", type="compute", edge_label="known CVEs"),
+                    VizStep(label="Remote Code Execution", sub="Full Instance Access", type="impact"),
+                ],
+            )
+        )
+    return chains
+
+
+def _detect_unpatched_no_scanning(
+    by_check: dict[str, list[Finding]],
+) -> list[AttackChain]:
+    """AC-30: Unpatched instances + no vulnerability scanning."""
+    chains: list[AttackChain] = []
+    patch = by_check.get("aws-ssm-003", [])
+    no_inspector = by_check.get("aws-inspector-001", [])
+    if not patch or not no_inspector:
+        return chains
+
+    if _region_overlap(by_check, "aws-ssm-003", "aws-inspector-001"):
+        chains.append(
+            AttackChain(
+                chain_id="AC-30",
+                name="Unpatched Instances Without Vulnerability Scanning",
+                severity=Severity.HIGH,
+                findings=[patch[0], no_inspector[0]],
+                attack_narrative=(
+                    "EC2 instances have known unpatched vulnerabilities and Amazon "
+                    "Inspector is not enabled. The organization has no visibility into "
+                    "which instances are vulnerable or how to prioritize remediation."
+                ),
+                priority_fix="Enable Amazon Inspector (effort: LOW) for immediate vulnerability visibility.",
+                mitre_refs=["T1203", "T1562.001"],
+                resources=["ssm-patch-compliance", "inspector"],
+                viz_steps=[
+                    VizStep(label="EC2 Instances", sub="Unpatched", type="compute", edge_label="missing patches"),
+                    VizStep(label="Inspector", sub="Not Enabled", type="finding", edge_label="no scanning"),
+                    VizStep(label="Blind Vulnerability Mgmt", sub="No Prioritization", type="impact"),
+                ],
+            )
+        )
+    return chains
+
+
+def _detect_exposed_no_waf_no_logs(
+    by_check: dict[str, list[Finding]],
+) -> list[AttackChain]:
+    """AC-31: Internet-facing resources without WAF or flow logs."""
+    chains: list[AttackChain] = []
+    no_waf = by_check.get("aws-waf-001", [])
+    open_sg = by_check.get("aws-vpc-002", [])
+    no_flow = by_check.get("aws-vpc-003", [])
+    if not no_waf or not open_sg or not no_flow:
+        return chains
+
+    if _region_overlap(by_check, "aws-waf-001", "aws-vpc-002", "aws-vpc-003"):
+        chains.append(
+            AttackChain(
+                chain_id="AC-31",
+                name="Internet-Exposed Without WAF or Flow Logs",
+                severity=Severity.HIGH,
+                findings=[no_waf[0], open_sg[0], no_flow[0]],
+                attack_narrative=(
+                    "Internet-facing resources have unrestricted security groups, "
+                    "no WAF to filter malicious traffic, and no VPC flow logs for "
+                    "detection. Attackers can send arbitrary payloads with zero "
+                    "chance of being blocked or logged."
+                ),
+                priority_fix="Create WAFv2 WebACL with AWS Managed Rules (effort: MEDIUM).",
+                mitre_refs=["T1190", "T1562.008", "T1595"],
+                resources=["waf", "security-groups", "flow-logs"],
+                viz_steps=[
+                    VizStep(label="Internet", sub="Entry Point", type="internet", edge_label="malicious traffic"),
+                    VizStep(label="No WAF", sub="No Filtering", type="finding", edge_label="unblocked"),
+                    VizStep(label="Open SG", sub="All Ports", type="network", edge_label="unrestricted"),
+                    VizStep(label="No Flow Logs", sub="No Detection", type="finding", edge_label="invisible"),
+                    VizStep(label="Undetected Breach", sub="No Evidence", type="impact"),
+                ],
+            )
+        )
+    return chains
+
+
+def _detect_cloudtrail_blind_spot(
+    by_check: dict[str, list[Finding]],
+) -> list[AttackChain]:
+    """AC-32: CloudTrail not delivering to CloudWatch = all alarms non-functional."""
+    chains: list[AttackChain] = []
+    no_cw_integration = by_check.get("aws-ct-008", [])
+    no_root_alarm = by_check.get("aws-cw-001", [])
+    if not no_cw_integration or not no_root_alarm:
+        return chains
+
+    chains.append(
+        AttackChain(
+            chain_id="AC-32",
+            name="CloudTrail Blind Spot — Alarms Non-Functional",
+            severity=Severity.HIGH,
+            findings=[no_cw_integration[0], no_root_alarm[0]],
+            attack_narrative=(
+                "CloudTrail is not integrated with CloudWatch Logs. All CIS Section 4 "
+                "metric filter alarms (root usage, IAM changes, unauthorized API calls) "
+                "are non-functional because log data never reaches CloudWatch. "
+                "The account appears monitored but no alerts will fire."
+            ),
+            priority_fix=(
+                "Configure CloudTrail CloudWatch Logs delivery (effort: MEDIUM) to activate all existing alarms."
+            ),
+            mitre_refs=["T1562.008", "T1078.004"],
+            resources=["cloudtrail", "cloudwatch-logs"],
+            viz_steps=[
+                VizStep(label="CloudTrail", sub="Logging to S3", type="storage", edge_label="no CW delivery"),
+                VizStep(label="CloudWatch Logs", sub="Empty", type="finding", edge_label="no data"),
+                VizStep(label="15 CIS Alarms", sub="Non-Functional", type="finding", edge_label="never fire"),
+                VizStep(label="False Sense of Security", sub="No Real-Time Detection", type="impact"),
+            ],
+        )
+    )
+    return chains
+
+
+def _detect_all_public_vpc_no_segmentation(
+    by_check: dict[str, list[Finding]],
+) -> list[AttackChain]:
+    """AC-33: VPC with all public subnets + open SGs + no flow logs."""
+    chains: list[AttackChain] = []
+    no_private = by_check.get("aws-vpc-006", [])
+    open_sg = by_check.get("aws-vpc-002", [])
+    no_flow = by_check.get("aws-vpc-003", [])
+    if not no_private or not open_sg or not no_flow:
+        return chains
+
+    if _region_overlap(by_check, "aws-vpc-006", "aws-vpc-002", "aws-vpc-003"):
+        chains.append(
+            AttackChain(
+                chain_id="AC-33",
+                name="All-Public VPC Without Network Segmentation",
+                severity=Severity.HIGH,
+                findings=[no_private[0], open_sg[0], no_flow[0]],
+                attack_narrative=(
+                    "A VPC has exclusively public subnets with no private/public boundary. "
+                    "Combined with open security groups and no flow logs, all workloads "
+                    "are directly internet-addressable and lateral movement is unlogged."
+                ),
+                priority_fix="Create private subnets and move backend resources to them (effort: MEDIUM).",
+                mitre_refs=["T1190", "T1021", "T1562.008"],
+                resources=["vpc", "subnets", "security-groups"],
+                viz_steps=[
+                    VizStep(label="Internet", sub="Entry Point", type="internet", edge_label="direct access"),
+                    VizStep(label="All-Public VPC", sub="No Segmentation", type="network", edge_label="flat network"),
+                    VizStep(label="Open SG", sub="All Ports", type="network", edge_label="lateral movement"),
+                    VizStep(label="No Flow Logs", sub="No Detection", type="finding", edge_label="invisible"),
+                    VizStep(label="Full VPC Compromise", sub="All Resources Exposed", type="impact"),
+                ],
+            )
+        )
+    return chains
+
+
 # ---------------------------------------------------------------------------
 # Main detection function
 # ---------------------------------------------------------------------------
@@ -1071,6 +1269,10 @@ _SIMPLE_RULES = [
     _detect_admin_no_mfa_no_alarm,  # AC-26
     _detect_default_sg_no_flow_logs,  # AC-27
     _detect_oidc_no_analyzer,  # AC-28
+    _detect_unpatched_no_scanning,  # AC-30
+    _detect_exposed_no_waf_no_logs,  # AC-31
+    _detect_cloudtrail_blind_spot,  # AC-32
+    _detect_all_public_vpc_no_segmentation,  # AC-33
 ]
 
 _RELATIONSHIP_RULES = [
@@ -1080,6 +1282,7 @@ _RELATIONSHIP_RULES = [
     _detect_cicd_admin_takeover,  # AC-07
     _detect_cicd_data_exfil,  # AC-23
     _detect_cicd_lateral_movement,  # AC-24
+    _detect_unpatched_exposed_instance,  # AC-29
 ]
 
 

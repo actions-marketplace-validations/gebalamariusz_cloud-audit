@@ -1162,6 +1162,67 @@ def check_cloudshell_access(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_role_max_session_duration(provider: AWSProvider) -> CheckResult:
+    """Check for IAM roles with MaxSessionDuration exceeding 1 hour."""
+    iam = provider.client("iam")
+    result = CheckResult(check_id="aws-iam-017", check_name="IAM role max session duration")
+
+    try:
+        paginator = iam.get_paginator("list_roles")
+        for page in paginator.paginate():
+            for role in page["Roles"]:
+                role_name = role["RoleName"]
+                role_path = role.get("Path", "/")
+
+                # Skip service-linked roles
+                if role_path.startswith("/aws-service-role/"):
+                    continue
+
+                result.resources_scanned += 1
+                max_duration = role.get("MaxSessionDuration", 3600)
+
+                if max_duration > 3600:
+                    hours = max_duration / 3600
+                    result.findings.append(
+                        Finding(
+                            check_id="aws-iam-017",
+                            title=f"Role '{role_name}' has MaxSessionDuration of {hours:.0f}h ({max_duration}s)",
+                            severity=Severity.MEDIUM,
+                            category=Category.SECURITY,
+                            resource_type="AWS::IAM::Role",
+                            resource_id=role_name,
+                            description=(
+                                f"IAM role '{role_name}' has MaxSessionDuration set to "
+                                f"{max_duration} seconds ({hours:.0f} hours). The default is "
+                                f"1 hour (3600s). Extended session durations increase the window "
+                                f"of opportunity for an attacker using stolen temporary credentials."
+                            ),
+                            recommendation="Reduce MaxSessionDuration to 3600 seconds (1 hour) unless a longer session is specifically required.",
+                            remediation=Remediation(
+                                cli=(
+                                    f"aws iam update-role \\\n"
+                                    f"  --role-name {role_name} \\\n"
+                                    f"  --max-session-duration 3600"
+                                ),
+                                terraform=(
+                                    'resource "aws_iam_role" "this" {\n'
+                                    f'  name                 = "{role_name}"\n'
+                                    "  max_session_duration = 3600  # 1 hour\n"
+                                    "  assume_role_policy   = data.aws_iam_policy_document.trust.json\n"
+                                    "}"
+                                ),
+                                doc_url="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use.html#id_roles_use_view-role-max-session",
+                                effort=Effort.LOW,
+                            ),
+                            compliance_refs=[],
+                        )
+                    )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all IAM checks bound to the provider."""
     from cloud_audit.providers.base import make_check
@@ -1183,4 +1244,5 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
         make_check(check_cloudshell_access, provider, check_id="aws-iam-014", category=Category.SECURITY),
         make_check(check_root_hardware_mfa, provider, check_id="aws-iam-015", category=Category.SECURITY),
         make_check(check_ec2_instance_roles, provider, check_id="aws-iam-016", category=Category.SECURITY),
+        make_check(check_role_max_session_duration, provider, check_id="aws-iam-017", category=Category.SECURITY),
     ]

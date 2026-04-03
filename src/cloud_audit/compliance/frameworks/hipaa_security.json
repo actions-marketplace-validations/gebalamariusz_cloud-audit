@@ -1,0 +1,801 @@
+{
+  "framework_id": "hipaa_security",
+  "framework_name": "HIPAA Security Rule",
+  "version": "45 CFR Part 164 Subpart C",
+  "source_url": "https://www.hhs.gov/hipaa/for-professionals/security/index.html",
+  "disclaimer": "This report assists with HIPAA Security Rule compliance readiness assessment for AWS infrastructure. It does not constitute HIPAA compliance certification or replace a formal risk analysis required under §164.308(a)(1). This tool automates assessment of technical safeguard controls; administrative and physical safeguards require separate evaluation. HIPAA compliance is the responsibility of the covered entity or business associate.",
+  "controls": {
+    "164.308(a)(1)(i)": {
+      "title": "Security Management Process - Risk Analysis",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Partial",
+      "description": "Conduct an accurate and thorough assessment of the potential risks and vulnerabilities to the confidentiality, integrity, and availability of electronic protected health information held by the covered entity or business associate.",
+      "checks": [
+        "aws-gd-001",
+        "aws-gd-002",
+        "aws-sh-001",
+        "aws-iam-012",
+        "aws-cfg-001",
+        "aws-cfg-002"
+      ],
+      "manual_steps": "Automated checks verify that risk identification services (GuardDuty, Security Hub, IAM Access Analyzer, AWS Config) are enabled. A formal risk analysis document covering all ePHI data flows, threat sources, and vulnerability assessments must be completed separately per NIST SP 800-30.",
+      "evidence_template": "Automated risk identification services were verified: GuardDuty enabled and findings addressed, Security Hub enabled, IAM Access Analyzer active, AWS Config recorder active. {pass_count}/{total_count} check(s) passed. {findings_summary} A formal documented risk analysis per NIST SP 800-30 is also required."
+    },
+    "164.308(a)(1)(ii)(A)": {
+      "title": "Security Management Process - Risk Management",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Partial",
+      "description": "Implement security measures sufficient to reduce risks and vulnerabilities to a reasonable and appropriate level to comply with §164.306(a).",
+      "checks": [
+        "aws-gd-001",
+        "aws-sh-001",
+        "aws-iam-005",
+        "aws-iam-008",
+        "aws-vpc-002",
+        "aws-vpc-004",
+        "aws-rds-001",
+        "aws-s3-001",
+        "aws-ssm-001"
+      ],
+      "manual_steps": "Automated checks verify key risk reduction controls: threat detection enabled, no wildcard admin policies, no root access keys, restricted network access (security groups and NACLs), no public databases or storage, instances managed for patching. A documented risk management plan with risk acceptance decisions, compensating controls, and residual risk tracking is required separately.",
+      "evidence_template": "Risk management controls were verified: GuardDuty active, Security Hub active, admin privilege restrictions, root key restrictions, network access controls (SGs and NACLs), database and storage exposure controls, SSM patch management. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(1)(ii)(B)": {
+      "title": "Security Management Process - Sanction Policy",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Manual",
+      "description": "Apply appropriate sanctions against workforce members who fail to comply with the security policies and procedures of the covered entity or business associate.",
+      "checks": [],
+      "manual_steps": "Review the documented sanction policy, evidence of workforce acknowledgment, records of sanctions applied, and integration with HR disciplinary procedures. This control is entirely administrative and cannot be assessed through technical controls.",
+      "evidence_template": "164.308(a)(1)(ii)(B) requires manual assessment. Review the sanction policy, workforce acknowledgment records, and disciplinary action logs."
+    },
+    "164.308(a)(1)(ii)(C)": {
+      "title": "Security Management Process - Information System Activity Review",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Automated",
+      "description": "Implement procedures to regularly review records of information system activity, such as audit logs, access reports, and security incident tracking reports.",
+      "checks": [
+        "aws-ct-001",
+        "aws-ct-002",
+        "aws-ct-004",
+        "aws-ct-005",
+        "aws-ct-006",
+        "aws-ct-007",
+        "aws-vpc-003",
+        "aws-s3-005",
+        "aws-cw-001",
+        "aws-cw-002"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Information system activity review infrastructure was verified: CloudTrail multi-region logging with validation, KMS encryption, object-level write/read logging, VPC flow logs, S3 access logging, CloudWatch alarms for root usage and unauthorized API calls. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(2)": {
+      "title": "Assigned Security Responsibility",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Partial",
+      "description": "Identify the security official who is responsible for the development and implementation of the policies and procedures required by this subpart for the covered entity or business associate.",
+      "checks": [
+        "aws-account-001"
+      ],
+      "manual_steps": "Automated check verifies that a security contact is registered in the AWS account. Manual review is required to confirm a named HIPAA Security Officer has been formally designated, with documented responsibilities and evidence of active oversight.",
+      "evidence_template": "AWS security contact registration was verified. {pass_count}/{total_count} check(s) passed. {findings_summary} Manual confirmation of formal HIPAA Security Officer designation is also required."
+    },
+    "164.308(a)(3)(i)": {
+      "title": "Workforce Security - Authorization and/or Supervision",
+      "section": "Administrative Safeguards",
+      "level": "Addressable",
+      "assessment": "Partial",
+      "description": "Implement procedures for the authorization and/or supervision of workforce members who work with electronic protected health information or in locations where it might be accessed.",
+      "checks": [
+        "aws-iam-005",
+        "aws-iam-010",
+        "aws-iam-016"
+      ],
+      "manual_steps": "Automated checks verify that IAM enforces authorization controls: no wildcard admin privileges, permissions assigned through groups, EC2 instances use IAM roles. Manual review of workforce authorization procedures, role definitions, and supervisory oversight of ePHI access is also required.",
+      "evidence_template": "Workforce authorization controls were verified: no wildcard admin policies, group-based permission enforcement, EC2 instances with IAM roles. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(3)(ii)": {
+      "title": "Workforce Security - Workforce Clearance Procedure",
+      "section": "Administrative Safeguards",
+      "level": "Addressable",
+      "assessment": "Manual",
+      "description": "Implement procedures to determine that the access of a workforce member to electronic protected health information is appropriate.",
+      "checks": [],
+      "manual_steps": "Review background check policies, access request and approval workflows, role-based access matrices for ePHI systems, and evidence of periodic access appropriateness reviews.",
+      "evidence_template": "164.308(a)(3)(ii) requires manual assessment. Review workforce clearance procedures, background check policies, and access approval workflows for ePHI systems."
+    },
+    "164.308(a)(3)(iii)": {
+      "title": "Workforce Security - Termination Procedures",
+      "section": "Administrative Safeguards",
+      "level": "Addressable",
+      "assessment": "Partial",
+      "description": "Implement procedures for terminating access to electronic protected health information when the employment of, or other arrangement with, a workforce member ends.",
+      "checks": [
+        "aws-iam-004",
+        "aws-iam-003",
+        "aws-iam-013",
+        "aws-sm-002"
+      ],
+      "manual_steps": "Automated checks verify that stale credentials are detected: unused access keys disabled after 45 days, key rotation enforced within 90 days, expired certificates removed, unused secrets identified. Manual review of offboarding checklists, HR-IT integration for termination triggers, and evidence of timely access revocation is also required.",
+      "evidence_template": "Credential lifecycle controls were verified: unused access keys detected (45-day threshold), key rotation enforced (90-day threshold), expired certificates identified, unused secrets detected. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(4)(i)": {
+      "title": "Information Access Management - Isolating Healthcare Clearinghouse Functions",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Partial",
+      "description": "If a healthcare clearinghouse is part of a larger organization, the clearinghouse must implement policies and procedures that protect the electronic protected health information of the clearinghouse from unauthorized access by the larger organization.",
+      "checks": [
+        "aws-vpc-001",
+        "aws-vpc-002",
+        "aws-vpc-005"
+      ],
+      "manual_steps": "Automated checks verify network isolation controls: default VPC not in use (dedicated VPCs for segmentation), security groups restrict access, default SG blocks all traffic. Manual review is required to confirm that ePHI-processing environments are logically separated from non-clearinghouse functions via separate VPCs or accounts.",
+      "evidence_template": "Network isolation controls were verified: default VPC usage checked, security group restrictions, default security group rules. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(4)(ii)": {
+      "title": "Information Access Management - Access Authorization",
+      "section": "Administrative Safeguards",
+      "level": "Addressable",
+      "assessment": "Automated",
+      "description": "Implement policies and procedures for granting access to electronic protected health information, for example, through access to a workstation, transaction, program, process, or other mechanism.",
+      "checks": [
+        "aws-iam-005",
+        "aws-iam-007",
+        "aws-iam-008",
+        "aws-iam-010",
+        "aws-iam-014",
+        "aws-iam-016",
+        "aws-ecs-003"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Access authorization controls were verified: no wildcard admin policies, OIDC trust with sub condition, no root access keys, group-based permissions, CloudShell access restricted, EC2 instances use IAM roles, ECS Exec restricted. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(4)(iii)": {
+      "title": "Information Access Management - Access Establishment and Modification",
+      "section": "Administrative Safeguards",
+      "level": "Addressable",
+      "assessment": "Partial",
+      "description": "Implement policies and procedures that, based upon the covered entity's or business associate's access authorization policies, establish, document, review, and modify a user's right of access to a workstation, transaction, program, or process.",
+      "checks": [
+        "aws-iam-003",
+        "aws-iam-004",
+        "aws-iam-009",
+        "aws-iam-010",
+        "aws-iam-013",
+        "aws-cw-004"
+      ],
+      "manual_steps": "Automated checks verify access lifecycle controls: key rotation, unused credential detection, single active key enforcement, group-based permissions, expired certificate removal, IAM policy change monitoring. Manual review of access provisioning workflows, periodic access reviews, and change documentation is also required.",
+      "evidence_template": "Access lifecycle controls were verified: key rotation within 90 days, unused credentials detected, single active key per user, group-based permissions, expired certificates removed, IAM policy changes monitored. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(5)(i)": {
+      "title": "Security Awareness and Training - Security Reminders",
+      "section": "Administrative Safeguards",
+      "level": "Addressable",
+      "assessment": "Manual",
+      "description": "Periodic security updates and reminders to workforce members regarding their responsibilities related to electronic protected health information.",
+      "checks": [],
+      "manual_steps": "Review security awareness program documentation, evidence of periodic security reminders (email bulletins, intranet postings, newsletters), and records of security reminder distribution to all workforce members with ePHI access.",
+      "evidence_template": "164.308(a)(5)(i) requires manual assessment. Review security awareness training program, periodic security reminder records, and workforce distribution evidence."
+    },
+    "164.308(a)(5)(ii)": {
+      "title": "Security Awareness and Training - Protection from Malicious Software",
+      "section": "Administrative Safeguards",
+      "level": "Addressable",
+      "assessment": "Partial",
+      "description": "Procedures for guarding against, detecting, and reporting malicious software.",
+      "checks": [
+        "aws-gd-001",
+        "aws-gd-002",
+        "aws-lambda-002",
+        "aws-ecs-001",
+        "aws-ssm-003"
+      ],
+      "manual_steps": "Automated checks verify threat detection, runtime security, and patch compliance: GuardDuty enabled and findings addressed, deprecated Lambda runtimes detected, ECS containers checked for privileged mode, EC2 patch compliance via SSM verified. Manual review of endpoint protection policies, malware training records, and incident reporting procedures is also required.",
+      "evidence_template": "Malicious software protection controls were verified: GuardDuty threat detection active and findings addressed, Lambda deprecated runtimes detected, ECS privileged containers identified, EC2 patch compliance via SSM verified. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(5)(iii)": {
+      "title": "Security Awareness and Training - Log-in Monitoring",
+      "section": "Administrative Safeguards",
+      "level": "Addressable",
+      "assessment": "Automated",
+      "description": "Procedures for monitoring log-in attempts and reporting discrepancies.",
+      "checks": [
+        "aws-cw-001",
+        "aws-cw-002",
+        "aws-cw-003",
+        "aws-cw-006"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Log-in monitoring was verified: CloudWatch alarms for root account usage, unauthorized API calls, console sign-in without MFA, and console authentication failures. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(5)(iv)": {
+      "title": "Security Awareness and Training - Password Management",
+      "section": "Administrative Safeguards",
+      "level": "Addressable",
+      "assessment": "Automated",
+      "description": "Procedures for creating, changing, and safeguarding passwords.",
+      "checks": [
+        "aws-iam-006"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Password management controls were verified: IAM password policy checked for minimum length, complexity requirements, reuse prevention, and expiration settings. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(6)(i)": {
+      "title": "Security Incident Procedures - Response and Reporting",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Partial",
+      "description": "Identify and respond to suspected or known security incidents; mitigate, to the extent practicable, harmful effects of security incidents that are known to the covered entity or business associate; and document security incidents and their outcomes.",
+      "checks": [
+        "aws-gd-001",
+        "aws-gd-002",
+        "aws-ct-001",
+        "aws-ct-002",
+        "aws-iam-011"
+      ],
+      "manual_steps": "Automated checks verify incident detection and response infrastructure: GuardDuty enabled and findings addressed, CloudTrail logging active with validation, AWS Support role exists. Manual review of the incident response plan, HIPAA breach notification procedures (60-day reporting requirement), tabletop exercise records, and incident documentation is required.",
+      "evidence_template": "Incident response infrastructure was verified: GuardDuty enabled and findings addressed, CloudTrail multi-region with validation, AWS Support role available. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(7)(i)": {
+      "title": "Contingency Plan - Data Backup Plan",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Automated",
+      "description": "Establish and implement procedures to create and maintain retrievable exact copies of electronic protected health information.",
+      "checks": [
+        "aws-s3-003",
+        "aws-s3-007",
+        "aws-rds-003",
+        "aws-backup-001"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Data backup controls were verified: S3 versioning for object-level recovery, S3 MFA Delete for deletion protection, RDS Multi-AZ for database redundancy, AWS Backup vault with backup plan for centralized backup management. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(7)(ii)": {
+      "title": "Contingency Plan - Disaster Recovery Plan",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Partial",
+      "description": "Establish (and implement as needed) procedures to restore any loss of data.",
+      "checks": [
+        "aws-rds-003",
+        "aws-s3-003",
+        "aws-ec2-005"
+      ],
+      "manual_steps": "Automated checks verify recovery infrastructure: RDS Multi-AZ failover, S3 versioning, EC2 termination protection. Manual review of the documented disaster recovery plan with defined RTO/RPO for ePHI systems, recovery procedures, and communication plans is required.",
+      "evidence_template": "Disaster recovery infrastructure was verified: RDS Multi-AZ failover, S3 versioning enabled, EC2 termination protection. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(a)(7)(iii)": {
+      "title": "Contingency Plan - Emergency Mode Operation Plan",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Manual",
+      "description": "Establish (and implement as needed) procedures to enable continuation of critical business processes for protection of the security of electronic protected health information while operating in emergency mode.",
+      "checks": [],
+      "manual_steps": "Review the emergency mode operation plan covering critical ePHI system identification, manual fallback procedures, emergency access procedures, communication protocols, and criteria for invoking and exiting emergency mode.",
+      "evidence_template": "164.308(a)(7)(iii) requires manual assessment. Review emergency mode operation plan, critical system inventory, manual fallback procedures, and emergency communication protocols."
+    },
+    "164.308(a)(7)(iv)": {
+      "title": "Contingency Plan - Testing and Revision Procedures",
+      "section": "Administrative Safeguards",
+      "level": "Addressable",
+      "assessment": "Manual",
+      "description": "Implement procedures for periodic testing and revision of contingency plans.",
+      "checks": [],
+      "manual_steps": "Review records of contingency plan testing (tabletop exercises, failover tests, restore tests), test findings, plan revisions resulting from test outcomes, and the testing schedule.",
+      "evidence_template": "164.308(a)(7)(iv) requires manual assessment. Review contingency plan test records, test findings, and resulting plan revisions."
+    },
+    "164.308(a)(7)(v)": {
+      "title": "Contingency Plan - Applications and Data Criticality Analysis",
+      "section": "Administrative Safeguards",
+      "level": "Addressable",
+      "assessment": "Manual",
+      "description": "Assess the relative criticality of specific applications and data in support of other contingency plan components.",
+      "checks": [],
+      "manual_steps": "Review the documented criticality analysis identifying all applications and data stores that create, receive, maintain, or transmit ePHI, their criticality ratings, and dependencies.",
+      "evidence_template": "164.308(a)(7)(v) requires manual assessment. Review application and data criticality analysis, ePHI inventory, and system dependency mapping."
+    },
+    "164.308(a)(8)": {
+      "title": "Evaluation",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Partial",
+      "description": "Perform a periodic technical and nontechnical evaluation, based initially upon the standards implemented under this rule and, subsequently, in response to environmental or operational changes affecting the security of electronic protected health information.",
+      "checks": [
+        "aws-cfg-001",
+        "aws-cfg-002",
+        "aws-sh-001",
+        "aws-rds-004",
+        "aws-ssm-001",
+        "aws-inspector-001"
+      ],
+      "manual_steps": "Automated checks verify continuous evaluation services: AWS Config recorder active, Security Hub enabled, RDS auto minor version upgrade enabled, EC2 instances managed by SSM for patching, Amazon Inspector enabled for continuous vulnerability scanning. Manual review of periodic evaluation schedule, evaluation methodology, scope documentation, and evidence of evaluations triggered by environmental or operational changes is required.",
+      "evidence_template": "Continuous evaluation infrastructure was verified: AWS Config recorder active, Security Hub enabled, RDS auto patching, SSM patch management, Amazon Inspector for vulnerability scanning. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.308(b)(1)": {
+      "title": "Business Associate Contracts and Other Arrangements",
+      "section": "Administrative Safeguards",
+      "level": "Required",
+      "assessment": "Manual",
+      "description": "A covered entity may permit a business associate to create, receive, maintain, or transmit electronic protected health information on the covered entity's behalf only if the covered entity obtains satisfactory assurances that the business associate will appropriately safeguard the information, documented through a written contract or other arrangement.",
+      "checks": [],
+      "manual_steps": "Review the AWS Business Associate Addendum (BAA) executed through AWS Artifact. Verify BAAs are in place with all business associates who create, receive, maintain, or transmit ePHI. Review BAA inventory and renewal tracking.",
+      "evidence_template": "164.308(b)(1) requires manual assessment. Verify AWS BAA executed via AWS Artifact and BAA inventory with all business associates handling ePHI."
+    },
+    "164.310(a)(1)": {
+      "title": "Facility Access Controls",
+      "section": "Physical Safeguards",
+      "level": "Addressable",
+      "assessment": "Manual",
+      "description": "Implement policies and procedures to limit physical access to electronic information systems and the facility or facilities in which they are housed, while ensuring that properly authorized access is allowed.",
+      "checks": [],
+      "manual_steps": "Physical access to AWS data centers is managed by AWS under the shared responsibility model (covered by AWS SOC 2 and HIPAA attestation). Review physical security controls for any customer-managed facilities that process or store ePHI, including facility access logs, visitor management, and access badge systems.",
+      "evidence_template": "164.310(a)(1) requires manual assessment. Physical data center security is covered by AWS's SOC 2 report and HIPAA attestation. Review customer facility physical access controls."
+    },
+    "164.310(a)(2)(i)": {
+      "title": "Facility Access Controls - Contingency Operations",
+      "section": "Physical Safeguards",
+      "level": "Addressable",
+      "assessment": "Manual",
+      "description": "Establish (and implement as needed) procedures that allow facility access in support of restoration of lost data under the disaster recovery plan and emergency mode operations plan in the event of an emergency.",
+      "checks": [],
+      "manual_steps": "Review emergency facility access procedures that support disaster recovery and emergency mode operations. Verify integration with the contingency plan and that procedures cover after-hours access and emergency authorization.",
+      "evidence_template": "164.310(a)(2)(i) requires manual assessment. Review emergency facility access procedures and their integration with the disaster recovery and emergency mode operation plans."
+    },
+    "164.310(a)(2)(ii)": {
+      "title": "Facility Access Controls - Facility Security Plan",
+      "section": "Physical Safeguards",
+      "level": "Addressable",
+      "assessment": "Manual",
+      "description": "Implement policies and procedures to safeguard the facility and the equipment therein from unauthorized physical access, tampering, and theft.",
+      "checks": [],
+      "manual_steps": "Review the documented facility security plan covering physical barriers, surveillance, alarm systems, and anti-tamper controls for facilities housing ePHI systems. For AWS-hosted environments, reference AWS compliance attestations.",
+      "evidence_template": "164.310(a)(2)(ii) requires manual assessment. Review facility security plan and AWS compliance attestations for cloud-hosted ePHI environments."
+    },
+    "164.310(a)(2)(iii)": {
+      "title": "Facility Access Controls - Access Control and Validation Procedures",
+      "section": "Physical Safeguards",
+      "level": "Addressable",
+      "assessment": "Manual",
+      "description": "Implement procedures to control and validate a person's access to facilities based on their role or function, including visitor control, and control of access to software programs for testing and revision.",
+      "checks": [],
+      "manual_steps": "Review role-based physical access control procedures, visitor management logs, escort policies, and procedures controlling access to development and testing environments that may contain ePHI.",
+      "evidence_template": "164.310(a)(2)(iii) requires manual assessment. Review role-based physical access procedures, visitor logs, and development environment access controls."
+    },
+    "164.310(a)(2)(iv)": {
+      "title": "Facility Access Controls - Maintenance Records",
+      "section": "Physical Safeguards",
+      "level": "Addressable",
+      "assessment": "Manual",
+      "description": "Implement policies and procedures to document repairs and modifications to the physical components of a facility which are related to security.",
+      "checks": [],
+      "manual_steps": "Review maintenance records for facility security components (locks, surveillance cameras, alarm systems, badge readers). For AWS-hosted environments, AWS manages physical infrastructure maintenance.",
+      "evidence_template": "164.310(a)(2)(iv) requires manual assessment. Review facility security maintenance records. AWS manages physical infrastructure maintenance for cloud-hosted environments."
+    },
+    "164.310(b)": {
+      "title": "Workstation Use",
+      "section": "Physical Safeguards",
+      "level": "Required",
+      "assessment": "Manual",
+      "description": "Implement policies and procedures that specify the proper functions to be performed, the manner in which those functions are to be performed, and the physical attributes of the surroundings of a specific workstation or class of workstation that can access electronic protected health information.",
+      "checks": [],
+      "manual_steps": "Review workstation use policy covering permitted functions, physical location requirements (screen positioning, clean desk), and acceptable use standards for workstations accessing ePHI.",
+      "evidence_template": "164.310(b) requires manual assessment. Review workstation use policy, physical environment standards, and acceptable use documentation."
+    },
+    "164.310(c)": {
+      "title": "Workstation Security",
+      "section": "Physical Safeguards",
+      "level": "Required",
+      "assessment": "Manual",
+      "description": "Implement physical safeguards for all workstations that access electronic protected health information, to restrict access to authorized users.",
+      "checks": [],
+      "manual_steps": "Review physical security controls for workstations: cable locks, secured rooms, screen locks, port restrictions, and encryption of local storage on devices that access ePHI.",
+      "evidence_template": "164.310(c) requires manual assessment. Review workstation physical security controls, endpoint encryption, and physical access restrictions."
+    },
+    "164.310(d)(1)": {
+      "title": "Device and Media Controls",
+      "section": "Physical Safeguards",
+      "level": "Required",
+      "assessment": "Partial",
+      "description": "Implement policies and procedures that govern the receipt and removal of hardware and electronic media that contain electronic protected health information into and out of a facility, and the movement of these items within the facility.",
+      "checks": [
+        "aws-s3-002",
+        "aws-s3-004",
+        "aws-ec2-002",
+        "aws-ec2-006",
+        "aws-rds-002",
+        "aws-efs-001"
+      ],
+      "manual_steps": "Automated checks verify encryption at rest and data lifecycle for cloud storage: S3 encryption and lifecycle policies, EBS encryption, EBS default encryption, RDS encryption, and EFS encryption. For physical media, AWS handles destruction under the shared responsibility model. Manual review of media disposal procedures, hardware inventory, and media tracking logs for customer-managed devices is required.",
+      "evidence_template": "Storage protection controls were verified: S3 encryption, S3 lifecycle policies, EBS encryption, EBS default encryption, RDS encryption, EFS encryption. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.310(d)(2)(i)": {
+      "title": "Device and Media Controls - Disposal",
+      "section": "Physical Safeguards",
+      "level": "Required",
+      "assessment": "Manual",
+      "description": "Implement policies and procedures to address the final disposition of electronic protected health information, and/or the hardware or electronic media on which it is stored.",
+      "checks": [],
+      "manual_steps": "Review media sanitization and disposal procedures. AWS handles physical media destruction per NIST 800-88 (covered by AWS SOC 2). Review customer procedures for local devices, backup media, and decommissioned storage that may contain ePHI.",
+      "evidence_template": "164.310(d)(2)(i) requires manual assessment. AWS handles physical media destruction per NIST 800-88. Review customer media disposal procedures and records."
+    },
+    "164.310(d)(2)(ii)": {
+      "title": "Device and Media Controls - Media Re-use",
+      "section": "Physical Safeguards",
+      "level": "Required",
+      "assessment": "Manual",
+      "description": "Implement procedures for removal of electronic protected health information from electronic media before the media are made available for re-use.",
+      "checks": [],
+      "manual_steps": "Review media re-use procedures ensuring ePHI is removed before re-provisioning. For AWS, EBS volumes are wiped on release. Review customer procedures for local media re-use and device recycling.",
+      "evidence_template": "164.310(d)(2)(ii) requires manual assessment. AWS wipes EBS volumes on release. Review customer media re-use and sanitization procedures."
+    },
+    "164.310(d)(2)(iii)": {
+      "title": "Device and Media Controls - Accountability",
+      "section": "Physical Safeguards",
+      "level": "Addressable",
+      "assessment": "Manual",
+      "description": "Maintain a record of the movements of hardware and electronic media and any person responsible therefore.",
+      "checks": [],
+      "manual_steps": "Review hardware and media tracking inventory, chain-of-custody records, and asset management procedures for devices that store or process ePHI.",
+      "evidence_template": "164.310(d)(2)(iii) requires manual assessment. Review hardware inventory, media tracking records, and chain-of-custody documentation."
+    },
+    "164.310(d)(2)(iv)": {
+      "title": "Device and Media Controls - Data Backup and Storage",
+      "section": "Physical Safeguards",
+      "level": "Addressable",
+      "assessment": "Automated",
+      "description": "Create a retrievable, exact copy of electronic protected health information, when needed, before movement of equipment.",
+      "checks": [
+        "aws-s3-003",
+        "aws-s3-007",
+        "aws-rds-003",
+        "aws-ec2-005"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Data backup and storage controls were verified: S3 versioning for object-level recovery, S3 MFA Delete for deletion protection, RDS Multi-AZ for database redundancy, EC2 termination protection. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.312(a)(1)": {
+      "title": "Access Control",
+      "section": "Technical Safeguards",
+      "level": "Required",
+      "assessment": "Automated",
+      "description": "Implement technical policies and procedures for electronic information systems that maintain electronic protected health information to allow access only to those persons or software programs that have been granted access rights as specified in §164.308(a)(4).",
+      "checks": [
+        "aws-iam-001",
+        "aws-iam-002",
+        "aws-iam-005",
+        "aws-iam-006",
+        "aws-iam-007",
+        "aws-iam-008",
+        "aws-iam-010",
+        "aws-iam-015",
+        "aws-iam-016",
+        "aws-vpc-002",
+        "aws-vpc-004",
+        "aws-vpc-005",
+        "aws-vpc-006",
+        "aws-rds-001",
+        "aws-s3-001",
+        "aws-lambda-001",
+        "aws-ec2-001",
+        "aws-ec2-004"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Access controls were verified: root and user MFA enforcement, password policy, no wildcard admin policies, OIDC trust restrictions, no root access keys, group-based permissions, hardware MFA for root, EC2 IAM roles, network access restrictions (SGs and NACLs), VPC subnet isolation (public/private separation), IMDSv2 enforcement, no public databases/storage/Lambda/AMIs. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.312(a)(2)(i)": {
+      "title": "Access Control - Unique User Identification",
+      "section": "Technical Safeguards",
+      "level": "Required",
+      "assessment": "Automated",
+      "description": "Assign a unique name and/or number for identifying and tracking user identity.",
+      "checks": [
+        "aws-iam-008",
+        "aws-iam-009",
+        "aws-iam-010",
+        "aws-iam-016"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Unique user identification was verified: no root access keys (prevents shared root usage), single active access key per user, permissions via groups (not direct), EC2 instances use IAM roles (not shared keys). {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.312(a)(2)(ii)": {
+      "title": "Access Control - Emergency Access Procedure",
+      "section": "Technical Safeguards",
+      "level": "Required",
+      "assessment": "Partial",
+      "description": "Establish (and implement as needed) procedures for obtaining necessary electronic protected health information during an emergency.",
+      "checks": [
+        "aws-iam-001",
+        "aws-iam-015",
+        "aws-iam-011"
+      ],
+      "manual_steps": "Automated checks verify emergency access controls: root account MFA enabled (break-glass account), hardware MFA for root, AWS Support role exists. Manual review of documented emergency access procedures, break-glass account protocols, and emergency access logging is required.",
+      "evidence_template": "Emergency access controls were verified: root MFA enabled, hardware MFA for root, AWS Support role available. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.312(a)(2)(iii)": {
+      "title": "Access Control - Automatic Logoff",
+      "section": "Technical Safeguards",
+      "level": "Addressable",
+      "assessment": "Partial",
+      "description": "Implement electronic procedures that terminate an electronic session after a predetermined time of inactivity. IAM role max session duration settings control the maximum length of assumed role sessions.",
+      "checks": [
+        "aws-iam-017"
+      ],
+      "manual_steps": "Automated check verifies IAM role max session duration is configured appropriately (>1 hour may indicate overly permissive session lengths). Manual review of session timeout configurations for all systems accessing ePHI: AWS Console session duration, application session timeouts, and workstation screen lock policies is also required. AWS Console defaults to 12 hours; HIPAA-compliant configurations typically require 15-30 minutes.",
+      "evidence_template": "Session management controls verified: IAM role max session duration limits checked. {pass_count}/{total_count} check(s) passed. {findings_summary} Manual review of application and workstation session timeout settings for ePHI systems is also required."
+    },
+    "164.312(a)(2)(iv)": {
+      "title": "Access Control - Encryption and Decryption",
+      "section": "Technical Safeguards",
+      "level": "Addressable",
+      "assessment": "Automated",
+      "description": "Implement a mechanism to encrypt and decrypt electronic protected health information.",
+      "checks": [
+        "aws-s3-002",
+        "aws-ec2-002",
+        "aws-ec2-006",
+        "aws-rds-002",
+        "aws-efs-001",
+        "aws-kms-001",
+        "aws-kms-002"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Encryption controls were verified: S3 server-side encryption, EBS encryption, EBS default encryption enabled, RDS encryption at rest, EFS encryption, KMS key rotation, KMS key policies. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.312(b)": {
+      "title": "Audit Controls",
+      "section": "Technical Safeguards",
+      "level": "Required",
+      "assessment": "Automated",
+      "description": "Implement hardware, software, and/or procedural mechanisms that record and examine activity in information systems that contain or use electronic protected health information.",
+      "checks": [
+        "aws-ct-001",
+        "aws-ct-002",
+        "aws-ct-003",
+        "aws-ct-004",
+        "aws-ct-005",
+        "aws-ct-006",
+        "aws-ct-007",
+        "aws-ct-008",
+        "aws-vpc-003",
+        "aws-s3-005",
+        "aws-ecs-002",
+        "aws-cw-001",
+        "aws-cw-002",
+        "aws-cw-003",
+        "aws-cw-004",
+        "aws-cw-005",
+        "aws-cw-006",
+        "aws-cw-007",
+        "aws-cw-008",
+        "aws-cw-009",
+        "aws-cw-010",
+        "aws-cw-011",
+        "aws-cw-012",
+        "aws-cw-013",
+        "aws-cw-014",
+        "aws-cw-015"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Audit controls were verified: CloudTrail multi-region with validation, CloudTrail CloudWatch Logs delivery for real-time analysis, S3 bucket protection, KMS encryption, object-level write/read logging, VPC flow logs, S3 access logging, ECS task logging, CloudWatch metric filters and alarms for root usage, unauthorized API calls, MFA-less sign-in, IAM/CloudTrail/Config/auth failure/CMK/S3/SG/NACL/gateway/route/VPC/Organizations changes. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.312(c)(1)": {
+      "title": "Integrity",
+      "section": "Technical Safeguards",
+      "level": "Required",
+      "assessment": "Automated",
+      "description": "Implement policies and procedures to protect electronic protected health information from improper alteration or destruction.",
+      "checks": [
+        "aws-s3-003",
+        "aws-s3-007",
+        "aws-ct-002",
+        "aws-kms-001",
+        "aws-kms-002",
+        "aws-cw-016"
+      ],
+      "manual_steps": "",
+      "evidence_template": "ePHI integrity controls were verified: S3 versioning for change tracking and recovery, S3 MFA Delete for deletion protection, CloudTrail log file validation for tamper detection, KMS key rotation and key policies for cryptographic integrity, CloudWatch log group KMS encryption for log data integrity. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.312(c)(2)": {
+      "title": "Integrity - Mechanism to Authenticate Electronic Protected Health Information",
+      "section": "Technical Safeguards",
+      "level": "Addressable",
+      "assessment": "Automated",
+      "description": "Implement electronic mechanisms to corroborate that electronic protected health information has not been altered or destroyed in an unauthorized manner.",
+      "checks": [
+        "aws-ct-002",
+        "aws-s3-003",
+        "aws-s3-007",
+        "aws-ct-005"
+      ],
+      "manual_steps": "",
+      "evidence_template": "ePHI authentication mechanisms were verified: CloudTrail log file validation (digest files for tamper detection), S3 versioning (change tracking), S3 MFA Delete (deletion protection), CloudTrail KMS encryption (log integrity). {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.312(d)": {
+      "title": "Person or Entity Authentication",
+      "section": "Technical Safeguards",
+      "level": "Required",
+      "assessment": "Automated",
+      "description": "Implement procedures to verify that a person or entity seeking access to electronic protected health information is the one claimed.",
+      "checks": [
+        "aws-iam-001",
+        "aws-iam-002",
+        "aws-iam-006",
+        "aws-iam-015",
+        "aws-iam-007"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Person and entity authentication was verified: root MFA enabled, IAM user MFA enforcement, password policy strength, hardware MFA for root, OIDC trust with sub condition (entity verification for federated access). {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.312(e)(1)": {
+      "title": "Transmission Security",
+      "section": "Technical Safeguards",
+      "level": "Required",
+      "assessment": "Automated",
+      "description": "Implement technical security measures to guard against unauthorized access to electronic protected health information that is being transmitted over an electronic communications network.",
+      "checks": [
+        "aws-s3-006",
+        "aws-ct-005",
+        "aws-sm-001",
+        "aws-ssm-002",
+        "aws-lambda-003",
+        "aws-waf-001"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Transmission security was verified: S3 HTTPS enforcement (deny HTTP), CloudTrail KMS encryption, Secrets Manager rotation (credential protection), SSM SecureString parameters, no secrets in Lambda environment variables, WAFv2 WebACL exists for web application transmission protection. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.312(e)(2)(i)": {
+      "title": "Transmission Security - Integrity Controls",
+      "section": "Technical Safeguards",
+      "level": "Addressable",
+      "assessment": "Partial",
+      "description": "Implement security measures to ensure that electronically transmitted electronic protected health information is not improperly modified without detection until disposed of.",
+      "checks": [
+        "aws-s3-006",
+        "aws-ct-002",
+        "aws-ct-005"
+      ],
+      "manual_steps": "Automated checks verify transmission integrity: S3 HTTPS enforcement (TLS integrity), CloudTrail log validation (API call integrity), CloudTrail KMS encryption. Manual review of TLS configuration standards, certificate management, and data integrity verification procedures for ePHI transmissions is also required.",
+      "evidence_template": "Transmission integrity controls were verified: S3 HTTPS enforcement, CloudTrail log file validation, CloudTrail KMS encryption. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    },
+    "164.312(e)(2)(ii)": {
+      "title": "Transmission Security - Encryption",
+      "section": "Technical Safeguards",
+      "level": "Addressable",
+      "assessment": "Automated",
+      "description": "Implement a mechanism to encrypt electronic protected health information whenever deemed appropriate.",
+      "checks": [
+        "aws-s3-006",
+        "aws-s3-002",
+        "aws-rds-002",
+        "aws-ec2-002",
+        "aws-ec2-006",
+        "aws-efs-001",
+        "aws-ct-005",
+        "aws-kms-001",
+        "aws-kms-002",
+        "aws-sm-001",
+        "aws-ssm-002"
+      ],
+      "manual_steps": "",
+      "evidence_template": "Encryption was verified across all storage and transmission layers: S3 HTTPS enforcement, S3/EBS/RDS/EFS encryption at rest, EBS default encryption, CloudTrail KMS encryption, KMS key rotation and policies, Secrets Manager rotation, SSM SecureString parameters. {pass_count}/{total_count} check(s) passed. {findings_summary}"
+    }
+  },
+  "attack_chain_mappings": {
+    "AC-01": [
+      "164.312(a)(1)",
+      "164.312(b)",
+      "164.308(a)(1)(ii)(A)"
+    ],
+    "AC-02": [
+      "164.312(a)(1)",
+      "164.312(e)(1)",
+      "164.308(a)(1)(i)"
+    ],
+    "AC-05": [
+      "164.312(a)(1)",
+      "164.308(a)(4)(ii)"
+    ],
+    "AC-07": [
+      "164.312(a)(1)",
+      "164.312(d)",
+      "164.308(a)(4)(ii)"
+    ],
+    "AC-09": [
+      "164.312(a)(1)",
+      "164.312(b)",
+      "164.308(a)(1)(ii)(C)"
+    ],
+    "AC-10": [
+      "164.312(a)(1)",
+      "164.312(b)",
+      "164.308(a)(1)(i)"
+    ],
+    "AC-11": [
+      "164.312(b)",
+      "164.308(a)(1)(i)",
+      "164.308(a)(8)"
+    ],
+    "AC-12": [
+      "164.312(a)(1)",
+      "164.312(d)"
+    ],
+    "AC-13": [
+      "164.312(a)(1)",
+      "164.312(b)",
+      "164.308(a)(6)(i)"
+    ],
+    "AC-14": [
+      "164.312(a)(1)",
+      "164.312(b)"
+    ],
+    "AC-17": [
+      "164.312(a)(1)",
+      "164.312(a)(2)(iv)",
+      "164.312(b)"
+    ],
+    "AC-19": [
+      "164.312(a)(1)",
+      "164.308(a)(5)(ii)"
+    ],
+    "AC-20": [
+      "164.312(b)",
+      "164.308(a)(1)(ii)(C)"
+    ],
+    "AC-21": [
+      "164.312(a)(2)(iv)",
+      "164.312(e)(1)"
+    ],
+    "AC-23": [
+      "164.312(a)(1)",
+      "164.312(e)(1)",
+      "164.308(a)(4)(ii)"
+    ],
+    "AC-24": [
+      "164.312(a)(1)",
+      "164.308(a)(4)(ii)"
+    ],
+    "AC-25": [
+      "164.312(a)(1)",
+      "164.312(b)",
+      "164.308(a)(1)(ii)(C)"
+    ],
+    "AC-26": [
+      "164.312(a)(1)",
+      "164.312(d)",
+      "164.308(a)(5)(iii)"
+    ],
+    "AC-27": [
+      "164.312(a)(1)",
+      "164.312(b)"
+    ],
+    "AC-28": [
+      "164.312(a)(1)",
+      "164.308(a)(1)(i)"
+    ],
+    "AC-29": [
+      "164.308(a)(5)(ii)",
+      "164.312(a)(1)"
+    ],
+    "AC-30": [
+      "164.308(a)(1)(i)",
+      "164.308(a)(8)"
+    ],
+    "AC-31": [
+      "164.312(a)(1)",
+      "164.312(e)(1)"
+    ],
+    "AC-32": [
+      "164.312(b)"
+    ],
+    "AC-33": [
+      "164.312(a)(1)"
+    ]
+  }
+}

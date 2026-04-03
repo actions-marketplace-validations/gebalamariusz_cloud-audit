@@ -134,6 +134,165 @@ def check_insecure_parameters(provider: AWSProvider) -> CheckResult:
     return result
 
 
+def check_patch_compliance(provider: AWSProvider) -> CheckResult:
+    """Check EC2 instances patch compliance via SSM."""
+    result = CheckResult(check_id="aws-ssm-003", check_name="SSM patch compliance")
+
+    try:
+        for region in provider.regions:
+            ssm = provider.session.client("ssm", region_name=region)
+            ec2 = provider.session.client("ec2", region_name=region)
+
+            # Get all running instances
+            running_ids: set[str] = set()
+            try:
+                ec2_paginator = ec2.get_paginator("describe_instances")
+                for page in ec2_paginator.paginate(Filters=[{"Name": "instance-state-name", "Values": ["running"]}]):
+                    for res in page["Reservations"]:
+                        for inst in res["Instances"]:
+                            running_ids.add(inst["InstanceId"])
+            except Exception:
+                continue
+
+            if not running_ids:
+                continue
+
+            # Get patch states for instances
+            patched_ids: set[str] = set()
+            try:
+                ssm_paginator = ssm.get_paginator("describe_instance_patch_states")
+                for page in ssm_paginator.paginate():
+                    for patch_state in page.get("InstancePatchStates", []):
+                        instance_id = patch_state.get("InstanceId", "")
+                        if instance_id not in running_ids:
+                            continue
+
+                        patched_ids.add(instance_id)
+                        result.resources_scanned += 1
+
+                        missing_count = patch_state.get("MissingCount", 0)
+                        failed_count = patch_state.get("FailedCount", 0)
+
+                        if missing_count > 0 or failed_count > 0:
+                            issues = []
+                            if missing_count > 0:
+                                issues.append(f"{missing_count} missing")
+                            if failed_count > 0:
+                                issues.append(f"{failed_count} failed")
+                            issue_str = ", ".join(issues)
+
+                            result.findings.append(
+                                Finding(
+                                    check_id="aws-ssm-003",
+                                    title=f"Instance '{instance_id}' has {issue_str} patch(es)",
+                                    severity=Severity.MEDIUM,
+                                    category=Category.SECURITY,
+                                    resource_type="AWS::EC2::Instance",
+                                    resource_id=instance_id,
+                                    region=region,
+                                    description=(
+                                        f"Instance {instance_id} has {issue_str} patches. "
+                                        "Unpatched instances are vulnerable to known exploits "
+                                        "and may not meet compliance requirements."
+                                    ),
+                                    recommendation="Run the AWS-RunPatchBaseline document to apply missing patches.",
+                                    remediation=Remediation(
+                                        cli=(
+                                            f"aws ssm send-command \\\n"
+                                            f"  --document-name AWS-RunPatchBaseline \\\n"
+                                            f"  --targets Key=InstanceIds,Values={instance_id} \\\n"
+                                            f"  --parameters Operation=Install \\\n"
+                                            f"  --region {region}"
+                                        ),
+                                        terraform=(
+                                            'resource "aws_ssm_patch_baseline" "this" {\n'
+                                            '  name             = "custom-patch-baseline"\n'
+                                            '  operating_system = "AMAZON_LINUX_2"\n'
+                                            "\n"
+                                            "  approval_rule {\n"
+                                            "    approve_after_days = 7\n"
+                                            '    compliance_level   = "CRITICAL"\n'
+                                            "\n"
+                                            "    patch_filter {\n"
+                                            '      key    = "CLASSIFICATION"\n'
+                                            '      values = ["Security", "Bugfix"]\n'
+                                            "    }\n"
+                                            "  }\n"
+                                            "}\n"
+                                            "\n"
+                                            'resource "aws_ssm_patch_group" "this" {\n'
+                                            "  baseline_id = aws_ssm_patch_baseline.this.id\n"
+                                            '  patch_group = "production"\n'
+                                            "}"
+                                        ),
+                                        doc_url="https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager.html",
+                                        effort=Effort.MEDIUM,
+                                    ),
+                                    compliance_refs=[],
+                                )
+                            )
+            except Exception as exc:
+                error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+                if error_code in ("AccessDeniedException",):
+                    continue
+                raise
+
+            # Flag running instances with no patch data at all
+            unscanned_ids = running_ids - patched_ids
+            for instance_id in unscanned_ids:
+                result.resources_scanned += 1
+                result.findings.append(
+                    Finding(
+                        check_id="aws-ssm-003",
+                        title=f"Instance '{instance_id}' has no patch compliance data",
+                        severity=Severity.MEDIUM,
+                        category=Category.SECURITY,
+                        resource_type="AWS::EC2::Instance",
+                        resource_id=instance_id,
+                        region=region,
+                        description=(
+                            f"Instance {instance_id} has no patch compliance data in SSM. "
+                            "Either the instance is not managed by SSM or patch scanning "
+                            "has never been executed. Patch status is unknown."
+                        ),
+                        recommendation="Ensure the SSM Agent is installed, the instance has the SSM IAM policy, and run a patch scan.",
+                        remediation=Remediation(
+                            cli=(
+                                f"# Scan patches (does not install):\n"
+                                f"aws ssm send-command \\\n"
+                                f"  --document-name AWS-RunPatchBaseline \\\n"
+                                f"  --targets Key=InstanceIds,Values={instance_id} \\\n"
+                                f"  --parameters Operation=Scan \\\n"
+                                f"  --region {region}"
+                            ),
+                            terraform=(
+                                'resource "aws_ssm_patch_baseline" "this" {\n'
+                                '  name             = "custom-patch-baseline"\n'
+                                '  operating_system = "AMAZON_LINUX_2"\n'
+                                "\n"
+                                "  approval_rule {\n"
+                                "    approve_after_days = 7\n"
+                                '    compliance_level   = "CRITICAL"\n'
+                                "\n"
+                                "    patch_filter {\n"
+                                '      key    = "CLASSIFICATION"\n'
+                                '      values = ["Security", "Bugfix"]\n'
+                                "    }\n"
+                                "  }\n"
+                                "}"
+                            ),
+                            doc_url="https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager.html",
+                            effort=Effort.MEDIUM,
+                        ),
+                        compliance_refs=[],
+                    )
+                )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all SSM checks bound to the provider."""
     from cloud_audit.providers.base import make_check
@@ -141,4 +300,5 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
     return [
         make_check(check_ec2_not_managed, provider, check_id="aws-ssm-001", category=Category.SECURITY),
         make_check(check_insecure_parameters, provider, check_id="aws-ssm-002", category=Category.SECURITY),
+        make_check(check_patch_compliance, provider, check_id="aws-ssm-003", category=Category.SECURITY),
     ]

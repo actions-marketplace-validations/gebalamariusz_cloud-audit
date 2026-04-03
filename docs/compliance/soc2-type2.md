@@ -163,7 +163,7 @@ cloud-audit marks these as NOT_ASSESSED with actionable manual steps for each.
 
 ## Attack Chain Integration
 
-All 20 attack chain rules are mapped to SOC 2 controls. When a chain is detected, the compliance report shows which controls it violates:
+All 25 attack chain rules are mapped to SOC 2 controls. When a chain is detected, the compliance report shows which controls it violates:
 
 | Chain | SOC 2 Controls Violated |
 |-------|------------------------|

@@ -518,6 +518,76 @@ def check_cloudtrail_bucket_access_logging(provider: AWSProvider) -> CheckResult
     return result
 
 
+def check_cloudtrail_cloudwatch_logs(provider: AWSProvider) -> CheckResult:
+    """Check if multi-region CloudTrail trails deliver logs to CloudWatch Logs."""
+    result = CheckResult(check_id="aws-ct-008", check_name="CloudTrail CloudWatch Logs integration")
+
+    try:
+        trails = _list_trails(provider)
+        seen_arns: set[str] = set()
+
+        for trail in trails:
+            trail_arn = trail.get("TrailARN", "")
+            if trail_arn in seen_arns:
+                continue
+            seen_arns.add(trail_arn)
+
+            # Only check multi-region trails (the important ones)
+            if not trail.get("IsMultiRegionTrail", False):
+                continue
+
+            trail_name = trail.get("Name", "unknown")
+            result.resources_scanned += 1
+
+            if not trail.get("CloudWatchLogsLogGroupArn"):
+                result.findings.append(
+                    Finding(
+                        check_id="aws-ct-008",
+                        title=f"CloudTrail '{trail_name}' does not deliver logs to CloudWatch",
+                        severity=Severity.MEDIUM,
+                        category=Category.SECURITY,
+                        resource_type="AWS::CloudTrail::Trail",
+                        resource_id=trail_name,
+                        description=(
+                            f"Multi-region trail '{trail_name}' does not have CloudWatch Logs "
+                            "integration configured. Without CloudWatch Logs delivery, you cannot "
+                            "create metric filters, alarms, or real-time alerts for suspicious "
+                            "API activity detected by CloudTrail."
+                        ),
+                        recommendation="Configure the trail to deliver logs to a CloudWatch Logs log group.",
+                        remediation=Remediation(
+                            cli=(
+                                f"# Create a log group and IAM role first, then:\n"
+                                f"aws cloudtrail update-trail \\\n"
+                                f"  --name {trail_name} \\\n"
+                                f"  --cloud-watch-logs-log-group-arn arn:aws:logs:REGION:ACCOUNT_ID:log-group:cloudtrail-logs:* \\\n"
+                                f"  --cloud-watch-logs-role-arn arn:aws:iam::ACCOUNT_ID:role/cloudtrail-cloudwatch-role"
+                            ),
+                            terraform=(
+                                'resource "aws_cloudwatch_log_group" "cloudtrail" {\n'
+                                '  name              = "cloudtrail-logs"\n'
+                                "  retention_in_days = 365\n"
+                                "}\n"
+                                "\n"
+                                'resource "aws_cloudtrail" "main" {\n'
+                                f'  name                       = "{trail_name}"\n'
+                                "  # ...\n"
+                                '  cloud_watch_logs_group_arn  = "${{aws_cloudwatch_log_group.cloudtrail.arn}}:*"\n'
+                                "  cloud_watch_logs_role_arn   = aws_iam_role.cloudtrail_cloudwatch.arn\n"
+                                "}"
+                            ),
+                            doc_url="https://docs.aws.amazon.com/awscloudtrail/latest/userguide/send-cloudtrail-events-to-cloudwatch-logs.html",
+                            effort=Effort.MEDIUM,
+                        ),
+                        compliance_refs=[],
+                    )
+                )
+    except Exception as e:
+        result.error = str(e)
+
+    return result
+
+
 def get_checks(provider: AWSProvider) -> list[CheckFn]:
     """Return all CloudTrail checks bound to the provider."""
     from cloud_audit.providers.base import make_check
@@ -530,4 +600,5 @@ def get_checks(provider: AWSProvider) -> list[CheckFn]:
         make_check(check_cloudtrail_kms_encryption, provider, check_id="aws-ct-005", category=Category.SECURITY),
         make_check(check_s3_object_write_logging, provider, check_id="aws-ct-006", category=Category.SECURITY),
         make_check(check_s3_object_read_logging, provider, check_id="aws-ct-007", category=Category.SECURITY),
+        make_check(check_cloudtrail_cloudwatch_logs, provider, check_id="aws-ct-008", category=Category.SECURITY),
     ]
