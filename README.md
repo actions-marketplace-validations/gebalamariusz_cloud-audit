@@ -33,8 +33,13 @@
 <p align="center">
   <a href="https://haitmg.pl/cloud-audit/">Documentation</a> -
   <a href="https://haitmg.pl/cloud-audit/getting-started/quick-start/">Quick Start</a> -
-  <a href="https://haitmg.pl/cloud-audit/compliance/cis-aws-v3/">CIS AWS v3.0</a> -
+  <a href="https://haitmg.pl/cloud-audit/compliance/overview/">Compliance</a> -
+  <a href="https://haitmg.pl/cloud-audit/compliance/cis-aws-v3/">CIS</a> -
   <a href="https://haitmg.pl/cloud-audit/compliance/soc2-type2/">SOC 2</a> -
+  <a href="https://haitmg.pl/cloud-audit/compliance/bsi-c5-2020/">BSI C5</a> -
+  <a href="https://haitmg.pl/cloud-audit/compliance/iso27001-2022/">ISO 27001</a> -
+  <a href="https://haitmg.pl/cloud-audit/compliance/hipaa-security/">HIPAA</a> -
+  <a href="https://haitmg.pl/cloud-audit/compliance/nis2-directive/">NIS2</a> -
   <a href="https://haitmg.pl/cloud-audit/features/attack-chains/">Attack Chains</a> -
   <a href="https://haitmg.pl/cloud-audit/features/mcp-server/">MCP Server</a>
 </p>
@@ -129,7 +134,7 @@ cloud-audit diff yesterday.json today.json
 
 Exit code 0 = no new findings, 1 = regression. See [daily-scan-with-diff.yml](examples/daily-scan-with-diff.yml) for a CI/CD workflow.
 
-### CIS AWS v3.0 Compliance
+### 6 Compliance Frameworks
 
 Built-in compliance engine with per-control evidence, readiness scoring, and auditor-ready reports.
 
@@ -171,7 +176,7 @@ claude mcp add cloud-audit -- uvx --from cloud-audit cloud-audit-mcp
 
 cloud-audit has fewer checks than Prowler but covers 6 compliance frameworks and deeper output per finding: remediation code, attack chain context, cost estimates, and compliance evidence. If you need exhaustive compliance coverage across multiple clouds, Prowler is the better choice. If you need a focused scan that shows how findings combine into real attack paths and tells you exactly how to fix each one, cloud-audit is built for that.
 
-<sub>Feature snapshot as of March 2026. Verify against upstream docs for the latest details.</sub>
+<sub>Feature snapshot as of April 2026. Verify against upstream docs for the latest details.</sub>
 
 ---
 
@@ -433,13 +438,13 @@ cloud-audit never modifies your infrastructure.
 cloud-audit has grown beyond what a single README can cover. The full documentation is at **[haitmg.pl/cloud-audit](https://haitmg.pl/cloud-audit/)** and includes:
 
 - **[Getting Started](https://haitmg.pl/cloud-audit/getting-started/installation/)** - installation, quick start, demo mode
-- **[Compliance](https://haitmg.pl/cloud-audit/compliance/overview/)** - CIS AWS v3.0 with all 62 controls, planned SOC 2, BSI C5, HIPAA, NIS2
+- **[Compliance](https://haitmg.pl/cloud-audit/compliance/overview/)** - 6 frameworks: CIS AWS v3.0, SOC 2, BSI C5, ISO 27001, HIPAA, NIS2
 - **[Attack Chains](https://haitmg.pl/cloud-audit/features/attack-chains/)** - all 25 rules with MITRE ATT&CK references
 - **[MCP Server](https://haitmg.pl/cloud-audit/features/mcp-server/)** - full setup guide for Claude Code, Cursor, VS Code
 - **[Configuration](https://haitmg.pl/cloud-audit/configuration/config-file/)** - config file, env vars, suppressions
 - **[CI/CD](https://haitmg.pl/cloud-audit/ci-cd/github-actions/)** - GitHub Actions, SARIF, pre-commit hooks
 - **[Reports](https://haitmg.pl/cloud-audit/reports/html/)** - HTML, JSON, SARIF, Markdown output formats
-- **[All 80 Checks](https://haitmg.pl/cloud-audit/checks/)** - full check reference by service
+- **[All 88 Checks](https://haitmg.pl/cloud-audit/checks/)** - full check reference by service
 
 This README covers the essentials. For compliance framework details, advanced configuration, and per-check documentation, see the full docs.
 
